@@ -1,0 +1,50 @@
+# Handoff: TAP as a Max for Live device
+
+Last updated 2026-10-10 (plan agreed, no code yet). Branch: `claude/codebase-vst-ableton-puxbqz`.
+
+## Goal
+
+Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes notes and sends per-note pitch (MPE) to the instrument after it on the same track. Plan: [`SPEC.md`](SPEC.md). Tickets: [`tickets/`](tickets/). Research: [`RESEARCH.md`](RESEARCH.md).
+
+## Where we are
+
+| Ticket | State |
+| --- | --- |
+| 01 MPE spike and repo setup | Next |
+| 02 to 05 | Not started |
+
+## Why not the VST
+
+Ableton merges all MIDI channels into one when MIDI goes from track to track, so the VST's per-note bends never reached Wavetable (VST ticket 02). The VST in `plugin/` is parked; ask the user before deleting it. History: [`../vst/HANDOFF.md`](../vst/HANDOFF.md).
+
+## The user's setup
+
+- Ableton Live 11 Suite on an Intel Mac, macOS 13.7.8. Live 11 bundles Max 8.
+- Uses Cursor locally. Loads the device straight from `m4l/` in the local checkout (added to Live's Places), and runs `node --test m4l`.
+- Tests with Wavetable. Operator does not support MPE.
+
+## Decisions (do not reopen without the user)
+
+See "Decisions" in [`SPEC.md`](SPEC.md). In short: Live 11 and Max 8 only; for the user's own use; v1 is three modes, their settings and Reset on a plain panel; pitch table not saved with the set; ES5 engine tested in Node; note path in `js` unless ticket 01 shows a delay; `.amxd` generated from the repo, hand-built as the fallback.
+
+## Open questions
+
+1. Does per-note bend reach Wavetable from the device with `is_mpe` on? (Ticket 01, check 1.)
+2. Does Live read per-note bend as ±48 semitones? Nothing in the docs says so. (Ticket 01, check 2.)
+3. Is the `js` delay noticeable when playing? (Ticket 01, check 3.)
+4. Will Live load a generated `.amxd` without a re-save in Max?
+5. Exact bundled Max version (Max console: `max version`).
+
+## Gotchas
+
+- **`js` in Max 8 is ES5:** no `let`, arrow functions, classes, template literals, `Map` or `Promise`. Use `Task` for timers.
+- **Channel 1** is the MPE master channel. Notes on it are not treated as per-note.
+- **Pushing:** check `git log origin/<branch>..HEAD` first so nothing unexpected goes up.
+- **Vercel** fails on every commit on this branch for reasons unrelated to this work. Do not merge to `main`.
+- **No PR** unless the user asks.
+- **User preferences:** Australian spelling, no em dashes, small reviewable tickets, review before committing, ask before big changes.
+
+## Next steps
+
+1. Build ticket 01, review it, and give the user step by step Live instructions.
+2. Record the three check results here before starting ticket 02.

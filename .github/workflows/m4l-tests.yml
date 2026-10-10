@@ -1,0 +1,25 @@
+name: Max for Live tests
+
+on:
+  push:
+    paths:
+      - "m4l/**"
+      - ".github/workflows/m4l-tests.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Unit tests
+        run: npm test --prefix m4l
+
+      # Max 8's js object only understands ES5, so reject newer syntax in device scripts.
+      - name: ES5 check
+        run: find m4l -name "*.js" -not -path "*/tests/*" -print0 | xargs -0 -n1 npx --yes acorn@8.14.0 --ecma5 --silent

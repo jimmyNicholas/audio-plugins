@@ -17,5 +17,5 @@
 Load `TAP.amxd` before Wavetable. Play A then B and release both: A now sounds at B's pitch. With the pedal held, nothing changes until it lifts. No stuck notes after fast playing or holding more than 15 notes.
 
 ## Done when
-- `node --test m4l` passes here and in CI.
+- `npm test --prefix m4l` passes here and in CI.
 - Swap behaves like the web app for the same key sequence.

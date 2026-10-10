@@ -1,0 +1,10 @@
+{
+  "name": "tap-m4l",
+  "private": true,
+  "description": "The Annoying Piano as a Max for Live device. No dependencies: run the tests with `npm test --prefix m4l` from the repo root.",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test",
+    "build": "node tools/amxd.mjs pack \"spike/TAP MPE Spike.maxpat\" \"spike/TAP MPE Spike.amxd\""
+  }
+}

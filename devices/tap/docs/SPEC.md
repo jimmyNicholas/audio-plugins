@@ -59,6 +59,7 @@ m4l/
   TAP.amxd           generated device, loaded in Live from here
   TAP.maxpat         patch source
   tap.js             engine plus Max glue, ES5
+  package.json       `npm test` and `npm run build`, no dependencies
   tests/             node --test files
   tools/amxd.mjs     pack .maxpat into .amxd, and unpack
   spike/             ticket 01's throwaway device
@@ -70,7 +71,7 @@ docs/m4l/            spec, tickets, research, handoff
 1. Once: in Live's browser, Places > Add Folder, and choose `m4l/` in your local checkout. ("Patch supports MPE" is already set inside the device.)
 2. Drag the device from Places onto a MIDI track before Wavetable.
 3. After each ticket, `git pull` in Cursor. Because `tap.js` uses `autowatch`, a running device reloads its logic on its own. If the ticket changes the patch, it says so, and you drag the device in again.
-4. `node --test m4l` runs the engine tests in a second, with no `npm install`.
+4. `npm test --prefix m4l` (from the repo root) runs the engine tests in a second. It installs nothing; Node 18 or later is enough.
 
 ## Prototype rule
 

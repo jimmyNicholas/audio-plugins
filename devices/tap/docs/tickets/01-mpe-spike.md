@@ -7,7 +7,7 @@
 ### Repo setup
 - Create `m4l/` with `tests/` and `tools/`.
 - `m4l/tools/amxd.mjs`: `pack` wraps a `.maxpat` into an unfrozen MIDI effect `.amxd` (chunks `ampf` `mmmm`, `meta`, `ptch`); `unpack` does the reverse. Node built-ins only. Round trip tested against a known file.
-- Add `.github/workflows/m4l-tests.yml`: runs `node --test m4l` on pushes that touch `m4l/`.
+- Add `.github/workflows/m4l-tests.yml`: runs `npm test --prefix m4l` and an ES5 syntax check on pushes that touch `m4l/`.
 - Change `.github/workflows/plugin-macos.yml` to run only when started by hand (`workflow_dispatch`).
 - Mark `docs/vst/` as replaced by `docs/m4l/` at the top of its spec and handoff.
 

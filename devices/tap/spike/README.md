@@ -2,6 +2,8 @@
 
 Ticket 01's throwaway device. It detunes notes with per-note pitch bend so we can see whether that reaches Wavetable. Takes about 15 minutes.
 
+Using Cursor? Tell its agent "Read `m4l/spike/CURSOR.md` and help me test the spike." It checks the repo, finds your Live and Max versions, walks you through these steps one at a time and writes up the results.
+
 ## 1. Get the files
 
 1. In Cursor, switch to the branch `claude/codebase-vst-ableton-puxbqz` and pull.

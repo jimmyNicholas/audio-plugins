@@ -11,7 +11,7 @@
   - Max glue at the bottom (`msg_int`/`list` handlers, `outlet`), kept thin. Node only sees the exports.
 - Test cases taken from `__tests__/lib/data/modes/swap.test.ts`, `__tests__/utils/hertzHelpers/`, `plugin/tests/MpeRouterTests.cpp` and the parked engine tests at commit `89272e4`.
 - `m4l/TAP.maxpat` and the generated `m4l/TAP.amxd`: `midiin` to `js tap.js` to `midiout`, `is_mpe` on.
-- Apply ticket 01's results (Bend Range setting or plain-object note path, if needed).
+- Ticket 01 passed with no changes needed: keep the ±48 semitone bend and the note path in `js`.
 
 ## Prototype
 Load `TAP.amxd` before Wavetable. Play A then B and release both: A now sounds at B's pitch. With the pedal held, nothing changes until it lifts. No stuck notes after fast playing or holding more than 15 notes.

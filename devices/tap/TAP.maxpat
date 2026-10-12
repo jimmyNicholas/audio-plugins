@@ -453,6 +453,72 @@
           ],
           "text": "prepend reset"
         }
+      },
+      {
+        "box": {
+          "id": "obj-25",
+          "maxclass": "live.tab",
+          "varname": "output",
+          "numinlets": 1,
+          "numoutlets": 3,
+          "outlettype": [
+            "",
+            "",
+            "float"
+          ],
+          "parameter_enable": 1,
+          "num_lines_patching": 1,
+          "num_lines_presentation": 1,
+          "patching_rect": [
+            528,
+            24,
+            110,
+            20
+          ],
+          "presentation": 1,
+          "presentation_rect": [
+            4,
+            136,
+            110,
+            20
+          ],
+          "saved_attribute_attributes": {
+            "valueof": {
+              "parameter_longname": "Output",
+              "parameter_shortname": "Output",
+              "parameter_type": 2,
+              "parameter_mmin": 0,
+              "parameter_mmax": 1,
+              "parameter_initial": [
+                0
+              ],
+              "parameter_initial_enable": 1,
+              "parameter_unitstyle": 9,
+              "parameter_enum": [
+                "MPE",
+                "Semitone"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "box": {
+          "id": "obj-44",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            528,
+            184,
+            88,
+            20
+          ],
+          "text": "prepend output"
+        }
       }
     ],
     "lines": [
@@ -599,6 +665,30 @@
             0
           ]
         }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-44",
+            0
+          ],
+          "source": [
+            "obj-25",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-2",
+            0
+          ],
+          "source": [
+            "obj-44",
+            0
+          ]
+        }
       }
     ],
     "parameters": {
@@ -620,6 +710,11 @@
       "obj-24": [
         "Reset",
         "Reset",
+        0
+      ],
+      "obj-25": [
+        "Output",
+        "Output",
         0
       ],
       "inherited_shortname": 1

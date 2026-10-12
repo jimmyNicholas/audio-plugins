@@ -3,7 +3,14 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const { createEngine, createRouter, createTap, bendForCents, hertzForPitch } = require("../tap.js");
+const {
+  createEngine,
+  createRouter,
+  createSemitoneRouter,
+  createTap,
+  bendForCents,
+  hertzForPitch,
+} = require("../tap.js");
 
 // Runs raw MIDI bytes through the whole device and returns what came out.
 function setup() {
@@ -14,7 +21,17 @@ function setup() {
     bytes.forEach(tap.input);
     return out.slice();
   };
+  outputs.set(tap, out);
   return { tap, play };
+}
+
+// What the device sent while running fn, for changes made from the panel.
+const outputs = new WeakMap();
+function captured(tap, fn) {
+  const out = outputs.get(tap);
+  out.length = 0;
+  fn();
+  return out.slice();
 }
 
 // Splits output bytes into 3 byte channel messages. Fine for the notes, bends and controllers used here.
@@ -393,6 +410,54 @@ test("all notes off stops every held note", () => {
   assert.equal(router.activeNotes(), 0);
 });
 
+// ---- Semitone router: plain MIDI on channel 1 ----
+
+function semitoneSetup() {
+  const out = [];
+  const router = createSemitoneRouter((byte) => out.push(byte));
+  const run = (fn) => {
+    out.length = 0;
+    fn(router);
+    return out.slice();
+  };
+  return { router, run };
+}
+
+test("semitone output rounds each pitch to the nearest note on channel 1, with no bend", () => {
+  const { run } = semitoneSetup();
+  assert.deepEqual(run((r) => r.noteOn(60, 60.3, 100)), [0x90, 60, 100]);
+  assert.deepEqual(run((r) => r.noteOn(62, 71.7, 90)), [0x90, 72, 90]);
+  assert.deepEqual(run((r) => r.noteOn(64, 64.5, 80)), [0x90, 65, 80]);
+  assert.deepEqual(run((r) => r.noteOff(62, 40)), [0x80, 72, 40]);
+});
+
+test("semitone output keeps notes in the MIDI range", () => {
+  const { run } = semitoneSetup();
+  assert.deepEqual(run((r) => r.noteOn(0, -0.4, 100)), [0x90, 0, 100]);
+  assert.deepEqual(run((r) => r.noteOn(127, 130, 100)), [0x90, 127, 100]);
+});
+
+test("two keys on one note: the note off waits for the last of them", () => {
+  const { router, run } = semitoneSetup();
+  assert.deepEqual(run((r) => r.noteOn(60, 64.2, 100)), [0x90, 64, 100]);
+  assert.deepEqual(run((r) => r.noteOn(64, 64, 90)), [0x80, 64, 0, 0x90, 64, 90]); // restarted
+  assert.equal(router.activeNotes(), 2);
+  assert.deepEqual(run((r) => r.noteOff(60, 0)), []); // 64 still held
+  assert.deepEqual(run((r) => r.aftertouch(64, 30)), [0xa0, 64, 30]);
+  assert.deepEqual(run((r) => r.noteOff(64, 20)), [0x80, 64, 20]);
+  assert.equal(router.activeNotes(), 0);
+  assert.equal(run((r) => r.noteOff(64, 0)).length, 0); // and no second note off
+});
+
+test("semitone all notes off stops each sounding note once", () => {
+  const { router, run } = semitoneSetup();
+  run((r) => r.noteOn(60, 60, 100));
+  run((r) => r.noteOn(61, 60.4, 100)); // restarts 60
+  run((r) => r.noteOn(64, 65, 100));
+  assert.deepEqual(run((r) => r.allNotesOff()), [0x80, 60, 0, 0x80, 65, 0]);
+  assert.equal(router.activeNotes(), 0);
+});
+
 // ---- Whole device: MIDI bytes in, MPE bytes out ----
 
 test("A then B, release both: A now sounds at B's pitch", () => {
@@ -563,6 +628,122 @@ test("no stuck notes after fast playing with more than 15 keys held", () => {
   for (const [key, count] of sounding) assert.equal(count, 0, `${key} is stuck`);
 });
 
+// ---- Whole device with Output on Semitone ----
+
+const MPE = 0;
+const SEMITONE = 1;
+
+function semitoneDevice() {
+  const device = setup();
+  device.tap.setOutput(SEMITONE);
+  return device;
+}
+
+test("Semitone output: Swap stays exact on channel 1", () => {
+  const { play } = semitoneDevice();
+  play([0x90, 69, 100, 0x80, 69, 0]);
+  play([0x90, 71, 100, 0x80, 71, 0]);
+  assert.deepEqual(play([0x90, 69, 100]), [0x90, 71, 100]);
+  assert.deepEqual(play([0x80, 69, 0]), [0x80, 71, 0]);
+});
+
+test("Semitone output: Move stays exact", () => {
+  const { tap, play } = semitoneDevice();
+  tap.setMode(MOVE);
+  tap.setSemitones(-2);
+  play([0x90, 60, 100, 0x80, 60, 0]);
+  assert.deepEqual(play([0x90, 60, 100]), [0x90, 58, 100]);
+});
+
+test("Semitone output: Gravity is rounded to the nearest semitone", () => {
+  const { tap, play } = semitoneDevice();
+  tap.setMode(GRAVITY);
+  tap.setStrength(5);
+  play([0x90, 57, 100, 0x80, 57, 0]); // A3, 220 Hz
+  play([0x90, 69, 100, 0x80, 69, 0]); // A4, 440 Hz: A3 goes to 264 Hz, note 60.16
+  assert.deepEqual(play([0x90, 57, 100]), [0x90, 60, 100]);
+});
+
+test("Semitone output: two keys tuned to one note do not stick", () => {
+  const { tap, play } = semitoneDevice();
+  tap.setMode(GRAVITY);
+  tap.setStrength(10);
+  play([0x90, 60, 100, 0x80, 60, 0]);
+  play([0x90, 64, 100, 0x80, 64, 0]); // key 60 is pulled onto E
+  assert.deepEqual(play([0x90, 60, 100]), [0x90, 64, 100]);
+  assert.deepEqual(play([0x90, 64, 100]), [0x80, 64, 0, 0x90, 64, 100]); // E restarts
+  assert.deepEqual(play([0x80, 60, 0]), []); // E is still held by key 64
+  assert.deepEqual(play([0x80, 64, 0]), [0x80, 64, 0]);
+  assert.equal(tap.activeNotes(), 0);
+});
+
+test("Semitone output: controllers and the pedal still pass through on channel 1", () => {
+  const { play } = semitoneDevice();
+  assert.deepEqual(play([0xb3, 64, 127]), [0xb0, 64, 127]);
+  assert.deepEqual(play([0xe3, 0, 80]), [0xe0, 0, 80]);
+});
+
+test("changing Output stops held notes, and their keys still count as released", () => {
+  const { tap, play } = setup();
+  play([0x90, 60, 100, 0x90, 62, 100]); // channels 2 and 3
+  assert.deepEqual(
+    captured(tap, () => tap.setOutput(SEMITONE)),
+    [0x81, 60, 0, 0x82, 62, 0],
+  );
+  assert.equal(tap.activeNotes(), 0);
+  assert.deepEqual(play([0x80, 60, 0, 0x80, 62, 0]), []); // already stopped
+  assert.deepEqual(play([0x90, 60, 100]), [0x90, 62, 100]); // 60 <-> 62
+  assert.deepEqual(captured(tap, () => tap.setOutput(MPE)), [0x80, 62, 0]);
+  assert.deepEqual(play([0x80, 60, 0]), []);
+});
+
+test("Output settings that are not numbers or are the same again change nothing", () => {
+  const { tap, play } = setup();
+  play([0x90, 60, 100]);
+  tap.setOutput("bang");
+  tap.setOutput(MPE);
+  assert.equal(tap.activeNotes(), 1);
+  tap.setOutput(5); // anything else is MPE
+  assert.equal(tap.activeNotes(), 1);
+});
+
+test("no stuck notes in Semitone output after fast playing in Gravity", () => {
+  const { tap, play } = semitoneDevice();
+  tap.setMode(GRAVITY);
+  tap.setStrength(6);
+  let seed = 7;
+  const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const held = new Set();
+  const sounding = new Map(); // note -> count of note ons minus note offs
+  const track = (out) => {
+    for (const [status, note] of messages(out)) {
+      assert.equal(status & 0x0f, 0, "everything goes out on channel 1");
+      if ((status & 0xf0) === 0x90) {
+        assert.ok(!sounding.get(note), `second voice on ${note}`);
+        sounding.set(note, 1);
+      }
+      if ((status & 0xf0) === 0x80) {
+        assert.equal(sounding.get(note), 1, `note off for ${note} that is not sounding`);
+        sounding.set(note, 0);
+      }
+    }
+  };
+  for (let i = 0; i < 2000; i++) {
+    const note = 48 + Math.floor(random() * 12);
+    if (held.has(note) && random() < 0.6) {
+      held.delete(note);
+      track(play([0x80, note, 0]));
+    } else {
+      held.add(note);
+      track(play([0x90, note, 100]));
+    }
+    if (i % 97 === 0) track(play([0xb0, 64, random() < 0.5 ? 127 : 0]));
+  }
+  for (const note of held) track(play([0x80, note, 0]));
+  assert.equal(tap.activeNotes(), 0);
+  for (const [note, count] of sounding) assert.equal(count, 0, `${note} is stuck`);
+});
+
 // ---- Max glue: tap.js loaded as Max loads it, with a fake patcher ----
 
 function loadInMax(panel) {
@@ -608,4 +789,12 @@ test("panel messages change the mode and settings, and only a press resets", () 
   max.strength(10);
   play([0x80, 60, 0, 0x90, 67, 100, 0x80, 67, 0]);
   assert.deepEqual(play([0x90, 60, 100]).at(-1), [67, 100]);
+});
+
+test("on load the device reads Output from the panel, and panel messages change it", () => {
+  const { max, play } = loadInMax({ output: SEMITONE });
+  assert.deepEqual(play([0x90, 60, 100]), [[60, 100]]); // plain note on, no bend
+  max.output(MPE);
+  play([0x80, 60, 0]);
+  assert.equal(play([0x90, 62, 100]).length, 2); // bend then note
 });

@@ -1,10 +1,13 @@
 // The Annoying Piano as a Max for Live MIDI effect.
 //
 // Every key you release changes the pitch of keys you play later. Reads raw MIDI bytes
-// from [midiin] and writes MPE bytes for [midiout], so each note can have its own pitch:
+// from [midiin] and writes them for [midiout] in one of two ways, chosen by Output.
+// MPE, so each note can have its own pitch:
 // - each note on gets its own channel, 2 to 16, with a pitch bend sent just before it
 // - note off goes out on the note's channel
 // - everything else goes out on channel 1, the MPE master channel
+// Semitone, for instruments without MPE: plain notes on channel 1, each pitch rounded to
+// the nearest semitone.
 //
 // Written in ES5 for Max 8's js object. Also loads in Node for the tests.
 
@@ -25,6 +28,10 @@ var SWAP = 0;
 var GRAVITY = 1;
 var MOVE = 2;
 var MAX_STRENGTH = 10;
+
+// Outputs, in the order of the panel's Output tab.
+var MPE = 0;
+var SEMITONE = 1;
 
 function hertzForPitch(pitch) {
   return 440 * Math.pow(2, (pitch - 69) / 12);
@@ -249,10 +256,82 @@ function createRouter(send) {
   };
 }
 
+// Plain MIDI on channel 1 for instruments without MPE. Each pitch is rounded to the nearest
+// semitone, so two held keys can share a note. The second key restarts the note (a note
+// off, then its note on) so the instrument never has two voices on one note, and the note
+// off goes out only when the last of the keys is released. Same interface as createRouter.
+function createSemitoneRouter(send) {
+  var noteForKey = []; // -1 when the key has no note
+  var keysOnNote = []; // how many keys hold each note
+  for (var i = 0; i < NUM_NOTES; i++) {
+    noteForKey[i] = -1;
+    keysOnNote[i] = 0;
+  }
+
+  function noteOn(key, pitch, velocity) {
+    var note = Math.max(0, Math.min(NUM_NOTES - 1, Math.round(pitch)));
+    if (keysOnNote[note] > 0) {
+      send(0x80);
+      send(note);
+      send(0);
+    }
+    send(0x90);
+    send(note);
+    send(velocity);
+    noteForKey[key] = note;
+    keysOnNote[note]++;
+  }
+
+  // Returns false if the key has no note.
+  function noteOff(key, velocity) {
+    var note = noteForKey[key];
+    if (note === -1) return false;
+    noteForKey[key] = -1;
+    keysOnNote[note]--;
+    if (keysOnNote[note] === 0) {
+      send(0x80);
+      send(note);
+      send(velocity);
+    }
+    return true;
+  }
+
+  function aftertouch(key, pressure) {
+    var note = noteForKey[key];
+    if (note === -1) return;
+    send(0xa0);
+    send(note);
+    send(pressure);
+  }
+
+  function allNotesOff() {
+    for (var key = 0; key < NUM_NOTES; key++) {
+      if (noteForKey[key] !== -1) noteOff(key, 0);
+    }
+  }
+
+  return {
+    noteOn: noteOn,
+    noteOff: noteOff,
+    aftertouch: aftertouch,
+    allNotesOff: allNotesOff,
+    // Keys holding a note, so two keys on one note count twice.
+    activeNotes: function () {
+      var count = 0;
+      for (var key = 0; key < NUM_NOTES; key++) {
+        if (noteForKey[key] !== -1) count++;
+      }
+      return count;
+    },
+  };
+}
+
 // The whole device: parses MIDI bytes, retunes notes and routes them.
 function createTap(send) {
   var engine = createEngine();
-  var router = createRouter(send);
+  var routers = [createRouter(send), createSemitoneRouter(send)];
+  var output = MPE;
+  var router = routers[output];
 
   // Keys that are down, so a stray note off (say the device loaded while a key was held)
   // does not count as a release.
@@ -290,6 +369,17 @@ function createTap(send) {
       for (var key = 0; key < NUM_NOTES; key++) keysDown[key] = false;
     }
     sendAll([0xb0, number, value]);
+  }
+
+  // Held notes are stopped first so none get stuck. Their keys still count as released
+  // when they come up, as with a stolen note.
+  function setOutput(value) {
+    if (!isNumber(value)) return;
+    var next = Math.round(value) === SEMITONE ? SEMITONE : MPE;
+    if (next === output) return;
+    router.allNotesOff();
+    output = next;
+    router = routers[output];
   }
 
   function handleMessage(bytes) {
@@ -344,7 +434,10 @@ function createTap(send) {
 
   return {
     input: input,
-    activeNotes: router.activeNotes,
+    activeNotes: function () {
+      return router.activeNotes();
+    },
+    setOutput: setOutput,
     setMode: engine.setMode,
     setStrength: engine.setStrength,
     setSemitones: engine.setSemitones,
@@ -374,6 +467,10 @@ function semitones(value) {
   tap.setSemitones(value);
 }
 
+function output(value) {
+  tap.setOutput(value);
+}
+
 // The Reset button may send 1 then 0, or a bang. Only the press resets.
 function reset(value) {
   if (value === 0) return;
@@ -387,6 +484,7 @@ function sync() {
     ["mode", mode],
     ["strength", strength],
     ["semitones", semitones],
+    ["output", output],
   ];
   for (var i = 0; i < controls.length; i++) {
     var control = this.patcher.getnamed(controls[i][0]);
@@ -400,6 +498,7 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     createEngine: createEngine,
     createRouter: createRouter,
+    createSemitoneRouter: createSemitoneRouter,
     createTap: createTap,
     bendForCents: bendForCents,
     hertzForPitch: hertzForPitch,

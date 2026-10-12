@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-12 (ticket 03 passed in Live, ticket 04 next). Branch: `claude/codebase-vst-ableton-puxbqz`.
+Last updated 2026-10-12 (ticket 04 built, waiting for a test in Live). Branch: `claude/codebase-vst-ableton-puxbqz`.
 
 ## Goal
 
@@ -13,7 +13,8 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 01 MPE spike and repo setup | **Done.** Passed in Live on 2026-10-11; results below. |
 | 02 Engine, channels and Swap | **Done.** Passed in Live on 2026-10-12: every check below worked and `npm test` passed. |
 | 03 Gravity, Move and the panel | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
-| 04 to 05 | Not started |
+| 04 Semitone mode | **Built, not yet tested in Live.** `npm test` passes. |
+| 05 | Not started |
 
 ## Ticket 01 results (2026-10-11)
 
@@ -50,19 +51,30 @@ Live 11.0.10 is before 11.3, so the only MPE instruments available are Wavetable
 - Loading: `live.thisdevice` sends `sync`, which reads every control by its scripting name. `tap.js` also syncs when `autowatch` reloads it, so the panel and the engine stay in step after a `git pull`.
 - The Max glue is tested too: the tests load `tap.js` in a sandbox with a fake patcher.
 
-## Testing ticket 03 in Live
+## Ticket 04: what was built
+
+- `tap.js`: `createSemitoneRouter`, with the same interface as the MPE router, and an Output setting that picks between them.
+  - Semitone sends plain note on, note off and poly aftertouch on channel 1, each pitch rounded to the nearest note (0 to 127). No bends. Swap and Move stay exact because their pitches are whole notes; Gravity is rounded.
+  - Two held keys on the same note: the second key restarts the note (a note off, then its own note on), so the instrument never has two voices on one note. The note off goes out only when the last of the keys is released.
+  - Changing Output stops every held note through the old output, so nothing sticks. Those keys still count as released when they come up, as with a stolen note. Changing Output does not reset the pitches.
+  - There is no voice limit in Semitone, so no stealing.
+- `TAP.maxpat` and `TAP.amxd`: a `live.tab` Output (MPE, Semitone; default MPE) under Reset, saved with the set and read by `sync` on load.
+- "Patch supports MPE" stays on. Notes on channel 1 should reach a non-MPE instrument such as Operator as ordinary notes; the test in Live confirms it.
+
+## Testing ticket 04 in Live
 
 The patch changed, so drag the device in again.
 
 1. `git pull` in Cursor, then `npm test --prefix m4l`. The last lines should show `# fail 0`.
-2. Take the old TAP off the Wavetable track and drag **Places > m4l > TAP.amxd** in its place. The panel shows Mode, Strength, Semitones and Reset.
-3. **Swap** still works as in ticket 02.
-4. **Move**, Semitones 1: play a key and release it, again and again. It goes up a semitone each time. Set Semitones to -2: it comes down two at a time.
-5. **Gravity**, Strength 2: play A, release, play the E above, release. Play A again: it is a little sharp of A. Set Strength to 10 and repeat with fresh keys: A now sounds the same as E.
-6. **Mode resets:** retune a few keys, then change mode. Every key is back at concert pitch. Retune again, press **Reset**: the same, and the mode stays.
-7. **Saved with the set:** choose Gravity, Strength 6, Semitones -1. Save the set, close it and open it again. The panel shows those values, Gravity is on, and every key starts at concert pitch.
-8. **Automation:** in Arrangement view, pick TAP and Mode (and then Strength) in the automation lanes, draw a change and play it back. The panel follows.
-9. If the device shows an error, open it in the Max editor and copy the red lines from the Max Console.
+2. Make a MIDI track with **TAP.amxd** then **Operator**. The panel now has an Output tab under Reset. Set it to **Semitone**.
+3. **Swap:** play A, release, play B, release. Play A again: it sounds as B.
+4. **Move**, Semitones 1: release a key again and again. It goes up a semitone each time.
+5. **Gravity**, Strength 5: play the A below middle C, release, play the A above it, release. Play the low A again: it sounds as middle C (rounded from slightly sharp of C).
+6. **Shared note:** Gravity, Strength 10. Play C, release, play E, release. Hold C and E together: both sound E. Let go of C: E keeps sounding. Let go of E: it stops.
+7. **No stuck notes:** play fast in each mode, with and without the pedal, for a while. Nothing keeps ringing.
+8. **Switching:** hold a chord and change Output. The chord stops and nothing sticks. Back on a Wavetable track with Output on MPE, everything works as in ticket 03.
+9. **Saved with the set:** Output saves with the set like the other controls.
+10. If the device shows an error, open it in the Max editor and copy the red lines from the Max Console.
 
 ## Why not the VST
 
@@ -93,4 +105,5 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 
 ## Next steps
 
-1. Ticket 04: Semitone mode ([`tickets/04-semitone-mode.md`](tickets/04-semitone-mode.md)).
+1. Test ticket 04 in Live (steps above).
+2. Ticket 05: Drift view ([`tickets/05-drift-view.md`](tickets/05-drift-view.md)).

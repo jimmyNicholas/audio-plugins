@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-12 (ticket 05 built, waiting for a test in Live). Branch: `claude/codebase-vst-ableton-puxbqz`.
+Last updated 2026-10-12 (ticket 05.2 built, waiting for a test in Live). Branch: `claude/codebase-vst-ableton-puxbqz`.
 
 ## Goal
 
@@ -14,8 +14,8 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 02 Engine, channels and Swap | **Done.** Passed in Live on 2026-10-12: every check below worked and `npm test` passed. |
 | 03 Gravity, Move and the panel | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 04 Semitone mode | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
-| 05 Drift view | **Built, not yet tested in Live.** `npm test` passes. |
-| 05.2 Picture mode | Planned (user's idea, 2026-10-12). Not started. |
+| 05 Drift view | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
+| 05.2 Picture mode | **Built, not yet tested in Live.** `npm test` passes. |
 
 ## Ticket 01 results (2026-10-11)
 
@@ -100,6 +100,29 @@ The patch changed, so drag the device in again.
 9. Close and reopen the window: it shows the current drift, not a blank keyboard.
 10. If the window does not open or shows an error, open the device in the Max editor and copy the red lines from the Max Console.
 
+## Ticket 05.2: what was built
+
+- The user's idea: a pixel art picture that scrambles as the piano drifts. They chose built-in art (a landscape) and a Keys / Picture switch in the existing window.
+- `drift-view.js` only. No change to `tap.js`, the patch or the device file.
+  - `LANDSCAPE`: 16 by 8 letters, one per note, note 0 top left, coloured from `LANDSCAPE_COLOURS` (sky, cloud, sun, snowy mountain, hills, lake, trees, field).
+  - `slotSquares(slot, cents)`: each key's slot shows the square for the pitch it now plays. Whole note drift shows another square (Swap trades two, Move shifts one); drift between notes blends the two nearest squares; pitches past either end show the end square.
+  - Keys and Picture buttons at the right of the header. The choice lasts while the device is loaded; it is not a Live parameter.
+  - Hover in Picture mode outlines the square and shows the same text as in Keys mode.
+- Tests: the mapping, the layout, the switch, a swap in the drawn picture, and hover.
+
+## Testing ticket 05.2 in Live
+
+Only `drift-view.js` changed, and it uses `autowatch`, so a loaded device picks it up after `git pull`. If the window looks unchanged, drag the device in again.
+
+1. `git pull` in Cursor, then `npm test --prefix m4l`. The last lines should show `# fail 0`.
+2. Open **Drift view** and click **Picture** at the top right. A landscape appears: sky, cloud, sun, mountain, hills, lake and trees.
+3. **Swap:** release keys. Squares trade places in pairs and the picture scrambles.
+4. **Move**, Semitones 1: release one key a few times. Its square steps along to the next squares.
+5. **Gravity**, Strength 2: squares smear into the colours of their neighbours.
+6. **Reset** or a mode change puts the picture back together.
+7. Hover over a square: the top line names its key and drift. Click **Keys** to go back to the keyboard.
+8. **Speed:** fast passages with Picture showing feel as tight as before.
+
 ## Why not the VST
 
 Ableton merges all MIDI channels into one when MIDI goes from track to track, so the VST's per-note bends never reached Wavetable (VST ticket 02). The VST in `plugin/` is parked; ask the user before deleting it. History: [`../vst/HANDOFF.md`](../vst/HANDOFF.md).
@@ -129,6 +152,5 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 
 ## Next steps
 
-1. Test ticket 05 in Live (steps above).
-2. Then ticket 05.2: picture mode in the drift window ([`tickets/05.2-picture-mode.md`](tickets/05.2-picture-mode.md)).
-3. After that, the only item left in the spec is "later: save the pitch table with the set".
+1. Test ticket 05.2 in Live (steps above).
+2. After that, the only item left in the spec is "later: save the pitch table with the set".

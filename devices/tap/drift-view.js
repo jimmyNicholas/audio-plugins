@@ -5,6 +5,11 @@
 // red when sharp and blue when flat, deeper the further they have gone, and a bar above
 // each key shows the same. Hover over a key to read its offset.
 //
+// Picture mode (the Keys / Picture switch in the header) shows a 16 by 8 pixel art
+// landscape, one square per note, note 0 at the top left. Each key's slot shows the square
+// for the pitch it now plays, so Swap trades squares, Move shifts them, Gravity blends two
+// neighbours, and Reset puts the picture back together.
+//
 // Written in ES5 for Max 8's jsui. The tests load it in Node with a fake mgraphics.
 
 autowatch = 1;
@@ -24,6 +29,13 @@ var HEADER_HEIGHT = 22;
 var LANE_HEIGHT = 72;
 var LABEL_HEIGHT = 14;
 
+var PICTURE_COLUMNS = 16;
+var PICTURE_ROWS = 8;
+var BUTTON_WIDTH = 60;
+var BUTTON_GAP = 4;
+var KEYS = "keys";
+var PICTURE = "picture";
+
 var BACKGROUND = [0.15, 0.15, 0.15];
 var TEXT = [0.85, 0.85, 0.85];
 var GRID = [0.32, 0.32, 0.32];
@@ -32,6 +44,32 @@ var BLACK_KEY = [0.12, 0.12, 0.12];
 var SHARP = [0.9, 0.25, 0.2];
 var FLAT = [0.2, 0.45, 0.95];
 var HOVER = [1, 0.8, 0.2];
+var BUTTON_ON = [0.45, 0.45, 0.45];
+
+// The landscape, one letter per note in reading order, coloured from LANDSCAPE_COLOURS.
+var LANDSCAPE = [
+  "aaaaaaaaaaaaaaaa",
+  "aacccaaaaaaassaa",
+  "bbbbccbbbwbbssbb",
+  "bbbbbbbbwwwbbbbb",
+  "bbbbbbbmmmmmbbwb",
+  "gggbbmmmmmmmmmmm",
+  "gdgggggllllggggd",
+  "ytyyyylllllyyyyt",
+];
+var LANDSCAPE_COLOURS = {
+  a: [0.24, 0.44, 0.78], // high sky
+  b: [0.5, 0.7, 0.93], // low sky
+  c: [0.96, 0.96, 0.98], // cloud
+  s: [1, 0.82, 0.25], // sun
+  w: [0.94, 0.95, 1], // snow
+  m: [0.45, 0.42, 0.55], // mountain
+  g: [0.3, 0.6, 0.28], // hills
+  d: [0.1, 0.36, 0.16], // tree
+  t: [0.42, 0.28, 0.15], // trunk
+  l: [0.2, 0.5, 0.78], // lake
+  y: [0.58, 0.76, 0.32], // field
+};
 
 // As Live names them: note 60, middle C, is C3.
 function noteName(note) {
@@ -133,11 +171,72 @@ function describe(drift, hovered) {
   return count + (count === 1 ? " key has" : " keys have") + " drifted. Hover over a key to see by how much.";
 }
 
+// The landscape colour of a square, 0 to 127.
+function squareColour(square) {
+  var row = Math.floor(square / PICTURE_COLUMNS);
+  return LANDSCAPE_COLOURS[LANDSCAPE[row].charAt(square % PICTURE_COLUMNS)];
+}
+
+// What a key's slot shows: the square for the pitch the key now plays. A pitch between
+// notes blends the two nearest squares, t of the way to the second. Pitches past either
+// end show the end square.
+function slotSquares(slot, cents) {
+  if (amount(cents) === 0) return { from: slot, to: slot, t: 0 };
+  var pitch = Math.max(0, Math.min(NUM_NOTES - 1, slot + cents / 100));
+  var from = Math.floor(pitch);
+  var t = pitch - from;
+  if (t < 0.005) return { from: from, to: from, t: 0 };
+  if (t > 0.995) return { from: from + 1, to: from + 1, t: 0 };
+  return { from: from, to: from + 1, t: t };
+}
+
+function slotColour(slot, cents) {
+  var squares = slotSquares(slot, cents);
+  return mix(squareColour(squares.from), squareColour(squares.to), squares.t);
+}
+
+// Where the picture sits: square size and the top left corner, centred below the header.
+function pictureLayout(width, height) {
+  var square = Math.max(1, Math.floor(Math.min((width - 8) / PICTURE_COLUMNS, (height - HEADER_HEIGHT - 4) / PICTURE_ROWS)));
+  return {
+    x: Math.floor((width - square * PICTURE_COLUMNS) / 2),
+    y: HEADER_HEIGHT + Math.floor((height - HEADER_HEIGHT - square * PICTURE_ROWS) / 2),
+    square: square,
+  };
+}
+
+// The slot under a point, or -1.
+function slotAt(layout, x, y) {
+  var column = Math.floor((x - layout.x) / layout.square);
+  var row = Math.floor((y - layout.y) / layout.square);
+  if (column < 0 || column >= PICTURE_COLUMNS || row < 0 || row >= PICTURE_ROWS) return -1;
+  return row * PICTURE_COLUMNS + column;
+}
+
+// The Keys and Picture switches at the right of the header: { name, x, width }.
+function buttonLayout(width) {
+  var picture = width - BUTTON_GAP - BUTTON_WIDTH;
+  return [
+    { name: KEYS, label: "Keys", x: picture - BUTTON_GAP - BUTTON_WIDTH, width: BUTTON_WIDTH },
+    { name: PICTURE, label: "Picture", x: picture, width: BUTTON_WIDTH },
+  ];
+}
+
+function buttonAt(width, x, y) {
+  if (y < 2 || y >= HEADER_HEIGHT - 2) return null;
+  var buttons = buttonLayout(width);
+  for (var i = 0; i < buttons.length; i++) {
+    if (x >= buttons[i].x && x < buttons[i].x + buttons[i].width) return buttons[i].name;
+  }
+  return null;
+}
+
 // ---- State and drawing ----
 
 var drift = [];
 for (var n = 0; n < NUM_NOTES; n++) drift.push(0);
 var hovered = -1;
+var showing = KEYS;
 
 function size() {
   return [box.rect[2] - box.rect[0], box.rect[3] - box.rect[1]];
@@ -214,14 +313,48 @@ function drawKeyboard(keys) {
   }
 }
 
+function drawButtons(width) {
+  var buttons = buttonLayout(width);
+  for (var i = 0; i < buttons.length; i++) {
+    var button = buttons[i];
+    if (button.name === showing) fillRect(button.x, 3, button.width, HEADER_HEIGHT - 6, BUTTON_ON);
+    else outlineRect(button.x, 3, button.width, HEADER_HEIGHT - 6, GRID);
+    setColour(TEXT);
+    drawText(button.label, button.x + 8, 15, 11);
+  }
+}
+
+function drawPicture() {
+  var layout = pictureLayout(size()[0], size()[1]);
+  for (var slot = 0; slot < NUM_NOTES; slot++) {
+    var x = layout.x + (slot % PICTURE_COLUMNS) * layout.square;
+    var y = layout.y + Math.floor(slot / PICTURE_COLUMNS) * layout.square;
+    fillRect(x, y, layout.square, layout.square, slotColour(slot, drift[slot]));
+  }
+  if (hovered >= 0) {
+    outlineRect(
+      layout.x + (hovered % PICTURE_COLUMNS) * layout.square,
+      layout.y + Math.floor(hovered / PICTURE_COLUMNS) * layout.square,
+      layout.square,
+      layout.square,
+      HOVER
+    );
+  }
+}
+
 function paint() {
   var width = size()[0];
-  var keys = keyLayout(width);
   fillRect(0, 0, width, size()[1], BACKGROUND);
   setColour(TEXT);
   drawText(describe(drift, hovered), 6, 15, 12);
-  drawBars(keys, width);
-  drawKeyboard(keys);
+  drawButtons(width);
+  if (showing === PICTURE) {
+    drawPicture();
+  } else {
+    var keys = keyLayout(width);
+    drawBars(keys, width);
+    drawKeyboard(keys);
+  }
 }
 
 // ---- Messages ----
@@ -237,7 +370,9 @@ function list() {
 function hover(x, y) {
   var keys = keyLayout(size()[0]);
   var next = -1;
-  if (y >= keyboardTop()) {
+  if (showing === PICTURE) {
+    next = slotAt(pictureLayout(size()[0], size()[1]), x, y);
+  } else if (y >= keyboardTop()) {
     next = keyAt(keys, x, y - keyboardTop(), keyboardHeight() * 0.62);
   } else if (y >= HEADER_HEIGHT) {
     next = nearestKey(keys, x);
@@ -252,6 +387,13 @@ function onidle(x, y) {
 }
 
 function onclick(x, y) {
+  var button = buttonAt(size()[0], x, y);
+  if (button !== null && button !== showing) {
+    showing = button;
+    hovered = -1;
+    mgraphics.redraw();
+    return;
+  }
   hover(x, y);
 }
 

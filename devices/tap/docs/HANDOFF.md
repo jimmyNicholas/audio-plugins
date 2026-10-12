@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-12 (ticket 02 passed in Live, ticket 03 next). Branch: `claude/codebase-vst-ableton-puxbqz`.
+Last updated 2026-10-12 (ticket 03 built, waiting for review and a test in Live). Branch: `claude/codebase-vst-ableton-puxbqz`.
 
 ## Goal
 
@@ -12,7 +12,8 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | --- | --- |
 | 01 MPE spike and repo setup | **Done.** Passed in Live on 2026-10-11; results below. |
 | 02 Engine, channels and Swap | **Done.** Passed in Live on 2026-10-12: every check below worked and `npm test` passed. |
-| 03 to 05 | Not started |
+| 03 Gravity, Move and the panel | **Built, not yet tested in Live.** Steps below. |
+| 04 to 05 | Not started |
 
 ## Ticket 01 results (2026-10-11)
 
@@ -37,14 +38,31 @@ Live 11.0.10 is before 11.3, so the only MPE instruments available are Wavetable
   - A note stolen because all 15 channels were busy still counts as released when its key comes up.
   - All notes off (CC 123) and all sound off (CC 120) stop every note without counting as releases. The pedal queue is kept.
 
-## Testing ticket 02 in Live
+## Ticket 03: what was built
+
+- `tap.js`: Gravity and Move, the Mode, Strength and Semitones settings, and Reset.
+  - Gravity works in Hertz with the web app's formula, then turns the result back into a pitch. At strength 10 it puts the last key exactly on the current key's pitch.
+  - Just below 10 the web formula overshoots a long way (strength 9.9 pulls ten times the gap), so a pitch that would fall below note 0 is held at note 0. The spec keeps the web formula, so this is unchanged; ask the user if it should be smoothed.
+  - Move shifts the released key, including on the very first release, as in the web app.
+  - Changing mode resets every key. Choosing the mode that is already on does not, so automation sending the same value again changes nothing. Changing Strength or Semitones never resets.
+  - Reset and mode changes also drop releases still waiting for the pedal.
+- `TAP.maxpat` and `TAP.amxd`: `live.tab` Mode, `live.dial` Strength (1 to 10, default 2), `live.numbox` Semitones (-2 to 2, default 1), `live.text` Reset. Each goes into the `js` through a `prepend`.
+- Loading: `live.thisdevice` sends `sync`, which reads every control by its scripting name. `tap.js` also syncs when `autowatch` reloads it, so the panel and the engine stay in step after a `git pull`.
+- The Max glue is tested too: the tests load `tap.js` in a sandbox with a fake patcher.
+
+## Testing ticket 03 in Live
+
+The patch changed, so drag the device in again.
 
 1. `git pull` in Cursor, then `npm test --prefix m4l`. The last lines should show `# fail 0`.
-2. On a MIDI track, load Wavetable, then drag **Places > m4l > TAP.amxd** to its left. Take the spike off the track.
-3. Play A, release it, then play B and release it. Play A again: it sounds at B's pitch, and B sounds at A's.
-4. Hold the sustain pedal and repeat with two other keys: nothing changes until the pedal lifts.
-5. Play fast and hold more than 15 notes at once. When you let go, nothing should keep sounding.
-6. If the device shows an error, open it in the Max editor and copy the red lines from the Max Console.
+2. Take the old TAP off the Wavetable track and drag **Places > m4l > TAP.amxd** in its place. The panel shows Mode, Strength, Semitones and Reset.
+3. **Swap** still works as in ticket 02.
+4. **Move**, Semitones 1: play a key and release it, again and again. It goes up a semitone each time. Set Semitones to -2: it comes down two at a time.
+5. **Gravity**, Strength 2: play A, release, play the E above, release. Play A again: it is a little sharp of A. Set Strength to 10 and repeat with fresh keys: A now sounds the same as E.
+6. **Mode resets:** retune a few keys, then change mode. Every key is back at concert pitch. Retune again, press **Reset**: the same, and the mode stays.
+7. **Saved with the set:** choose Gravity, Strength 6, Semitones -1. Save the set, close it and open it again. The panel shows those values, Gravity is on, and every key starts at concert pitch.
+8. **Automation:** in Arrangement view, pick TAP and Mode (and then Strength) in the automation lanes, draw a change and play it back. The panel follows.
+9. If the device shows an error, open it in the Max editor and copy the red lines from the Max Console.
 
 ## Why not the VST
 
@@ -75,4 +93,5 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 
 ## Next steps
 
-1. Ticket 03: Gravity, Move and the panel ([`tickets/03-modes-panel.md`](tickets/03-modes-panel.md)).
+1. Review ticket 03, then test it in Live with the steps above.
+2. Ticket 04: Semitone mode ([`tickets/04-semitone-mode.md`](tickets/04-semitone-mode.md)).

@@ -20,8 +20,26 @@ var CC_SUSTAIN = 64;
 var CC_ALL_SOUND_OFF = 120;
 var CC_ALL_NOTES_OFF = 123;
 
+// Modes, in the order of the panel's Mode tab.
+var SWAP = 0;
+var GRAVITY = 1;
+var MOVE = 2;
+var MAX_STRENGTH = 10;
+
 function hertzForPitch(pitch) {
   return 440 * Math.pow(2, (pitch - 69) / 12);
+}
+
+function pitchForHertz(hertz) {
+  return 69 + (12 * Math.log(hertz / 440)) / Math.LN2;
+}
+
+function isNumber(value) {
+  return typeof value === "number" && !isNaN(value);
+}
+
+function clamp(value, low, high) {
+  return Math.max(low, Math.min(high, value));
 }
 
 // 14-bit pitch bend value (8192 is centre) for an offset in cents.
@@ -47,21 +65,54 @@ function createEngine() {
   var lastReleased = -1;
   var pedalDown = false;
   var queue = [];
+  var mode = SWAP;
+  var strength = 2;
+  var semitones = 1;
 
+  // Releases still waiting for the pedal are dropped too, so lifting it changes nothing.
   function reset() {
     for (var note = 0; note < NUM_NOTES; note++) pitches[note] = note;
     lastReleased = -1;
+    queue = [];
+  }
+
+  function swap(last, current) {
+    var swapped = pitches[last];
+    pitches[last] = pitches[current];
+    pitches[current] = swapped;
+  }
+
+  // As in gravity.ts, in Hertz. Strength 10 divides by zero there, so here it pulls the
+  // last key exactly onto the current key. Just below 10 the web formula overshoots a long
+  // way, so the result is kept at or above note 0.
+  function gravity(last, current) {
+    if (strength >= MAX_STRENGTH) {
+      pitches[last] = pitches[current];
+      return;
+    }
+    var lastHertz = hertzForPitch(pitches[last]);
+    var currentHertz = hertzForPitch(pitches[current]);
+    var hertz = lastHertz - (lastHertz - currentHertz) / (MAX_STRENGTH - strength);
+    pitches[last] = hertz > hertzForPitch(0) ? pitchForHertz(hertz) : 0;
   }
 
   function apply(current) {
     // As in useKeyboard.ts: on the very first release the last key is the current key.
     var last = lastReleased < 0 ? current : lastReleased;
-    if (last !== current) {
-      var swapped = pitches[last];
-      pitches[last] = pitches[current];
-      pitches[current] = swapped;
-    }
+    if (mode === MOVE) pitches[current] += semitones;
+    else if (last !== current && mode === GRAVITY) gravity(last, current);
+    else if (last !== current) swap(last, current);
     lastReleased = current;
+  }
+
+  // Changing mode resets every key, as in the web app. The same mode again does not.
+  function setMode(value) {
+    if (!isNumber(value)) return;
+    var next = Math.round(value);
+    if (next !== SWAP && next !== GRAVITY && next !== MOVE) next = SWAP;
+    if (next === mode) return;
+    mode = next;
+    reset();
   }
 
   function noteReleased(note) {
@@ -83,6 +134,22 @@ function createEngine() {
     reset: reset,
     noteReleased: noteReleased,
     setPedal: setPedal,
+    setMode: setMode,
+    setStrength: function (value) {
+      if (isNumber(value)) strength = clamp(value, 1, MAX_STRENGTH);
+    },
+    setSemitones: function (value) {
+      if (isNumber(value)) semitones = clamp(Math.round(value), -2, 2);
+    },
+    mode: function () {
+      return mode;
+    },
+    strength: function () {
+      return strength;
+    },
+    semitones: function () {
+      return semitones;
+    },
     pitchForNote: function (note) {
       return pitches[note];
     },
@@ -278,6 +345,10 @@ function createTap(send) {
   return {
     input: input,
     activeNotes: router.activeNotes,
+    setMode: engine.setMode,
+    setStrength: engine.setStrength,
+    setSemitones: engine.setSemitones,
+    reset: engine.reset,
   };
 }
 
@@ -290,6 +361,41 @@ function msg_int(byte) {
   tap.input(byte);
 }
 
+// Messages from the panel. Each live.* control sends its value with a prepend.
+function mode(value) {
+  tap.setMode(value);
+}
+
+function strength(value) {
+  tap.setStrength(value);
+}
+
+function semitones(value) {
+  tap.setSemitones(value);
+}
+
+// The Reset button may send 1 then 0, or a bang. Only the press resets.
+function reset(value) {
+  if (value === 0) return;
+  tap.reset();
+}
+
+// Reads every setting from the panel. Sent by live.thisdevice once the device has loaded,
+// and run here too so a reload from autowatch picks the settings up again.
+function sync() {
+  var controls = [
+    ["mode", mode],
+    ["strength", strength],
+    ["semitones", semitones],
+  ];
+  for (var i = 0; i < controls.length; i++) {
+    var control = this.patcher.getnamed(controls[i][0]);
+    if (control) controls[i][1](control.getvalueof());
+  }
+}
+
+if (this.patcher) sync();
+
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     createEngine: createEngine,
@@ -297,5 +403,6 @@ if (typeof module !== "undefined" && module.exports) {
     createTap: createTap,
     bendForCents: bendForCents,
     hertzForPitch: hertzForPitch,
+    pitchForHertz: pitchForHertz,
   };
 }

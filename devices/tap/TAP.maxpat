@@ -12,8 +12,8 @@
     "rect": [
       100,
       100,
-      400,
-      260
+      640,
+      400
     ],
     "openrect": [
       0,
@@ -93,7 +93,7 @@
           ],
           "patching_rect": [
             24,
-            64,
+            264,
             52,
             20
           ],
@@ -113,7 +113,7 @@
           "outlettype": [],
           "patching_rect": [
             24,
-            104,
+            304,
             47,
             20
           ],
@@ -128,7 +128,7 @@
           "numoutlets": 0,
           "patching_rect": [
             24,
-            160,
+            344,
             120,
             18
           ],
@@ -144,25 +144,314 @@
       },
       {
         "box": {
-          "id": "obj-11",
-          "maxclass": "comment",
+          "id": "obj-20",
+          "maxclass": "live.tab",
+          "varname": "mode",
           "numinlets": 1,
-          "numoutlets": 0,
+          "numoutlets": 3,
+          "outlettype": [
+            "",
+            "",
+            "float"
+          ],
+          "parameter_enable": 1,
+          "num_lines_patching": 1,
+          "num_lines_presentation": 1,
           "patching_rect": [
-            24,
-            184,
             120,
-            18
+            24,
+            150,
+            20
           ],
           "presentation": 1,
           "presentation_rect": [
             4,
-            24,
+            26,
+            150,
+            20
+          ],
+          "saved_attribute_attributes": {
+            "valueof": {
+              "parameter_longname": "Mode",
+              "parameter_shortname": "Mode",
+              "parameter_type": 2,
+              "parameter_mmin": 0,
+              "parameter_mmax": 2,
+              "parameter_initial": [
+                0
+              ],
+              "parameter_initial_enable": 1,
+              "parameter_unitstyle": 9,
+              "parameter_enum": [
+                "Swap",
+                "Gravity",
+                "Move"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "box": {
+          "id": "obj-21",
+          "maxclass": "live.dial",
+          "varname": "strength",
+          "numinlets": 1,
+          "numoutlets": 2,
+          "outlettype": [
+            "",
+            "float"
+          ],
+          "parameter_enable": 1,
+          "patching_rect": [
             120,
+            64,
+            44,
+            48
+          ],
+          "presentation": 1,
+          "presentation_rect": [
+            4,
+            56,
+            44,
+            48
+          ],
+          "saved_attribute_attributes": {
+            "valueof": {
+              "parameter_longname": "Strength",
+              "parameter_shortname": "Strength",
+              "parameter_type": 0,
+              "parameter_mmin": 1.0,
+              "parameter_mmax": 10.0,
+              "parameter_initial": [
+                2.0
+              ],
+              "parameter_initial_enable": 1,
+              "parameter_unitstyle": 1
+            }
+          }
+        }
+      },
+      {
+        "box": {
+          "id": "obj-22",
+          "maxclass": "live.numbox",
+          "varname": "semitones",
+          "numinlets": 1,
+          "numoutlets": 2,
+          "outlettype": [
+            "",
+            "float"
+          ],
+          "parameter_enable": 1,
+          "patching_rect": [
+            184,
+            80,
+            44,
+            15
+          ],
+          "presentation": 1,
+          "presentation_rect": [
+            60,
+            72,
+            44,
+            15
+          ],
+          "saved_attribute_attributes": {
+            "valueof": {
+              "parameter_longname": "Semitones",
+              "parameter_shortname": "Semitones",
+              "parameter_type": 1,
+              "parameter_mmin": -2,
+              "parameter_mmax": 2,
+              "parameter_initial": [
+                1
+              ],
+              "parameter_initial_enable": 1,
+              "parameter_unitstyle": 0
+            }
+          }
+        }
+      },
+      {
+        "box": {
+          "id": "obj-23",
+          "maxclass": "comment",
+          "numinlets": 1,
+          "numoutlets": 0,
+          "fontname": "Arial",
+          "patching_rect": [
+            240,
+            80,
+            60,
             18
           ],
-          "text": "Swap mode",
-          "fontname": "Arial"
+          "presentation": 1,
+          "presentation_rect": [
+            56,
+            56,
+            60,
+            18
+          ],
+          "text": "Semitones"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-24",
+          "maxclass": "live.text",
+          "varname": "reset",
+          "numinlets": 1,
+          "numoutlets": 2,
+          "outlettype": [
+            "",
+            ""
+          ],
+          "parameter_enable": 1,
+          "mode": 0,
+          "text": "Reset",
+          "texton": "Reset",
+          "patching_rect": [
+            320,
+            64,
+            44,
+            15
+          ],
+          "presentation": 1,
+          "presentation_rect": [
+            4,
+            112,
+            44,
+            15
+          ],
+          "saved_attribute_attributes": {
+            "valueof": {
+              "parameter_longname": "Reset",
+              "parameter_shortname": "Reset",
+              "parameter_type": 2,
+              "parameter_mmin": 0,
+              "parameter_mmax": 1,
+              "parameter_initial": [
+                0
+              ],
+              "parameter_initial_enable": 1,
+              "parameter_unitstyle": 9,
+              "parameter_enum": [
+                "off",
+                "on"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "box": {
+          "id": "obj-30",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 3,
+          "outlettype": [
+            "bang",
+            "int",
+            "int"
+          ],
+          "patching_rect": [
+            440,
+            24,
+            85,
+            20
+          ],
+          "text": "live.thisdevice"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-31",
+          "maxclass": "message",
+          "numinlets": 2,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            440,
+            64,
+            34,
+            20
+          ],
+          "text": "sync"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-40",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            120,
+            184,
+            80,
+            20
+          ],
+          "text": "prepend mode"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-41",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            208,
+            184,
+            96,
+            20
+          ],
+          "text": "prepend strength"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-42",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            312,
+            184,
+            104,
+            20
+          ],
+          "text": "prepend semitones"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-43",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            424,
+            184,
+            80,
+            20
+          ],
+          "text": "prepend reset"
         }
       }
     ],
@@ -190,9 +479,149 @@
             0
           ]
         }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-40",
+            0
+          ],
+          "source": [
+            "obj-20",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-41",
+            0
+          ],
+          "source": [
+            "obj-21",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-42",
+            0
+          ],
+          "source": [
+            "obj-22",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-43",
+            0
+          ],
+          "source": [
+            "obj-24",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-2",
+            0
+          ],
+          "source": [
+            "obj-40",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-2",
+            0
+          ],
+          "source": [
+            "obj-41",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-2",
+            0
+          ],
+          "source": [
+            "obj-42",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-2",
+            0
+          ],
+          "source": [
+            "obj-43",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-31",
+            0
+          ],
+          "source": [
+            "obj-30",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-2",
+            0
+          ],
+          "source": [
+            "obj-31",
+            0
+          ]
+        }
       }
     ],
     "parameters": {
+      "obj-20": [
+        "Mode",
+        "Mode",
+        0
+      ],
+      "obj-21": [
+        "Strength",
+        "Strength",
+        0
+      ],
+      "obj-22": [
+        "Semitones",
+        "Semitones",
+        0
+      ],
+      "obj-24": [
+        "Reset",
+        "Reset",
+        0
+      ],
       "inherited_shortname": 1
     }
   }

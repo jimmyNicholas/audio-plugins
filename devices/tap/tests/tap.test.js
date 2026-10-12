@@ -1,5 +1,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
 const { createEngine, createRouter, createTap, bendForCents, hertzForPitch } = require("../tap.js");
 
 // Runs raw MIDI bytes through the whole device and returns what came out.
@@ -130,6 +133,180 @@ test("pressing the pedal twice does not lose the queue", () => {
   assert.equal(engine.pitchForNote(60), 62);
   engine.setPedal(false); // nothing left to apply
   assert.equal(engine.pitchForNote(60), 62);
+});
+
+// ---- Engine: Gravity, Move and settings (from __tests__/lib/data/modes) ----
+
+const SWAP = 0;
+const GRAVITY = 1;
+const MOVE = 2;
+
+function near(actual, expected, tolerance = 1e-9) {
+  assert.ok(Math.abs(actual - expected) < tolerance, `${actual} is not close to ${expected}`);
+}
+
+test("the default mode is Swap, strength 2 and 1 semitone", () => {
+  const engine = createEngine();
+  assert.equal(engine.mode(), SWAP);
+  assert.equal(engine.strength(), 2);
+  assert.equal(engine.semitones(), 1);
+});
+
+test("Gravity pulls the last key toward the current key as in the web app", () => {
+  const engine = createEngine();
+  engine.setMode(GRAVITY);
+  engine.noteReleased(69); // A4, 440 Hz
+  engine.noteReleased(71); // B4, 493.88 Hz
+  // gravity.test.ts: 440 - (440 - 493.88) / (10 - 2) = 446.735 Hz
+  near(hertzForPitch(engine.pitchForNote(69)), 446.735, 1e-2);
+  assert.equal(engine.pitchForNote(71), 71); // the current key does not move
+});
+
+test("Gravity works in Hertz, so the pull follows the strength", () => {
+  const engine = createEngine();
+  engine.setMode(GRAVITY);
+  engine.setStrength(5);
+  engine.noteReleased(57); // A3, 220 Hz
+  engine.noteReleased(69); // A4, 440 Hz
+  near(hertzForPitch(engine.pitchForNote(57)), 220 + 220 / 5);
+});
+
+test("Gravity does nothing on the first release or when the same key is released twice", () => {
+  const engine = createEngine();
+  engine.setMode(GRAVITY);
+  engine.noteReleased(69);
+  assert.equal(engine.pitchForNote(69), 69);
+  engine.noteReleased(69);
+  assert.equal(engine.pitchForNote(69), 69);
+});
+
+test("Gravity at strength 10 pulls the last key exactly onto the current key", () => {
+  const engine = createEngine();
+  engine.setMode(GRAVITY);
+  engine.setStrength(10);
+  engine.noteReleased(60);
+  engine.noteReleased(67);
+  assert.equal(engine.pitchForNote(60), 67);
+  assert.equal(engine.pitchForNote(67), 67);
+});
+
+test("Gravity never gives a pitch below note 0, even when the web formula overshoots", () => {
+  const engine = createEngine();
+  engine.setMode(GRAVITY);
+  engine.setStrength(9.9); // pulls 10 times the gap: 880 - 4400 Hz
+  engine.noteReleased(81); // A5, 880 Hz
+  engine.noteReleased(69); // A4, 440 Hz
+  assert.equal(engine.pitchForNote(81), 0);
+});
+
+test("Move shifts the released key by the semitones setting, from the first release", () => {
+  const engine = createEngine();
+  engine.setMode(MOVE);
+  engine.noteReleased(69);
+  assert.equal(engine.pitchForNote(69), 70); // move.test.ts: 440 Hz up one is 466.16 Hz
+  near(hertzForPitch(engine.pitchForNote(69)), 466.16, 1e-2);
+  engine.noteReleased(69);
+  assert.equal(engine.pitchForNote(69), 71);
+});
+
+test("Move down shifts the released key down and leaves the last key alone", () => {
+  const engine = createEngine();
+  engine.setMode(MOVE);
+  engine.setSemitones(-1);
+  engine.noteReleased(69);
+  engine.noteReleased(71);
+  assert.equal(engine.pitchForNote(71), 70); // move.test.ts: 493.88 Hz down one is 466.16 Hz
+  assert.equal(engine.pitchForNote(69), 68);
+});
+
+test("Move at 0 semitones changes nothing", () => {
+  const engine = createEngine();
+  engine.setMode(MOVE);
+  engine.setSemitones(0);
+  engine.noteReleased(60);
+  assert.equal(engine.pitchForNote(60), 60);
+});
+
+test("settings are kept in range", () => {
+  const engine = createEngine();
+  engine.setStrength(0);
+  assert.equal(engine.strength(), 1);
+  engine.setStrength(11);
+  assert.equal(engine.strength(), 10);
+  engine.setSemitones(-3);
+  assert.equal(engine.semitones(), -2);
+  engine.setSemitones(5);
+  assert.equal(engine.semitones(), 2);
+  engine.setSemitones(1.4);
+  assert.equal(engine.semitones(), 1);
+  engine.setMode(3);
+  assert.equal(engine.mode(), SWAP);
+  engine.setMode(-1);
+  assert.equal(engine.mode(), SWAP);
+});
+
+test("settings that are not numbers are ignored", () => {
+  const engine = createEngine();
+  engine.setMode(MOVE);
+  engine.setMode("bang");
+  engine.setStrength("bang");
+  engine.setSemitones(NaN);
+  assert.equal(engine.mode(), MOVE);
+  assert.equal(engine.strength(), 2);
+  assert.equal(engine.semitones(), 1);
+});
+
+test("changing mode resets every key and forgets the last release", () => {
+  const engine = createEngine();
+  engine.noteReleased(69);
+  engine.noteReleased(71);
+  engine.setMode(MOVE);
+  assert.equal(engine.pitchForNote(69), 69);
+  assert.equal(engine.pitchForNote(71), 71);
+  engine.setMode(GRAVITY);
+  engine.noteReleased(60); // a first release again, so Gravity does nothing
+  assert.equal(engine.pitchForNote(71), 71);
+});
+
+test("choosing the mode that is already on keeps the pitches", () => {
+  const engine = createEngine();
+  engine.noteReleased(69);
+  engine.noteReleased(71);
+  engine.setMode(SWAP); // say automation sends the same value again
+  assert.equal(engine.pitchForNote(69), 71);
+});
+
+test("changing a setting does not reset the keys", () => {
+  const engine = createEngine();
+  engine.setMode(MOVE);
+  engine.noteReleased(60);
+  engine.setSemitones(2);
+  engine.setStrength(7);
+  assert.equal(engine.pitchForNote(60), 61);
+  engine.noteReleased(60);
+  assert.equal(engine.pitchForNote(60), 63);
+});
+
+test("reset drops releases still waiting for the pedal", () => {
+  const engine = createEngine();
+  engine.setPedal(true);
+  engine.noteReleased(60);
+  engine.noteReleased(62);
+  engine.reset();
+  engine.setPedal(false);
+  assert.equal(engine.pitchForNote(60), 60);
+  assert.equal(engine.pitchForNote(62), 62);
+});
+
+test("the pedal queue uses the mode that is on when the pedal lifts", () => {
+  const engine = createEngine();
+  engine.setMode(MOVE);
+  engine.setPedal(true);
+  engine.noteReleased(60);
+  engine.noteReleased(60);
+  engine.setSemitones(2);
+  engine.setPedal(false);
+  assert.equal(engine.pitchForNote(60), 64);
 });
 
 // ---- Router: MPE channels (from plugin/tests/MpeRouterTests.cpp and the spike tests) ----
@@ -330,6 +507,30 @@ test("real time and sysex pass through", () => {
   assert.deepEqual(play([0xf0, 1, 2, 0xf7]), [0xf0, 1, 2, 0xf7]);
 });
 
+test("the panel's mode, settings and reset reach the engine", () => {
+  const { tap, play } = setup();
+  tap.setMode(MOVE);
+  tap.setSemitones(2);
+  play([0x90, 60, 100, 0x80, 60, 0]); // C4 moves up 2
+  assert.deepEqual(messages(play([0x90, 60, 100])).at(-1).slice(1), [62, 100]);
+  play([0x80, 60, 0]); // up 2 again
+  tap.reset();
+  assert.deepEqual(messages(play([0x90, 60, 100])).at(-1).slice(1), [60, 100]);
+  play([0x80, 60, 0]);
+  tap.setMode(GRAVITY);
+  tap.setStrength(10);
+  play([0x90, 60, 100, 0x80, 60, 0, 0x90, 67, 100, 0x80, 67, 0]);
+  assert.deepEqual(messages(play([0x90, 60, 100])).at(-1).slice(1), [67, 100]);
+});
+
+test("changing mode leaves held notes sounding and they still stop", () => {
+  const { tap, play } = setup();
+  play([0x90, 60, 100]);
+  tap.setMode(MOVE);
+  assert.deepEqual(play([0x80, 60, 0]), [0x81, 60, 0]);
+  assert.equal(tap.activeNotes(), 0);
+});
+
 test("no stuck notes after fast playing with more than 15 keys held", () => {
   const { tap, play } = setup();
   let seed = 1;
@@ -360,4 +561,51 @@ test("no stuck notes after fast playing with more than 15 keys held", () => {
   for (const note of held) track(play([0x80, note, 0]));
   assert.equal(tap.activeNotes(), 0);
   for (const [key, count] of sounding) assert.equal(count, 0, `${key} is stuck`);
+});
+
+// ---- Max glue: tap.js loaded as Max loads it, with a fake patcher ----
+
+function loadInMax(panel) {
+  const out = [];
+  const max = {
+    outlet: (index, byte) => out.push(byte),
+    patcher: {
+      getnamed: (name) => (name in panel ? { getvalueof: () => panel[name] } : null),
+    },
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../tap.js"), "utf8"), max);
+  const play = (bytes) => {
+    out.length = 0;
+    bytes.forEach((byte) => max.msg_int(byte));
+    return messages(out).map((m) => m.slice(1));
+  };
+  return { max, play };
+}
+
+test("on load the device reads its settings from the panel", () => {
+  const { play } = loadInMax({ mode: MOVE, strength: 4, semitones: -2 });
+  play([0x90, 60, 100, 0x80, 60, 0]);
+  assert.deepEqual(play([0x90, 60, 100]).at(-1), [58, 100]);
+});
+
+test("a missing control leaves its setting at the default", () => {
+  const { play } = loadInMax({ mode: MOVE });
+  play([0x90, 60, 100, 0x80, 60, 0]);
+  assert.deepEqual(play([0x90, 60, 100]).at(-1), [61, 100]);
+});
+
+test("panel messages change the mode and settings, and only a press resets", () => {
+  const { max, play } = loadInMax({});
+  max.mode(MOVE);
+  max.semitones(2);
+  play([0x90, 60, 100, 0x80, 60, 0]);
+  max.reset(0); // button let go
+  assert.deepEqual(play([0x90, 60, 100, 0x80, 60, 0]).at(1), [62, 100]); // reset ignored
+  max.reset(1);
+  assert.deepEqual(play([0x90, 60, 100]).at(-1), [60, 100]);
+  max.reset("bang");
+  max.mode(GRAVITY);
+  max.strength(10);
+  play([0x80, 60, 0, 0x90, 67, 100, 0x80, 67, 0]);
+  assert.deepEqual(play([0x90, 60, 100]).at(-1), [67, 100]);
 });

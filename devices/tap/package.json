@@ -5,6 +5,6 @@
   "type": "commonjs",
   "scripts": {
     "test": "node --test",
-    "build": "node tools/amxd.mjs pack \"spike/TAP MPE Spike.maxpat\" \"spike/TAP MPE Spike.amxd\""
+    "build": "node tools/amxd.mjs pack TAP.maxpat TAP.amxd && node tools/amxd.mjs pack \"spike/TAP MPE Spike.maxpat\" \"spike/TAP MPE Spike.amxd\""
   }
 }

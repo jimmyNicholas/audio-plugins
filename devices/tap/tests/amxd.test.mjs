@@ -31,7 +31,7 @@ test("unpack refuses a frozen device", () => {
   assert.throws(() => unpack(frozen), /frozen/);
 });
 
-for (const name of ["spike/TAP MPE Spike"]) {
+for (const name of ["TAP", "spike/TAP MPE Spike"]) {
   test(`${name}.amxd is in sync with its .maxpat`, () => {
     const source = fs.readFileSync(new URL(`../${name}.maxpat`, import.meta.url), "utf8");
     const device = fs.readFileSync(new URL(`../${name}.amxd`, import.meta.url));

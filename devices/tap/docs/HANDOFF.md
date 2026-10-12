@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-11 (ticket 01 passed in Live, ticket 02 next). Branch: `claude/codebase-vst-ableton-puxbqz`.
+Last updated 2026-10-12 (ticket 02 built, waiting for the test in Live). Branch: `claude/codebase-vst-ableton-puxbqz`.
 
 ## Goal
 
@@ -11,7 +11,8 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | Ticket | State |
 | --- | --- |
 | 01 MPE spike and repo setup | **Done.** Passed in Live on 2026-10-11; results below. |
-| 02 to 05 | Not started |
+| 02 Engine, channels and Swap | **Built**, tests pass in Node. Waiting for the test in Live (steps below). |
+| 03 to 05 | Not started |
 
 ## Ticket 01 results (2026-10-11)
 
@@ -25,6 +26,25 @@ Tested by the user with Cursor's help ([`m4l/spike/CURSOR.md`](../../m4l/spike/C
 | Loading | The generated `.amxd` loaded straight away, no re-save in Max. Keep generating devices from the repo. |
 
 Live 11.0.10 is before 11.3, so the only MPE instruments available are Wavetable, Sampler and Simpler.
+
+## Ticket 02: what was built
+
+- `m4l/tap.js`: pitch table (semitones from note 0), Swap with the first-release rule, sustain pedal queue, and the MPE channel logic from the spike and `MpeRouter.cpp`. Each note goes out as the nearest whole note plus a bend for the rest, so bends stay within half a semitone.
+- `m4l/TAP.maxpat` and the generated `m4l/TAP.amxd`: `midiin` to `js tap.js` to `midiout`, `is_mpe` on. No controls yet; they come in ticket 03.
+- Choices made along the way:
+  - A note off for a key that is not down (say the device loaded while a key was held) is ignored, so it does not retune anything.
+  - The same key played again while it is held stops the old note, and that does not count as a release.
+  - A note stolen because all 15 channels were busy still counts as released when its key comes up.
+  - All notes off (CC 123) and all sound off (CC 120) stop every note without counting as releases. The pedal queue is kept.
+
+## Testing ticket 02 in Live
+
+1. `git pull` in Cursor, then `npm test --prefix m4l`. The last lines should show `# fail 0`.
+2. On a MIDI track, load Wavetable, then drag **Places > m4l > TAP.amxd** to its left. Take the spike off the track.
+3. Play A, release it, then play B and release it. Play A again: it sounds at B's pitch, and B sounds at A's.
+4. Hold the sustain pedal and repeat with two other keys: nothing changes until the pedal lifts.
+5. Play fast and hold more than 15 notes at once. When you let go, nothing should keep sounding.
+6. If the device shows an error, open it in the Max editor and copy the red lines from the Max Console.
 
 ## Why not the VST
 
@@ -55,4 +75,5 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 
 ## Next steps
 
-1. Ticket 02: engine, channels and Swap ([`tickets/02-engine-swap.md`](tickets/02-engine-swap.md)). Ticket 01's results need no changes to it.
+1. The user tests ticket 02 in Live (steps above) and the results are recorded here.
+2. Then ticket 03: Gravity, Move and the panel ([`tickets/03-modes-panel.md`](tickets/03-modes-panel.md)).

@@ -87,8 +87,9 @@
           "id": "obj-2",
           "maxclass": "newobj",
           "numinlets": 1,
-          "numoutlets": 1,
+          "numoutlets": 2,
           "outlettype": [
+            "",
             ""
           ],
           "patching_rect": [
@@ -519,6 +520,206 @@
           ],
           "text": "prepend output"
         }
+      },
+      {
+        "box": {
+          "id": "obj-26",
+          "maxclass": "live.text",
+          "varname": "view",
+          "numinlets": 1,
+          "numoutlets": 2,
+          "outlettype": [
+            "",
+            ""
+          ],
+          "parameter_enable": 0,
+          "mode": 0,
+          "text": "Drift view",
+          "texton": "Drift view",
+          "patching_rect": [
+            24,
+            384,
+            60,
+            15
+          ],
+          "presentation": 1,
+          "presentation_rect": [
+            56,
+            112,
+            60,
+            15
+          ]
+        }
+      },
+      {
+        "box": {
+          "id": "obj-50",
+          "maxclass": "message",
+          "numinlets": 2,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            24,
+            416,
+            36,
+            20
+          ],
+          "text": "open"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-51",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            24,
+            448,
+            56,
+            20
+          ],
+          "text": "pcontrol"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-52",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 0,
+          "patching_rect": [
+            24,
+            480,
+            52,
+            20
+          ],
+          "text": "p Drift",
+          "patcher": {
+            "fileversion": 1,
+            "appversion": {
+              "major": 8,
+              "minor": 5,
+              "revision": 4,
+              "architecture": "x64",
+              "modernui": 1
+            },
+            "classnamespace": "box",
+            "rect": [
+              120,
+              120,
+              960,
+              200
+            ],
+            "openinpresentation": 1,
+            "toolbarvisible": 0,
+            "enablehscroll": 0,
+            "enablevscroll": 0,
+            "default_fontsize": 10,
+            "default_fontname": "Arial",
+            "gridsize": [
+              8,
+              8
+            ],
+            "boxanimatetime": 500,
+            "autosave": 0,
+            "boxes": [
+              {
+                "box": {
+                  "id": "obj-1",
+                  "maxclass": "inlet",
+                  "comment": "open from pcontrol",
+                  "numinlets": 0,
+                  "numoutlets": 1,
+                  "outlettype": [
+                    ""
+                  ],
+                  "patching_rect": [
+                    24,
+                    24,
+                    30,
+                    30
+                  ]
+                }
+              },
+              {
+                "box": {
+                  "id": "obj-2",
+                  "maxclass": "newobj",
+                  "numinlets": 1,
+                  "numoutlets": 1,
+                  "outlettype": [
+                    ""
+                  ],
+                  "patching_rect": [
+                    24,
+                    72,
+                    72,
+                    20
+                  ],
+                  "text": "r ---drift"
+                }
+              },
+              {
+                "box": {
+                  "id": "obj-3",
+                  "maxclass": "jsui",
+                  "filename": "drift-view.js",
+                  "parameter_enable": 0,
+                  "numinlets": 1,
+                  "numoutlets": 0,
+                  "patching_rect": [
+                    24,
+                    112,
+                    960,
+                    200
+                  ],
+                  "presentation": 1,
+                  "presentation_rect": [
+                    0,
+                    0,
+                    960,
+                    200
+                  ]
+                }
+              }
+            ],
+            "lines": [
+              {
+                "patchline": {
+                  "source": [
+                    "obj-2",
+                    0
+                  ],
+                  "destination": [
+                    "obj-3",
+                    0
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "box": {
+          "id": "obj-53",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 0,
+          "patching_rect": [
+            120,
+            304,
+            72,
+            20
+          ],
+          "text": "s ---drift"
+        }
       }
     ],
     "lines": [
@@ -686,6 +887,54 @@
           ],
           "source": [
             "obj-44",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-53",
+            0
+          ],
+          "source": [
+            "obj-2",
+            1
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-50",
+            0
+          ],
+          "source": [
+            "obj-26",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-51",
+            0
+          ],
+          "source": [
+            "obj-50",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-52",
+            0
+          ],
+          "source": [
+            "obj-51",
             0
           ]
         }

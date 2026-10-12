@@ -59,6 +59,7 @@ m4l/
   TAP.amxd           generated device, loaded in Live from here
   TAP.maxpat         patch source
   tap.js             engine plus Max glue, ES5
+  drift-view.js      jsui for the drift view window, ES5
   package.json       `npm test` and `npm run build`, no dependencies
   tests/             node --test files
   tools/amxd.mjs     pack .maxpat into .amxd, and unpack

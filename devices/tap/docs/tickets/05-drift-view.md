@@ -3,7 +3,7 @@
 **Goal:** see how far each key has drifted from concert pitch.
 
 ## Tasks
-- Decide the view first, with the user: a wider panel in the device, or a pop-out window.
+- Decide the view first, with the user: a wider panel in the device, or a pop-out window. **Decided 2026-10-12: a pop-out window**, opened from a Drift view button on the panel.
 - The `js` sends the pitch table to the view after each change, not on every note.
 - Show each key's offset in cents, with colour for sharp and flat.
 

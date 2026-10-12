@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-12 (ticket 04 passed in Live). Branch: `claude/codebase-vst-ableton-puxbqz`.
+Last updated 2026-10-12 (ticket 05 built, waiting for a test in Live). Branch: `claude/codebase-vst-ableton-puxbqz`.
 
 ## Goal
 
@@ -14,7 +14,7 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 02 Engine, channels and Swap | **Done.** Passed in Live on 2026-10-12: every check below worked and `npm test` passed. |
 | 03 Gravity, Move and the panel | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 04 Semitone mode | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
-| 05 | Not started |
+| 05 Drift view | **Built, not yet tested in Live.** `npm test` passes. |
 
 ## Ticket 01 results (2026-10-11)
 
@@ -76,6 +76,29 @@ The patch changed, so drag the device in again.
 9. **Saved with the set:** Output saves with the set like the other controls.
 10. If the device shows an error, open it in the Max editor and copy the red lines from the Max Console.
 
+## Ticket 05: what was built
+
+- The user chose a pop-out window over a wider panel.
+- `tap.js`: a second outlet sends a list of 128 offsets in cents (each key's drift from concert pitch, to 0.1 cent) after each change to the pitch table: once per release, once when the pedal lifts with releases waiting, and on Reset or a mode change. Nothing is sent on note on, and a note off goes out before its table. `sync` also sends it, so the view is filled on load.
+- `m4l/drift-view.js`: a `jsui` drawing all 128 keys. Keys turn red when sharp and blue when flat, deeper the further they drift, with a bar above each key. The scale is logarithmic up to an octave so a few cents still show. Hovering over a key or its bar shows its name (Live's names, middle C is C3), its offset and the note it now plays near. With no hover, the top line counts the drifted keys.
+- `TAP.maxpat` and `TAP.amxd`: a **Drift view** button next to Reset (not a Live parameter, so it is not automatable) sends `open` to `pcontrol`, which opens the `p Drift` subpatcher as a 960 by 200 window. Data reaches it through `s ---drift` and `r ---drift`, so two TAP devices each get their own view. The view keeps its table while the window is closed.
+- Tests: the drift table and when it is sent, the view's layout, colours, hover and drawing against a fake `mgraphics`, and a check that `tap.js` and `drift-view.js` use only ES5 syntax.
+
+## Testing ticket 05 in Live
+
+The patch changed, so drag the device in again.
+
+1. `git pull` in Cursor, then `npm test --prefix m4l`. The last lines should show `# fail 0`.
+2. MIDI track with **TAP.amxd** then **Wavetable**. Click **Drift view** next to Reset. A window opens with a keyboard and "Every key at concert pitch".
+3. **Move**, Semitones 1: play and release middle C a few times. C3 turns red, deeper each time, with a growing bar. Hover over it: "C3 +300.0 cents (plays near D#3)" after three releases.
+4. **Gravity**, Strength 2: play some keys. Keys turn faintly red or blue. Hover to read the cents.
+5. **Swap:** release A then B. Both change colour, one sharp and one flat.
+6. **Pedal:** hold the pedal and play. Nothing changes in the view until the pedal lifts, then it updates in one go.
+7. **Reset** (and changing Mode) clears the view.
+8. **Speed:** play the same fast passages as ticket 01, with the view open. Notes should feel just as tight as before.
+9. Close and reopen the window: it shows the current drift, not a blank keyboard.
+10. If the window does not open or shows an error, open the device in the Max editor and copy the red lines from the Max Console.
+
 ## Why not the VST
 
 Ableton merges all MIDI channels into one when MIDI goes from track to track, so the VST's per-note bends never reached Wavetable (VST ticket 02). The VST in `plugin/` is parked; ask the user before deleting it. History: [`../vst/HANDOFF.md`](../vst/HANDOFF.md).
@@ -105,4 +128,5 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 
 ## Next steps
 
-1. Ticket 05: Drift view ([`tickets/05-drift-view.md`](tickets/05-drift-view.md)).
+1. Test ticket 05 in Live (steps above).
+2. After that, every planned ticket is done. The only item left in the spec is "later: save the pitch table with the set".

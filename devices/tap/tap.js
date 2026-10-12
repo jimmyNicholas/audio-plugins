@@ -8,12 +8,14 @@
 // - everything else goes out on channel 1, the MPE master channel
 // Semitone, for instruments without MPE: plain notes on channel 1, each pitch rounded to
 // the nearest semitone.
+// The second outlet sends each key's drift from concert pitch, in cents, to the drift view
+// whenever the pitch table changes.
 //
 // Written in ES5 for Max 8's js object. Also loads in Node for the tests.
 
 autowatch = 1;
 inlets = 1;
-outlets = 1;
+outlets = 2;
 
 var NUM_NOTES = 128;
 var BEND_RANGE_SEMITONES = 48; // MPE default; ticket 01 showed Live agrees
@@ -66,8 +68,9 @@ function dataLength(status) {
 }
 
 // The pitch table and the modes. Each key's pitch is stored in semitones from MIDI
-// note 0, so concert pitch is the note number itself.
-function createEngine() {
+// note 0, so concert pitch is the note number itself. onChange, if given, is called once
+// after each change to the table: a release, a pedal lift with releases waiting, a reset.
+function createEngine(onChange) {
   var pitches = [];
   var lastReleased = -1;
   var pedalDown = false;
@@ -76,11 +79,20 @@ function createEngine() {
   var strength = 2;
   var semitones = 1;
 
-  // Releases still waiting for the pedal are dropped too, so lifting it changes nothing.
-  function reset() {
+  function changed() {
+    if (onChange) onChange();
+  }
+
+  function clear() {
     for (var note = 0; note < NUM_NOTES; note++) pitches[note] = note;
     lastReleased = -1;
     queue = [];
+  }
+
+  // Releases still waiting for the pedal are dropped too, so lifting it changes nothing.
+  function reset() {
+    clear();
+    changed();
   }
 
   function swap(last, current) {
@@ -124,18 +136,23 @@ function createEngine() {
 
   function noteReleased(note) {
     if (note < 0 || note >= NUM_NOTES) return;
-    if (pedalDown) queue.push(note);
-    else apply(note);
+    if (pedalDown) {
+      queue.push(note);
+      return;
+    }
+    apply(note);
+    changed();
   }
 
   function setPedal(down) {
     pedalDown = down;
-    if (down) return;
+    if (down || queue.length === 0) return;
     for (var i = 0; i < queue.length; i++) apply(queue[i]);
     queue = [];
+    changed();
   }
 
-  reset();
+  clear();
 
   return {
     reset: reset,
@@ -159,6 +176,14 @@ function createEngine() {
     },
     pitchForNote: function (note) {
       return pitches[note];
+    },
+    // Each key's offset from concert pitch in cents, to a tenth of a cent.
+    drift: function () {
+      var cents = [];
+      for (var note = 0; note < NUM_NOTES; note++) {
+        cents.push(Math.round((pitches[note] - note) * 1000) / 10);
+      }
+      return cents;
     },
   };
 }
@@ -326,9 +351,10 @@ function createSemitoneRouter(send) {
   };
 }
 
-// The whole device: parses MIDI bytes, retunes notes and routes them.
-function createTap(send) {
-  var engine = createEngine();
+// The whole device: parses MIDI bytes, retunes notes and routes them. onDrift, if given,
+// is called after each change to the pitch table; read the table with drift().
+function createTap(send, onDrift) {
+  var engine = createEngine(onDrift);
   var routers = [createRouter(send), createSemitoneRouter(send)];
   var output = MPE;
   var router = routers[output];
@@ -442,13 +468,19 @@ function createTap(send) {
     setStrength: engine.setStrength,
     setSemitones: engine.setSemitones,
     reset: engine.reset,
+    drift: engine.drift,
   };
 }
 
 // Max glue. outlet() only exists inside Max.
 var tap = createTap(function (byte) {
   outlet(0, byte);
-});
+}, sendDrift);
+
+// The drift view keeps the last table it was sent, even while its window is closed.
+function sendDrift() {
+  outlet(1, tap.drift());
+}
 
 function msg_int(byte) {
   tap.input(byte);
@@ -490,6 +522,7 @@ function sync() {
     var control = this.patcher.getnamed(controls[i][0]);
     if (control) controls[i][1](control.getvalueof());
   }
+  sendDrift();
 }
 
 if (this.patcher) sync();

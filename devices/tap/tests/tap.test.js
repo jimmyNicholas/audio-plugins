@@ -748,8 +748,9 @@ test("no stuck notes in Semitone output after fast playing in Gravity", () => {
 
 function loadInMax(panel) {
   const out = [];
+  const drift = []; // each table sent to the drift view
   const max = {
-    outlet: (index, byte) => out.push(byte),
+    outlet: (index, value) => (index === 0 ? out.push(value) : drift.push(value)),
     patcher: {
       getnamed: (name) => (name in panel ? { getvalueof: () => panel[name] } : null),
     },
@@ -760,7 +761,7 @@ function loadInMax(panel) {
     bytes.forEach((byte) => max.msg_int(byte));
     return messages(out).map((m) => m.slice(1));
   };
-  return { max, play };
+  return { max, play, drift };
 }
 
 test("on load the device reads its settings from the panel", () => {
@@ -797,4 +798,86 @@ test("on load the device reads Output from the panel, and panel messages change 
   max.output(MPE);
   play([0x80, 60, 0]);
   assert.equal(play([0x90, 62, 100]).length, 2); // bend then note
+});
+
+test("on load the device sends the drift view its table, and again after each release", () => {
+  const { play, drift } = loadInMax({ mode: MOVE });
+  const sent = drift.length;
+  assert.ok(sent > 0);
+  assert.equal(drift.at(-1).length, 128);
+  assert.ok(drift.at(-1).every((cents) => cents === 0));
+  play([0x90, 60, 100]);
+  assert.equal(drift.length, sent); // nothing on a note on
+  play([0x80, 60, 0]);
+  assert.equal(drift.length, sent + 1);
+  assert.equal(drift.at(-1)[60], 100);
+});
+
+test("a panel reset clears the drift view", () => {
+  const { max, play, drift } = loadInMax({ mode: MOVE });
+  play([0x90, 60, 100, 0x80, 60, 0]);
+  max.reset(1);
+  assert.equal(drift.at(-1)[60], 0);
+});
+
+// ---- Drift: what the view is sent ----
+
+function driftSetup() {
+  let changes = 0;
+  const out = [];
+  const tap = createTap((byte) => out.push(byte), () => changes++);
+  const play = (bytes) => bytes.forEach(tap.input);
+  return { tap, play, changes: () => changes };
+}
+
+test("drift is each key's offset from concert pitch in cents", () => {
+  const { tap, play } = driftSetup();
+  tap.setMode(MOVE);
+  tap.setSemitones(-2);
+  play([0x90, 64, 100, 0x80, 64, 0]);
+  const drift = tap.drift();
+  assert.equal(drift.length, 128);
+  assert.equal(drift[64], -200);
+  assert.equal(drift.filter((cents) => cents !== 0).length, 1);
+});
+
+test("drift is rounded to a tenth of a cent", () => {
+  const { tap, play } = driftSetup();
+  tap.setMode(GRAVITY);
+  play([0x90, 57, 100, 0x80, 57, 0, 0x90, 69, 100, 0x80, 69, 0]);
+  const cents = tap.drift()[57];
+  assert.ok(cents > 0);
+  assert.equal(Math.round(cents * 10), cents * 10);
+});
+
+test("the view is told once per release, and not on note on", () => {
+  const { play, changes } = driftSetup();
+  play([0x90, 60, 100]);
+  assert.equal(changes(), 0);
+  play([0x80, 60, 0, 0x90, 62, 100, 0x80, 62, 0]);
+  assert.equal(changes(), 2);
+});
+
+test("with the pedal down the view is told once, when the pedal lifts", () => {
+  const { play, changes } = driftSetup();
+  play([0xb0, 64, 127]);
+  play([0x90, 60, 100, 0x80, 60, 0, 0x90, 62, 100, 0x80, 62, 0, 0x90, 64, 100, 0x80, 64, 0]);
+  assert.equal(changes(), 0);
+  play([0xb0, 64, 0]);
+  assert.equal(changes(), 1);
+  play([0xb0, 64, 127, 0xb0, 64, 0]); // nothing waiting
+  assert.equal(changes(), 1);
+});
+
+test("reset and a mode change tell the view; other settings do not", () => {
+  const { tap, changes } = driftSetup();
+  tap.reset();
+  assert.equal(changes(), 1);
+  tap.setMode(GRAVITY);
+  assert.equal(changes(), 2);
+  tap.setMode(GRAVITY); // same mode again
+  tap.setStrength(5);
+  tap.setSemitones(2);
+  tap.setOutput(SEMITONE);
+  assert.equal(changes(), 2);
 });

@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-12 (ticket 02 built, waiting for the test in Live). Branch: `claude/codebase-vst-ableton-puxbqz`.
+Last updated 2026-10-12 (ticket 02 passed in Live, ticket 03 next). Branch: `claude/codebase-vst-ableton-puxbqz`.
 
 ## Goal
 
@@ -11,7 +11,7 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | Ticket | State |
 | --- | --- |
 | 01 MPE spike and repo setup | **Done.** Passed in Live on 2026-10-11; results below. |
-| 02 Engine, channels and Swap | **Built**, tests pass in Node. Waiting for the test in Live (steps below). |
+| 02 Engine, channels and Swap | **Done.** Passed in Live on 2026-10-12: every check below worked and `npm test` passed. |
 | 03 to 05 | Not started |
 
 ## Ticket 01 results (2026-10-11)
@@ -75,5 +75,4 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 
 ## Next steps
 
-1. The user tests ticket 02 in Live (steps above) and the results are recorded here.
-2. Then ticket 03: Gravity, Move and the panel ([`tickets/03-modes-panel.md`](tickets/03-modes-panel.md)).
+1. Ticket 03: Gravity, Move and the panel ([`tickets/03-modes-panel.md`](tickets/03-modes-panel.md)).

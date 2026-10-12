@@ -99,6 +99,7 @@ Every ticket ends in something you can try in Live. Each ticket is reviewed befo
 | 03 | [Gravity, Move and the panel](tickets/03-modes-panel.md) | All modes; settings save with the set |
 | 04 | [Semitone mode](tickets/04-semitone-mode.md) | Operator plays rounded pitches |
 | 05 | [Drift view](tickets/05-drift-view.md) | See keys drift as you play |
+| 05.2 | [Picture mode](tickets/05.2-picture-mode.md) | A pixel art picture scrambles as keys drift |
 | later | Save the pitch table with the set | |
 
 Tickets 04 and 05 can swap places.

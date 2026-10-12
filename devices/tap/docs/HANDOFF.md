@@ -15,6 +15,7 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 03 Gravity, Move and the panel | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 04 Semitone mode | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 05 Drift view | **Built, not yet tested in Live.** `npm test` passes. |
+| 05.2 Picture mode | Planned (user's idea, 2026-10-12). Not started. |
 
 ## Ticket 01 results (2026-10-11)
 
@@ -129,4 +130,5 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 ## Next steps
 
 1. Test ticket 05 in Live (steps above).
-2. After that, every planned ticket is done. The only item left in the spec is "later: save the pitch table with the set".
+2. Then ticket 05.2: picture mode in the drift window ([`tickets/05.2-picture-mode.md`](tickets/05.2-picture-mode.md)).
+3. After that, the only item left in the spec is "later: save the pitch table with the set".

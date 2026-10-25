@@ -11,9 +11,9 @@ Part of "three modes to eight" (tickets 06 to 10). Rules for all the new modes: 
 
 ## Choices made here (change them if they feel wrong)
 - **Move reads Mod**, so the Semitones box goes. Move can now shift by up to an octave either way, and by fractions: Mod 0.50 moves a quarter tone. A set saved with Semitones opens with Mod at its default.
-- **Strength stays** as its own dial for Gravity and Repel. Strength is not a number of semitones, so it does not fit the Mod knob.
+- **Strength** was kept as its own dial at first. Changed with the user in ticket 07: Gravity and Repel read Mod, and the Strength dial goes.
 - **Mod's default is 1.00**, which keeps Move's old default.
-- **Bounds:** Lowest defaults to note 0, Highest to 127. If Lowest is set above Highest, the two are read the other way round. Changing a bound does not move any key by itself: keys outside the new range come back inside the next time a mode changes them. So, like Strength, turning a knob never retunes anything.
+- **Bounds:** Lowest defaults to note 0, Highest to 127. If Lowest is set above Highest, the two are read the other way round. Changing a bound does not move any key by itself: keys outside the new range come back inside the next time a mode changes them. So turning a knob never retunes anything.
 - Gravity's old rule of holding pitches at note 0 becomes the Lowest bound.
 - Modes not yet built (Repel to Harmony until their tickets) change nothing on release.
 
@@ -24,7 +24,7 @@ Part of "three modes to eight" (tickets 06 to 10). Rules for all the new modes: 
   - `setMode` accepts 0 to 7.
   - Tests: Move with whole and fractional Mod, Move held at Highest, Gravity held at Lowest, bounds read the other way round, changing a bound not changing the drift table.
 - Panel:
-  - `live.menu` Mode, `live.dial` Mod (two decimals), `live.numbox` Lowest and Highest shown as note names. Strength, Reset, Output and Drift view stay. All saved with the set, automatable, and read by `sync`.
+  - `live.menu` Mode, `live.dial` Mod (two decimals), `live.numbox` Lowest and Highest shown as note names. Reset, Output and Drift view stay. All saved with the set, automatable, and read by `sync`.
   - Check everything fits the device height (169 pixels).
 - Regenerate the device. You will need to drag it in again. After this ticket, tickets 07 to 10 change only `tap.js`, so `autowatch` picks them up after `git pull`.
 

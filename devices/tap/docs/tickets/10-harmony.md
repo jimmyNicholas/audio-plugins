@@ -11,7 +11,7 @@
 | Ratio | 1/1 | 16/15 | 9/8 | 6/5 | 5/4 | 4/3 | 45/32 | 3/2 | 8/5 | 5/3 | 9/5 | 15/8 | 2/1 |
 
 - Downward intervals use the same ratios turned over: -7 puts current a 3/2 below last.
-- Mod 0 puts current exactly on last's pitch, like Gravity at strength 10.
+- Mod 0 puts current exactly on last's pitch, like Gravity at Mod 10.
 - On the very first release last is current, so nothing changes. Results stay within the bounds.
 - Each key is tuned against the key before it, so over a phrase the intervals pile up and the piano drifts away from concert pitch.
 

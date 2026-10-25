@@ -197,47 +197,6 @@
       },
       {
         "box": {
-          "id": "obj-21",
-          "maxclass": "live.dial",
-          "varname": "strength",
-          "numinlets": 1,
-          "numoutlets": 2,
-          "outlettype": [
-            "",
-            "float"
-          ],
-          "parameter_enable": 1,
-          "patching_rect": [
-            120,
-            64,
-            44,
-            48
-          ],
-          "presentation": 1,
-          "presentation_rect": [
-            4,
-            48,
-            44,
-            48
-          ],
-          "saved_attribute_attributes": {
-            "valueof": {
-              "parameter_longname": "Strength",
-              "parameter_shortname": "Strength",
-              "parameter_type": 0,
-              "parameter_mmin": 1.0,
-              "parameter_mmax": 10.0,
-              "parameter_initial": [
-                2.0
-              ],
-              "parameter_initial_enable": 1,
-              "parameter_unitstyle": 1
-            }
-          }
-        }
-      },
-      {
-        "box": {
           "id": "obj-27",
           "maxclass": "live.dial",
           "varname": "mod",
@@ -256,7 +215,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            56,
+            4,
             48,
             44,
             48
@@ -293,7 +252,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            108,
+            56,
             46,
             44,
             18
@@ -321,7 +280,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            108,
+            56,
             62,
             44,
             15
@@ -357,7 +316,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            108,
+            56,
             78,
             44,
             18
@@ -385,7 +344,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            108,
+            56,
             94,
             44,
             15
@@ -562,24 +521,6 @@
             20
           ],
           "text": "prepend mode"
-        }
-      },
-      {
-        "box": {
-          "id": "obj-41",
-          "maxclass": "newobj",
-          "numinlets": 1,
-          "numoutlets": 1,
-          "outlettype": [
-            ""
-          ],
-          "patching_rect": [
-            208,
-            184,
-            96,
-            20
-          ],
-          "text": "prepend strength"
         }
       },
       {
@@ -907,18 +848,6 @@
       {
         "patchline": {
           "destination": [
-            "obj-41",
-            0
-          ],
-          "source": [
-            "obj-21",
-            0
-          ]
-        }
-      },
-      {
-        "patchline": {
-          "destination": [
             "obj-43",
             0
           ],
@@ -936,18 +865,6 @@
           ],
           "source": [
             "obj-40",
-            0
-          ]
-        }
-      },
-      {
-        "patchline": {
-          "destination": [
-            "obj-2",
-            0
-          ],
-          "source": [
-            "obj-41",
             0
           ]
         }
@@ -1137,11 +1054,6 @@
       "obj-20": [
         "Mode",
         "Mode",
-        0
-      ],
-      "obj-21": [
-        "Strength",
-        "Strength",
         0
       ],
       "obj-24": [

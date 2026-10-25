@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-25 (ticket 06 built, waiting for a test in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
+Last updated 2026-10-25 (tickets 06 and 07 built, waiting for a test in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
 
 ## Goal
 
@@ -17,7 +17,8 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 05 Drift view | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 05.2 Picture mode | **Done.** Passed in Live by 2026-10-20: the user reported that it works. |
 | 06 Mode menu, Mod knob and bounds | **Built, not yet tested in Live.** `npm test` passes. |
-| 07 to 10 Repel, Echo, Rotate, Wander, Harmony | Planned. Build one at a time after 06 passes in Live. |
+| 07 Gravity on Mod, Repel and Echo | **Built, not yet tested in Live.** `npm test` passes. Test together with 06. |
+| 08 to 10 Rotate, Wander, Harmony | Planned. |
 
 ## Ticket 01 results (2026-10-11)
 
@@ -137,21 +138,33 @@ Only `drift-view.js` changed, and it uses `autowatch`, so a loaded device picks 
   - Mode is a `live.menu` with the eight names. It keeps the old `live.tab`'s id, `varname` and parameter name `Mode`.
   - Semitones, its label and its `prepend` are gone.
   - New: `live.dial` Mod (-12 to 12, initial 1, 2401 steps so it moves in 0.01s, Float unit style), and `live.numbox` Lowest and Highest (0 to 127, MIDI note unit style) with labels. Each goes through its own `prepend` into the `js`.
-  - Layout: Mode menu under the title; Strength and Mod dials side by side; Lowest and Highest to their right; Reset, Drift view and Output where they were.
+  - Layout: Mode menu under the title; the Mod dial (where Strength was); Lowest and Highest to its right; Reset, Drift view and Output where they were.
 - Tests: Mod and the bounds in the engine, the device and the Max glue; modes 3 to 7 changing nothing; and two new checks on `TAP.maxpat` itself: every control is wired through its `prepend` into the `js`, and the Mode menu lists the eight modes in engine order.
 
-## Testing ticket 06 in Live
+## Ticket 07: what was built
+
+- The user's change: Mod's positive and negative range is for strength and repel, so **Gravity reads Mod** and the Strength dial is gone.
+- `tap.js`: one `gravity(last, current, strength)` for both modes; Gravity passes `mod` and Repel `-mod`. A positive strength pulls, a negative one pushes. `share(strength)` gives the part of the gap moved: the web's `1 / (10 - s)` from 1 to 10, `s / 9` below 1 (so Mod 0 does nothing), and a full pull or push at 10 and above. A full pull lands on the current key; a full push goes to the bound in the direction away from it. Keys already at one pitch do not move.
+- `echo(last, current)`: current gets last's drift plus Mod, bounded. On the first release it just moves by Mod.
+- `setStrength`, `strength()`, the `strength` handler and its `sync` entry are gone.
+- `TAP.maxpat` and `TAP.amxd`: the Strength dial and `prepend strength` are gone; Mod sits where Strength was, with Lowest and Highest beside it.
+- Tests: Gravity's web values with Mod as strength, negative Mod, Mod 0 and below 1, above 10, Repel against Gravity, full pushes to each bound, one pitch, Echo up and down, bounds; the patch check now also confirms Strength is gone.
+
+## Testing tickets 06 and 07 in Live
 
 The patch changed, so drag the device in again.
 
 1. `git pull` in Cursor, then `npm test --prefix m4l`. The last lines should show `# fail 0`.
-2. MIDI track with **TAP.amxd** then Wavetable (or one of the Waves pianos). The panel now has a Mode dropdown, Strength and Mod dials, and Lowest and Highest boxes.
-3. **Mode:** the dropdown lists Swap, Gravity, Move, Repel, Echo, Rotate, Wander, Harmony. Swap and Gravity work as before. Repel to Harmony change nothing yet.
+2. MIDI track with **TAP.amxd** then Wavetable (or one of the Waves pianos). The panel now has a Mode dropdown, a Mod dial, and Lowest and Highest boxes. Strength and Semitones are gone.
+3. **Mode:** the dropdown lists Swap, Gravity, Move, Repel, Echo, Rotate, Wander, Harmony. Swap works as before. Rotate, Wander and Harmony change nothing yet.
+   - **Gravity**, Mod 2.00: as before at Strength 2. Mod -2.00: keys push apart instead. Mod 10.00: the last key lands exactly on the current one.
+   - **Repel**, Mod 5.00: play A3 (the A below middle C) then the A above it a few times, releasing each. They push apart until they reach Lowest and Highest. Mod -5.00 pulls like Gravity.
+   - **Echo**, Mod 0.10: play a rising scale once. Each key is 10 cents sharper than the one before (check with Drift view). Play it again and the trail carries on.
 4. **Move**, Mod 7.00: each release moves the key up a fifth. Mod -0.50: down a quarter tone (on MPE; Semitone output rounds it).
 5. **Mod dial:** check it shows two decimals and can be set to 0.01 steps (hold Shift while dragging, or type a value).
 6. **Bounds**, Highest C3 (middle C, as Live names it): with Move at +2.00, release a key below middle C again and again. It stops at middle C. Set Lowest above Highest: the bounds still work, read the other way round.
 7. **Saved with the set:** Mode, Mod, Lowest and Highest save with the set and reopen as they were.
-8. **Old sets:** open a set saved with the old device on Gravity or Move. Does it open on the same mode? (Unknown: the Mode control changed from a tab to a menu.) The Semitones value is lost and Mod opens at 1.00.
+8. **Old sets:** open a set saved with the old device on Gravity or Move. Does it open on the same mode? (Unknown: the Mode control changed from a tab to a menu.) The Strength and Semitones values are lost and Mod opens at 1.00.
 9. If the device shows an error, open it in the Max editor and copy the red lines from the Max Console.
 
 ## Why not the VST
@@ -183,8 +196,8 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 
 ## Next steps
 
-1. Test ticket 06 in Live (steps above).
-2. Tickets 07 to 10, one at a time: Repel and Echo, Rotate, Wander, Harmony. They change only `tap.js`.
+1. Test tickets 06 and 07 in Live (steps above).
+2. Tickets 08 to 10, one at a time: Rotate, Wander, Harmony. They change only `tap.js`.
 3. Later: save the pitch table with the set.
 
 Hosting an instrument inside TAP was explored and is not needed: TAP already works with Waves Grand Rhapsody Piano and Electric 88 placed after it on the same track (which Output was used is not yet recorded).

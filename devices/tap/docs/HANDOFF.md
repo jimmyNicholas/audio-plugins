@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-25 (tickets 06 to 10 planned; ticket 06 ready to build). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`; tickets 06 to 10 were planned on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
+Last updated 2026-10-25 (ticket 06 built, waiting for a test in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
 
 ## Goal
 
@@ -16,7 +16,7 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 04 Semitone mode | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 05 Drift view | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 05.2 Picture mode | **Done.** Passed in Live by 2026-10-20: the user reported that it works. |
-| 06 Mode menu, Mod knob and bounds | **Ready to build.** Notes below. |
+| 06 Mode menu, Mod knob and bounds | **Built, not yet tested in Live.** `npm test` passes. |
 | 07 to 10 Repel, Echo, Rotate, Wander, Harmony | Planned. Build one at a time after 06 passes in Live. |
 
 ## Ticket 01 results (2026-10-11)
@@ -125,34 +125,34 @@ Only `drift-view.js` changed, and it uses `autowatch`, so a loaded device picks 
 7. Hover over a square: the top line names its key and drift. Click **Keys** to go back to the keyboard.
 8. **Speed:** fast passages with Picture showing feel as tight as before.
 
-## Ticket 06: notes for the build
+## Ticket 06: what was built
 
-Ticket: [`tickets/06-mode-menu-mod-bounds.md`](tickets/06-mode-menu-mod-bounds.md). Mode rules: "More modes" in [`SPEC.md`](SPEC.md#more-modes). The design was settled with the user on 2026-10-25; the "Choices made here" in the ticket were not pushed back on, so build them as written.
+- `tap.js`:
+  - Mode numbers for all eight modes, in menu order: Swap 0, Gravity 1, Move 2, Repel 3, Echo 4, Rotate 5, Wander 6, Harmony 7. `setMode` rounds and clamps to 0 to 7. Modes 3 to 7 change no pitch yet, but a release still counts as the last release and still updates the drift view, so tickets 07 to 10 only add a rule in `apply`.
+  - `mod` replaces `semitones`: a float from -12 to 12, default 1. Move adds it, so Move now takes fractions and up to an octave.
+  - `lowest` and `highest` (0 to 127, defaults 0 and 127). `bound(pitch)` keeps every pitch a mode writes within them, reading them the other way round if Lowest is above Highest. Swap and Gravity use it too. Setting a bound changes no pitch and does not update the drift view.
+  - Gravity's overshoot below 0 Hz now goes to Lowest instead of note 0.
+  - Max handlers `mod`, `lowest` and `highest`; `semitones` is gone. `sync` reads `mod`, `lowest` and `highest`.
+- `TAP.maxpat` and `TAP.amxd`:
+  - Mode is a `live.menu` with the eight names. It keeps the old `live.tab`'s id, `varname` and parameter name `Mode`.
+  - Semitones, its label and its `prepend` are gone.
+  - New: `live.dial` Mod (-12 to 12, initial 1, 2401 steps so it moves in 0.01s, Float unit style), and `live.numbox` Lowest and Highest (0 to 127, MIDI note unit style) with labels. Each goes through its own `prepend` into the `js`.
+  - Layout: Mode menu under the title; Strength and Mod dials side by side; Lowest and Highest to their right; Reset, Drift view and Output where they were.
+- Tests: Mod and the bounds in the engine, the device and the Max glue; modes 3 to 7 changing nothing; and two new checks on `TAP.maxpat` itself: every control is wired through its `prepend` into the `js`, and the Mode menu lists the eight modes in engine order.
 
-### `m4l/tap.js`
-- Add mode constants for all eight, in panel order: `SWAP = 0` to `HARMONY = 7`. `setMode` accepts 0 to 7 (rounded; anything outside clamps). Modes 3 to 7 are not built yet: in `apply` they change no pitch but still set `lastReleased`, so later tickets only fill in a rule.
-- Replace `semitones` with `mod` (float, clamped to -12 to 12, default 1). Move does `pitches[current] += mod`. Remove `setSemitones`, the `semitones` getter and the `semitones()` Max handler; add `mod()`, `lowest()` and `highest()` handlers and `setMod`, `setLowest`, `setHighest` on the engine and on `createTap`.
-- Add `lowest` (default 0) and `highest` (default 127), ints clamped to 0 to 127. One `bound(pitch)` helper reads them the other way round if lowest is above highest. Every pitch a mode writes goes through it, Swap included, so a key outside new bounds comes back inside when a mode next touches it. Setting a bound changes no pitch and does not call `onChange`.
-- Gravity's `hertz > hertzForPitch(0) ? ... : 0` becomes `bound(...)`. Guard the Hertz to pitch step against a Hertz of 0 or below (it goes to `lowest`).
-- `sync()`: drop `semitones`, add `mod`, `lowest`, `highest`.
-- Keep the file ES5 (the ES5 check in the tests will catch slips).
+## Testing ticket 06 in Live
 
-### `m4l/tests/tap.test.js`
-- Test-first, as before. The existing Semitones tests (around lines 219 to 273, and uses at 300, 324, 578, 653, 768, 782, 836, 880) move to Mod; keep what each one proves.
-- New tests: Move with whole and fractional Mod, Mod clamping, Move held at Highest, Gravity held at Lowest, bounds read the other way round, Swap pulling an out-of-bounds pitch back in, setting a bound not sending a drift table, modes 3 to 7 changing nothing, and `loadInMax` reading `mod`, `lowest` and `highest`.
+The patch changed, so drag the device in again.
 
-### `m4l/TAP.maxpat`, then `npm run build --prefix m4l`
-- **Mode:** change `obj-20` from `live.tab` to `live.menu`. Keep its id, `varname` `mode` and parameter name `Mode` so saved sets keep their mode. `parameter_mmax` 7 and the eight names in `parameter_enum`. It still feeds `prepend mode`.
-- **Remove** Semitones: `obj-22`, its comment `obj-23`, `prepend semitones`, their patch lines and the `obj-22` entry in the `parameters` block at the end of the file.
-- **Add** `live.dial` Mod (varname `mod`, float, -12 to 12, initial 1, two decimals; `parameter_steps` 2401 gives steps of 0.01), and `live.numbox` Lowest and Highest (varnames `lowest` and `highest`, int 0 to 127, initial 0 and 127, unit style MIDI note). Each through its own `prepend` into `js tap.js`, and each listed in the `parameters` block with new ids.
-- Fit the panel in the device height (`openrect` height 169). Reset, Output and Drift view keep working; moving them is fine.
-- Regenerate `TAP.amxd` with `npm run build --prefix m4l`. `tests/amxd.test.mjs` fails if the `.amxd` and `.maxpat` are out of sync.
-
-### When it is built
-- Run `npm test --prefix m4l` and expect `# fail 0`.
-- Add "Ticket 06: what was built" and "Testing ticket 06 in Live" sections here, in the style of the earlier tickets, using the ticket's Prototype steps. The patch changed, so the user drags the device in again.
-- Update "Where we are" to "Built, not yet tested in Live", review the diff with the user, then commit and push.
-- Unknowns to watch in Live: whether `live.menu` keeps a saved set's Mode value from the old `live.tab`, and how the Mod dial shows two decimals. If either goes wrong, note it here and ask the user.
+1. `git pull` in Cursor, then `npm test --prefix m4l`. The last lines should show `# fail 0`.
+2. MIDI track with **TAP.amxd** then Wavetable (or one of the Waves pianos). The panel now has a Mode dropdown, Strength and Mod dials, and Lowest and Highest boxes.
+3. **Mode:** the dropdown lists Swap, Gravity, Move, Repel, Echo, Rotate, Wander, Harmony. Swap and Gravity work as before. Repel to Harmony change nothing yet.
+4. **Move**, Mod 7.00: each release moves the key up a fifth. Mod -0.50: down a quarter tone (on MPE; Semitone output rounds it).
+5. **Mod dial:** check it shows two decimals and can be set to 0.01 steps (hold Shift while dragging, or type a value).
+6. **Bounds**, Highest C3 (middle C, as Live names it): with Move at +2.00, release a key below middle C again and again. It stops at middle C. Set Lowest above Highest: the bounds still work, read the other way round.
+7. **Saved with the set:** Mode, Mod, Lowest and Highest save with the set and reopen as they were.
+8. **Old sets:** open a set saved with the old device on Gravity or Move. Does it open on the same mode? (Unknown: the Mode control changed from a tab to a menu.) The Semitones value is lost and Mod opens at 1.00.
+9. If the device shows an error, open it in the Max editor and copy the red lines from the Max Console.
 
 ## Why not the VST
 
@@ -183,7 +183,7 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 
 ## Next steps
 
-1. Build ticket 06 (notes above), then the user tests it in Live.
+1. Test ticket 06 in Live (steps above).
 2. Tickets 07 to 10, one at a time: Repel and Echo, Rotate, Wander, Harmony. They change only `tap.js`.
 3. Later: save the pitch table with the set.
 

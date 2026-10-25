@@ -146,7 +146,7 @@
       {
         "box": {
           "id": "obj-20",
-          "maxclass": "live.tab",
+          "maxclass": "live.menu",
           "varname": "mode",
           "numinlets": 1,
           "numoutlets": 3,
@@ -156,20 +156,18 @@
             "float"
           ],
           "parameter_enable": 1,
-          "num_lines_patching": 1,
-          "num_lines_presentation": 1,
           "patching_rect": [
             120,
             24,
-            150,
-            20
+            110,
+            15
           ],
           "presentation": 1,
           "presentation_rect": [
             4,
             26,
-            150,
-            20
+            110,
+            15
           ],
           "saved_attribute_attributes": {
             "valueof": {
@@ -177,7 +175,7 @@
               "parameter_shortname": "Mode",
               "parameter_type": 2,
               "parameter_mmin": 0,
-              "parameter_mmax": 2,
+              "parameter_mmax": 7,
               "parameter_initial": [
                 0
               ],
@@ -186,7 +184,12 @@
               "parameter_enum": [
                 "Swap",
                 "Gravity",
-                "Move"
+                "Move",
+                "Repel",
+                "Echo",
+                "Rotate",
+                "Wander",
+                "Harmony"
               ]
             }
           }
@@ -213,7 +216,7 @@
           "presentation": 1,
           "presentation_rect": [
             4,
-            56,
+            48,
             44,
             48
           ],
@@ -235,9 +238,9 @@
       },
       {
         "box": {
-          "id": "obj-22",
-          "maxclass": "live.numbox",
-          "varname": "semitones",
+          "id": "obj-27",
+          "maxclass": "live.dial",
+          "varname": "mod",
           "numinlets": 1,
           "numoutlets": 2,
           "outlettype": [
@@ -247,54 +250,214 @@
           "parameter_enable": 1,
           "patching_rect": [
             184,
-            80,
+            64,
             44,
-            15
+            48
           ],
           "presentation": 1,
           "presentation_rect": [
-            60,
-            72,
+            56,
+            48,
             44,
-            15
+            48
           ],
           "saved_attribute_attributes": {
             "valueof": {
-              "parameter_longname": "Semitones",
-              "parameter_shortname": "Semitones",
-              "parameter_type": 1,
-              "parameter_mmin": -2,
-              "parameter_mmax": 2,
+              "parameter_longname": "Mod",
+              "parameter_shortname": "Mod",
+              "parameter_type": 0,
+              "parameter_mmin": -12.0,
+              "parameter_mmax": 12.0,
               "parameter_initial": [
-                1
+                1.0
               ],
               "parameter_initial_enable": 1,
-              "parameter_unitstyle": 0
+              "parameter_steps": 2401,
+              "parameter_unitstyle": 1
             }
           }
         }
       },
       {
         "box": {
-          "id": "obj-23",
+          "id": "obj-32",
           "maxclass": "comment",
           "numinlets": 1,
           "numoutlets": 0,
           "fontname": "Arial",
           "patching_rect": [
             240,
-            80,
-            60,
+            120,
+            44,
             18
           ],
           "presentation": 1,
           "presentation_rect": [
-            56,
-            56,
-            60,
+            108,
+            46,
+            44,
             18
           ],
-          "text": "Semitones"
+          "text": "Lowest"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-28",
+          "maxclass": "live.numbox",
+          "varname": "lowest",
+          "numinlets": 1,
+          "numoutlets": 2,
+          "outlettype": [
+            "",
+            "float"
+          ],
+          "parameter_enable": 1,
+          "patching_rect": [
+            240,
+            140,
+            44,
+            15
+          ],
+          "presentation": 1,
+          "presentation_rect": [
+            108,
+            62,
+            44,
+            15
+          ],
+          "saved_attribute_attributes": {
+            "valueof": {
+              "parameter_longname": "Lowest",
+              "parameter_shortname": "Lowest",
+              "parameter_type": 1,
+              "parameter_mmin": 0,
+              "parameter_mmax": 127,
+              "parameter_initial": [
+                0
+              ],
+              "parameter_initial_enable": 1,
+              "parameter_unitstyle": 8
+            }
+          }
+        }
+      },
+      {
+        "box": {
+          "id": "obj-33",
+          "maxclass": "comment",
+          "numinlets": 1,
+          "numoutlets": 0,
+          "fontname": "Arial",
+          "patching_rect": [
+            300,
+            120,
+            44,
+            18
+          ],
+          "presentation": 1,
+          "presentation_rect": [
+            108,
+            78,
+            44,
+            18
+          ],
+          "text": "Highest"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-29",
+          "maxclass": "live.numbox",
+          "varname": "highest",
+          "numinlets": 1,
+          "numoutlets": 2,
+          "outlettype": [
+            "",
+            "float"
+          ],
+          "parameter_enable": 1,
+          "patching_rect": [
+            300,
+            140,
+            44,
+            15
+          ],
+          "presentation": 1,
+          "presentation_rect": [
+            108,
+            94,
+            44,
+            15
+          ],
+          "saved_attribute_attributes": {
+            "valueof": {
+              "parameter_longname": "Highest",
+              "parameter_shortname": "Highest",
+              "parameter_type": 1,
+              "parameter_mmin": 0,
+              "parameter_mmax": 127,
+              "parameter_initial": [
+                127
+              ],
+              "parameter_initial_enable": 1,
+              "parameter_unitstyle": 8
+            }
+          }
+        }
+      },
+      {
+        "box": {
+          "id": "obj-45",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            312,
+            184,
+            72,
+            20
+          ],
+          "text": "prepend mod"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-46",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            120,
+            224,
+            80,
+            20
+          ],
+          "text": "prepend lowest"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-47",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            208,
+            224,
+            88,
+            20
+          ],
+          "text": "prepend highest"
         }
       },
       {
@@ -417,24 +580,6 @@
             20
           ],
           "text": "prepend strength"
-        }
-      },
-      {
-        "box": {
-          "id": "obj-42",
-          "maxclass": "newobj",
-          "numinlets": 1,
-          "numoutlets": 1,
-          "outlettype": [
-            ""
-          ],
-          "patching_rect": [
-            312,
-            184,
-            104,
-            20
-          ],
-          "text": "prepend semitones"
         }
       },
       {
@@ -774,18 +919,6 @@
       {
         "patchline": {
           "destination": [
-            "obj-42",
-            0
-          ],
-          "source": [
-            "obj-22",
-            0
-          ]
-        }
-      },
-      {
-        "patchline": {
-          "destination": [
             "obj-43",
             0
           ],
@@ -815,18 +948,6 @@
           ],
           "source": [
             "obj-41",
-            0
-          ]
-        }
-      },
-      {
-        "patchline": {
-          "destination": [
-            "obj-2",
-            0
-          ],
-          "source": [
-            "obj-42",
             0
           ]
         }
@@ -938,6 +1059,78 @@
             0
           ]
         }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-45",
+            0
+          ],
+          "source": [
+            "obj-27",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-46",
+            0
+          ],
+          "source": [
+            "obj-28",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-47",
+            0
+          ],
+          "source": [
+            "obj-29",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-2",
+            0
+          ],
+          "source": [
+            "obj-45",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-2",
+            0
+          ],
+          "source": [
+            "obj-46",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-2",
+            0
+          ],
+          "source": [
+            "obj-47",
+            0
+          ]
+        }
       }
     ],
     "parameters": {
@@ -951,11 +1144,6 @@
         "Strength",
         0
       ],
-      "obj-22": [
-        "Semitones",
-        "Semitones",
-        0
-      ],
       "obj-24": [
         "Reset",
         "Reset",
@@ -964,6 +1152,21 @@
       "obj-25": [
         "Output",
         "Output",
+        0
+      ],
+      "obj-27": [
+        "Mod",
+        "Mod",
+        0
+      ],
+      "obj-28": [
+        "Lowest",
+        "Lowest",
+        0
+      ],
+      "obj-29": [
+        "Highest",
+        "Highest",
         0
       ],
       "inherited_shortname": 1

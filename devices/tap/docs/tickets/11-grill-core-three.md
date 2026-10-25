@@ -31,6 +31,15 @@
 - **Tickets 06 and 07:** skip testing them in Live. Only the reworked device gets tested.
 - **Later, out of scope:** a floor at the same note name. If you play A4 and Gravity pulls it down, it stops at the A below instead of going on down. It needs its own ticket.
 
+## Decided with the user (2026-10-25, round 2)
+
+- **One shared Mod dial for every mode,** reading -12 to +12 in semitones. Gravity turns the Mod value into its own strength.
+- **Gravity is far too strong.** It needs bringing down a lot: Mod 12 should pull about 50% of the gap, Mod 1 about 1% and Mod 2 about 3%, rising like an exponential in between.
+- **Mode control on the Live strip:** a slider for now.
+- **Double slider for Lowest and Highest:** its own ticket ([16](16-range-slider.md)), blocked by tickets 11 to 15.
+- **Order of work:** grill every ticket (11 to 15) first, then build.
+- **Floor at the same note name:** parked as ticket [17](17-note-floor.md).
+
 ## Questions to grill
 
 1. **What happens to the five new modes?** Options: delete them from `tap.js` and the menu; hide them from the menu but keep the code; or keep them in the menu and park only 08 to 10. *Recommendation:* take all five out of the menu and the engine, and keep them in git history (tickets 07 to 10 stay as notes). It keeps the device and the tests small while the core three are reworked.

@@ -26,7 +26,7 @@ var CC_ALL_SOUND_OFF = 120;
 var CC_ALL_NOTES_OFF = 123;
 
 // Modes, in the order of the panel's Mode menu. New modes go at the end, so saved sets
-// keep their mode. Repel to Harmony are not built yet: tickets 07 to 10.
+// keep their mode. Rotate, Wander and Harmony are not built yet: tickets 08 to 10.
 var SWAP = 0;
 var GRAVITY = 1;
 var MOVE = 2;
@@ -83,7 +83,6 @@ function createEngine(onChange) {
   var pedalDown = false;
   var queue = [];
   var mode = SWAP;
-  var strength = 2;
   var mod = 1;
   var lowest = 0;
   var highest = NUM_NOTES - 1;
@@ -116,25 +115,50 @@ function createEngine(onChange) {
     pitches[current] = bound(swapped);
   }
 
-  // As in gravity.ts, in Hertz. Strength 10 divides by zero there, so here it pulls the
-  // last key exactly onto the current key. Just below 10 the web formula overshoots a long
-  // way, even below 0 Hz, so the result is kept within the bounds.
-  function gravity(last, current) {
-    if (strength >= MAX_STRENGTH) {
+  // The share of the gap a pull or push moves, for a strength of 0 or more. From 1 to 10
+  // it is the web formula's 1 / (10 - strength); below 1 it fades in from nothing, so
+  // strength 0 changes nothing. At 10 and above it is Infinity.
+  function share(strength) {
+    if (strength >= MAX_STRENGTH) return Infinity;
+    if (strength >= 1) return 1 / (MAX_STRENGTH - strength);
+    return strength / (MAX_STRENGTH - 1);
+  }
+
+  // Gravity as in gravity.ts, in Hertz, with Mod as the strength. A positive strength pulls
+  // the last key toward the current key and a negative one pushes it away, which is Repel.
+  // A full pull lands exactly on the current key; a full push goes to a bound. Just below
+  // 10 the web formula overshoots a long way, even below 0 Hz, so results are bounded.
+  function gravity(last, current, strength) {
+    var lastHertz = hertzForPitch(pitches[last]);
+    var currentHertz = hertzForPitch(pitches[current]);
+    if (strength === 0 || lastHertz === currentHertz) return;
+    var amount = share(Math.abs(strength));
+    if (strength > 0 && amount === Infinity) {
       pitches[last] = bound(pitches[current]);
       return;
     }
-    var lastHertz = hertzForPitch(pitches[last]);
-    var currentHertz = hertzForPitch(pitches[current]);
-    var hertz = lastHertz - (lastHertz - currentHertz) / (MAX_STRENGTH - strength);
+    var away = lastHertz > currentHertz ? 1 : -1; // the direction that pushes away
+    if (amount === Infinity) {
+      pitches[last] = bound(away * Infinity);
+      return;
+    }
+    var gap = Math.abs(lastHertz - currentHertz);
+    var hertz = lastHertz + (strength > 0 ? -away : away) * gap * amount;
     pitches[last] = hertz > 0 ? bound(pitchForHertz(hertz)) : bound(-Infinity);
+  }
+
+  // The current key takes the last key's drift from concert pitch, plus Mod.
+  function echo(last, current) {
+    pitches[current] = bound(current + (pitches[last] - last) + mod);
   }
 
   function apply(current) {
     // As in useKeyboard.ts: on the very first release the last key is the current key.
     var last = lastReleased < 0 ? current : lastReleased;
     if (mode === MOVE) pitches[current] = bound(pitches[current] + mod);
-    else if (last !== current && mode === GRAVITY) gravity(last, current);
+    else if (mode === ECHO) echo(last, current);
+    else if (last !== current && mode === GRAVITY) gravity(last, current, mod);
+    else if (last !== current && mode === REPEL) gravity(last, current, -mod);
     else if (last !== current && mode === SWAP) swap(last, current);
     lastReleased = current;
   }
@@ -173,9 +197,6 @@ function createEngine(onChange) {
     noteReleased: noteReleased,
     setPedal: setPedal,
     setMode: setMode,
-    setStrength: function (value) {
-      if (isNumber(value)) strength = clamp(value, 1, MAX_STRENGTH);
-    },
     setMod: function (value) {
       if (isNumber(value)) mod = clamp(value, -MAX_MOD, MAX_MOD);
     },
@@ -187,9 +208,6 @@ function createEngine(onChange) {
     },
     mode: function () {
       return mode;
-    },
-    strength: function () {
-      return strength;
     },
     mod: function () {
       return mod;
@@ -491,7 +509,6 @@ function createTap(send, onDrift) {
     },
     setOutput: setOutput,
     setMode: engine.setMode,
-    setStrength: engine.setStrength,
     setMod: engine.setMod,
     setLowest: engine.setLowest,
     setHighest: engine.setHighest,
@@ -517,10 +534,6 @@ function msg_int(byte) {
 // Messages from the panel. Each live.* control sends its value with a prepend.
 function mode(value) {
   tap.setMode(value);
-}
-
-function strength(value) {
-  tap.setStrength(value);
 }
 
 function mod(value) {
@@ -550,7 +563,6 @@ function reset(value) {
 function sync() {
   var controls = [
     ["mode", mode],
-    ["strength", strength],
     ["mod", mod],
     ["lowest", lowest],
     ["highest", highest],

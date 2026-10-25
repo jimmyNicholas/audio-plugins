@@ -157,24 +157,26 @@ test("pressing the pedal twice does not lose the queue", () => {
 const SWAP = 0;
 const GRAVITY = 1;
 const MOVE = 2;
-const NOT_BUILT = [3, 4, 5, 6, 7]; // Repel, Echo, Rotate, Wander, Harmony: tickets 07 to 10
+const REPEL = 3;
+const ECHO = 4;
+const NOT_BUILT = [5, 6, 7]; // Rotate, Wander, Harmony: tickets 08 to 10
 
 function near(actual, expected, tolerance = 1e-9) {
   assert.ok(Math.abs(actual - expected) < tolerance, `${actual} is not close to ${expected}`);
 }
 
-test("the default mode is Swap, strength 2, Mod 1 and bounds 0 to 127", () => {
+test("the default mode is Swap, Mod 1 and bounds 0 to 127", () => {
   const engine = createEngine();
   assert.equal(engine.mode(), SWAP);
-  assert.equal(engine.strength(), 2);
   assert.equal(engine.mod(), 1);
   assert.equal(engine.lowest(), 0);
   assert.equal(engine.highest(), 127);
 });
 
-test("Gravity pulls the last key toward the current key as in the web app", () => {
+test("Gravity pulls the last key toward the current key as in the web app, with Mod as strength", () => {
   const engine = createEngine();
   engine.setMode(GRAVITY);
+  engine.setMod(2);
   engine.noteReleased(69); // A4, 440 Hz
   engine.noteReleased(71); // B4, 493.88 Hz
   // gravity.test.ts: 440 - (440 - 493.88) / (10 - 2) = 446.735 Hz
@@ -182,10 +184,10 @@ test("Gravity pulls the last key toward the current key as in the web app", () =
   assert.equal(engine.pitchForNote(71), 71); // the current key does not move
 });
 
-test("Gravity works in Hertz, so the pull follows the strength", () => {
+test("Gravity works in Hertz, so the pull follows Mod", () => {
   const engine = createEngine();
   engine.setMode(GRAVITY);
-  engine.setStrength(5);
+  engine.setMod(5);
   engine.noteReleased(57); // A3, 220 Hz
   engine.noteReleased(69); // A4, 440 Hz
   near(hertzForPitch(engine.pitchForNote(57)), 220 + 220 / 5);
@@ -200,10 +202,10 @@ test("Gravity does nothing on the first release or when the same key is released
   assert.equal(engine.pitchForNote(69), 69);
 });
 
-test("Gravity at strength 10 pulls the last key exactly onto the current key", () => {
+test("Gravity at Mod 10 pulls the last key exactly onto the current key", () => {
   const engine = createEngine();
   engine.setMode(GRAVITY);
-  engine.setStrength(10);
+  engine.setMod(10);
   engine.noteReleased(60);
   engine.noteReleased(67);
   assert.equal(engine.pitchForNote(60), 67);
@@ -213,7 +215,7 @@ test("Gravity at strength 10 pulls the last key exactly onto the current key", (
 test("Gravity never gives a pitch below the Lowest bound, even when the web formula overshoots", () => {
   const engine = createEngine();
   engine.setMode(GRAVITY);
-  engine.setStrength(9.9); // pulls 10 times the gap: 880 - 4400 Hz
+  engine.setMod(9.9); // pulls 10 times the gap: 880 - 4400 Hz
   engine.noteReleased(81); // A5, 880 Hz
   engine.noteReleased(69); // A4, 440 Hz
   assert.equal(engine.pitchForNote(81), 0);
@@ -249,10 +251,6 @@ test("Move with Mod at 0 changes nothing", () => {
 
 test("settings are kept in range", () => {
   const engine = createEngine();
-  engine.setStrength(0);
-  assert.equal(engine.strength(), 1);
-  engine.setStrength(11);
-  assert.equal(engine.strength(), 10);
   engine.setMod(-13);
   assert.equal(engine.mod(), -12);
   engine.setMod(12.5);
@@ -277,12 +275,10 @@ test("settings that are not numbers are ignored", () => {
   const engine = createEngine();
   engine.setMode(MOVE);
   engine.setMode("bang");
-  engine.setStrength("bang");
   engine.setMod(NaN);
   engine.setLowest("bang");
   engine.setHighest(NaN);
   assert.equal(engine.mode(), MOVE);
-  assert.equal(engine.strength(), 2);
   assert.equal(engine.mod(), 1);
   assert.equal(engine.lowest(), 0);
   assert.equal(engine.highest(), 127);
@@ -313,7 +309,7 @@ test("changing a setting does not reset the keys", () => {
   engine.setMode(MOVE);
   engine.noteReleased(60);
   engine.setMod(2);
-  engine.setStrength(7);
+  engine.setLowest(10);
   assert.equal(engine.pitchForNote(60), 61);
   engine.noteReleased(60);
   assert.equal(engine.pitchForNote(60), 63);
@@ -380,7 +376,7 @@ test("Gravity's overshoot stops at the Lowest bound", () => {
   const engine = createEngine();
   engine.setMode(GRAVITY);
   engine.setLowest(36);
-  engine.setStrength(9.9);
+  engine.setMod(9.9);
   engine.noteReleased(81);
   engine.noteReleased(69);
   assert.equal(engine.pitchForNote(81), 36);
@@ -435,6 +431,104 @@ test("modes not built yet change nothing on release", () => {
     assert.equal(engine.pitchForNote(62), 62, `mode ${mode}`);
     assert.equal(changes, before + 2, `mode ${mode}`); // the view is still told, as for any release
   }
+});
+
+// ---- Engine: Gravity's sign, Repel and Echo (ticket 07) ----
+
+function released(mode, mod, keys, setup = () => {}) {
+  const engine = createEngine();
+  engine.setMode(mode);
+  engine.setMod(mod);
+  setup(engine);
+  keys.forEach((key) => engine.noteReleased(key));
+  return engine;
+}
+
+test("Gravity with a negative Mod pushes the last key away instead", () => {
+  const engine = released(GRAVITY, -5, [57, 69]); // A3 220 Hz, A4 440 Hz
+  near(hertzForPitch(engine.pitchForNote(57)), 220 - 220 / 5);
+  assert.equal(engine.pitchForNote(69), 69);
+});
+
+test("Gravity at Mod 0 changes nothing", () => {
+  const engine = released(GRAVITY, 0, [57, 69]);
+  assert.equal(engine.pitchForNote(57), 57);
+});
+
+test("Gravity below Mod 1 fades in from nothing, meeting the web formula at 1", () => {
+  const half = released(GRAVITY, 0.5, [57, 69]);
+  near(hertzForPitch(half.pitchForNote(57)), 220 + 220 / 18);
+  const one = released(GRAVITY, 1, [57, 69]);
+  near(hertzForPitch(one.pitchForNote(57)), 220 + 220 / 9);
+});
+
+test("Gravity above Mod 10 still pulls exactly onto the current key", () => {
+  const engine = released(GRAVITY, 12, [60, 67]);
+  assert.equal(engine.pitchForNote(60), 67);
+});
+
+test("Repel pushes the last key away from the current key", () => {
+  const engine = released(REPEL, 5, [57, 69]);
+  near(hertzForPitch(engine.pitchForNote(57)), 220 - 220 / 5);
+  assert.equal(engine.pitchForNote(69), 69);
+  const up = released(REPEL, 5, [69, 57]); // A4 pushed up, away from A3
+  near(hertzForPitch(up.pitchForNote(69)), 440 + 220 / 5);
+});
+
+test("Repel with a negative Mod pulls, as Gravity does with a positive one", () => {
+  const repel = released(REPEL, -5, [57, 69]);
+  const gravity = released(GRAVITY, 5, [57, 69]);
+  near(repel.pitchForNote(57), gravity.pitchForNote(57));
+});
+
+test("Repel at Mod 10 pushes the last key all the way to a bound", () => {
+  const down = released(REPEL, 10, [57, 69], (e) => e.setLowest(24));
+  assert.equal(down.pitchForNote(57), 24);
+  const up = released(REPEL, 10, [69, 57], (e) => e.setHighest(100));
+  assert.equal(up.pitchForNote(69), 100);
+  const gravity = released(GRAVITY, -12, [57, 69]);
+  assert.equal(gravity.pitchForNote(57), 0);
+});
+
+test("Repel does nothing on the first release, the same key twice, or keys at one pitch", () => {
+  const first = released(REPEL, 10, [60]);
+  assert.equal(first.pitchForNote(60), 60);
+  const twice = released(REPEL, 10, [60, 60]);
+  assert.equal(twice.pitchForNote(60), 60);
+  // Repel at -10 pulls 60 exactly onto 67. Then 67 has no direction to be pushed in.
+  const engine = released(REPEL, -10, [60, 67]);
+  assert.equal(engine.pitchForNote(60), 67);
+  engine.setMod(10);
+  engine.noteReleased(60); // last is 67, current 60, both at 67
+  assert.equal(engine.pitchForNote(67), 67);
+  assert.equal(engine.pitchForNote(60), 67);
+});
+
+test("Repel stops at the bounds", () => {
+  const engine = released(REPEL, 9.9, [69, 81], (e) => e.setLowest(40)); // pushes ten times the gap
+  assert.equal(engine.pitchForNote(69), 40);
+});
+
+test("Echo gives the current key the last key's drift plus Mod", () => {
+  const engine = released(ECHO, 0.1, [60, 62, 64, 65]);
+  near(engine.pitchForNote(60), 60.1); // the first release just moves by Mod
+  near(engine.pitchForNote(62), 62.2);
+  near(engine.pitchForNote(64), 64.3);
+  near(engine.pitchForNote(65), 65.4);
+  engine.noteReleased(60); // the trail carries on from the last key
+  near(engine.pitchForNote(60), 60.5);
+});
+
+test("Echo with a negative Mod leaves a falling trail", () => {
+  const engine = released(ECHO, -0.25, [60, 61]);
+  near(engine.pitchForNote(60), 59.75);
+  near(engine.pitchForNote(61), 60.5);
+});
+
+test("Echo stops at the bounds", () => {
+  const engine = released(ECHO, 12, [60, 62], (e) => e.setHighest(80));
+  assert.equal(engine.pitchForNote(60), 72);
+  assert.equal(engine.pitchForNote(62), 80); // 62 + 12 + 12 = 86
 });
 
 // ---- Router: MPE channels (from plugin/tests/MpeRouterTests.cpp and the spike tests) ----
@@ -694,7 +788,7 @@ test("the panel's mode, settings and reset reach the engine", () => {
   assert.deepEqual(messages(play([0x90, 60, 100])).at(-1).slice(1), [60, 100]);
   play([0x80, 60, 0]);
   tap.setMode(GRAVITY);
-  tap.setStrength(10);
+  tap.setMod(10);
   play([0x90, 60, 100, 0x80, 60, 0, 0x90, 67, 100, 0x80, 67, 0]);
   assert.deepEqual(messages(play([0x90, 60, 100])).at(-1).slice(1), [67, 100]);
 });
@@ -769,7 +863,7 @@ test("Semitone output: Move stays exact", () => {
 test("Semitone output: Gravity is rounded to the nearest semitone", () => {
   const { tap, play } = semitoneDevice();
   tap.setMode(GRAVITY);
-  tap.setStrength(5);
+  tap.setMod(5);
   play([0x90, 57, 100, 0x80, 57, 0]); // A3, 220 Hz
   play([0x90, 69, 100, 0x80, 69, 0]); // A4, 440 Hz: A3 goes to 264 Hz, note 60.16
   assert.deepEqual(play([0x90, 57, 100]), [0x90, 60, 100]);
@@ -778,7 +872,7 @@ test("Semitone output: Gravity is rounded to the nearest semitone", () => {
 test("Semitone output: two keys tuned to one note do not stick", () => {
   const { tap, play } = semitoneDevice();
   tap.setMode(GRAVITY);
-  tap.setStrength(10);
+  tap.setMod(10);
   play([0x90, 60, 100, 0x80, 60, 0]);
   play([0x90, 64, 100, 0x80, 64, 0]); // key 60 is pulled onto E
   assert.deepEqual(play([0x90, 60, 100]), [0x90, 64, 100]);
@@ -821,7 +915,7 @@ test("Output settings that are not numbers or are the same again change nothing"
 test("no stuck notes in Semitone output after fast playing in Gravity", () => {
   const { tap, play } = semitoneDevice();
   tap.setMode(GRAVITY);
-  tap.setStrength(6);
+  tap.setMod(6);
   let seed = 7;
   const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const held = new Set();
@@ -876,7 +970,7 @@ function loadInMax(panel) {
 }
 
 test("on load the device reads its settings from the panel", () => {
-  const { play } = loadInMax({ mode: MOVE, strength: 4, mod: -2 });
+  const { play } = loadInMax({ mode: MOVE, mod: -2 });
   play([0x90, 60, 100, 0x80, 60, 0]);
   assert.deepEqual(play([0x90, 60, 100]).at(-1), [58, 100]);
 });
@@ -913,7 +1007,7 @@ test("panel messages change the mode and settings, and only a press resets", () 
   assert.deepEqual(play([0x90, 60, 100]).at(-1), [60, 100]);
   max.reset("bang");
   max.mode(GRAVITY);
-  max.strength(10);
+  max.mod(10);
   play([0x80, 60, 0, 0x90, 67, 100, 0x80, 67, 0]);
   assert.deepEqual(play([0x90, 60, 100]).at(-1), [67, 100]);
 });
@@ -953,7 +1047,7 @@ test("each panel control is wired through its prepend into the js", () => {
   const boxes = patcher.boxes.map((b) => b.box);
   const byId = Object.fromEntries(boxes.map((box) => [box.id, box]));
   const into = (id) => patcher.lines.filter((l) => l.patchline.source[0] === id).map((l) => byId[l.patchline.destination[0]]);
-  for (const name of ["mode", "strength", "mod", "lowest", "highest", "reset", "output"]) {
+  for (const name of ["mode", "mod", "lowest", "highest", "reset", "output"]) {
     const control = boxes.find((box) => box.varname === name);
     assert.ok(control, `no control named ${name}`);
     const prepend = into(control.id).find((box) => box.text === `prepend ${name}`);
@@ -961,6 +1055,7 @@ test("each panel control is wired through its prepend into the js", () => {
     assert.ok(into(prepend.id).some((box) => box.text === "js tap.js"), `prepend ${name} does not reach the js`);
   }
   assert.equal(boxes.find((box) => box.varname === "semitones"), undefined);
+  assert.equal(boxes.find((box) => box.varname === "strength"), undefined);
 });
 
 test("the Mode menu lists the eight modes in engine order", () => {
@@ -1029,7 +1124,6 @@ test("reset and a mode change tell the view; other settings do not", () => {
   tap.setMode(GRAVITY);
   assert.equal(changes(), 2);
   tap.setMode(GRAVITY); // same mode again
-  tap.setStrength(5);
   tap.setMod(2);
   tap.setLowest(30);
   tap.setHighest(90);

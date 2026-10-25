@@ -35,13 +35,15 @@ Mode is a dropdown. One global **Mod** knob, -12.00 to +12.00 in semitones, is r
 | # | Mode | On release | Reads |
 | --- | --- | --- | --- |
 | 0 | Swap | Swap last and current | Nothing |
-| 1 | Gravity | Last is pulled towards current (web formula, in Hertz) | Strength |
+| 1 | Gravity | Last is pulled towards current (web formula, in Hertz, with Mod as strength); a negative Mod pushes it away instead | Mod |
 | 2 | Move | Current moves by Mod semitones (was the Semitones box) | Mod |
-| 3 | Repel | Last is pushed away from current (Gravity's formula reversed); strength 10 pushes to a bound | Strength |
+| 3 | Repel | Gravity reversed: a positive Mod pushes last away from current, and 10 or more pushes it to a bound; a negative Mod pulls | Mod |
 | 4 | Echo | Current takes last's drift, plus Mod | Mod |
 | 5 | Rotate | The last N keys released pass their pitches round; N is Mod rounded, 2 to 12, and a negative Mod turns the other way | Mod |
 | 6 | Wander | Current moves by a random amount up to Mod either way | Mod |
 | 7 | Harmony | Current is retuned to the pure interval Mod from last: +7 is a 3/2 fifth up, -2 a 9/8 down | Mod |
+
+For Gravity and Repel, Mod is the web app's strength: from 1 to 10 the share of the gap moved is `1 / (10 - strength)`, below 1 it fades in from nothing at 0, and 10 or more is a full pull onto the current key (or a full push to a bound). The Strength dial is gone.
 
 ## Deliberate changes from the web app
 
@@ -118,7 +120,7 @@ Every ticket ends in something you can try in Live. Each ticket is reviewed befo
 | 05 | [Drift view](tickets/05-drift-view.md) | See keys drift as you play |
 | 05.2 | [Picture mode](tickets/05.2-picture-mode.md) | A pixel art picture scrambles as keys drift |
 | 06 | [Mode menu, Mod knob and bounds](tickets/06-mode-menu-mod-bounds.md) | Move by any amount; keys stop at the bounds |
-| 07 | [Repel and Echo](tickets/07-repel-echo.md) | Keys push apart; drift trails along a phrase |
+| 07 | [Gravity on Mod, Repel and Echo](tickets/07-repel-echo.md) | Mod pulls or pushes; drift trails along a phrase |
 | 08 | [Rotate](tickets/08-rotate.md) | Pitches pass round in threes, either way |
 | 09 | [Wander](tickets/09-wander.md) | Keys drift at random |
 | 10 | [Harmony](tickets/10-harmony.md) | Each key lands a pure interval from the one before |

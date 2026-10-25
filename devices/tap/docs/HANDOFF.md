@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-25 (ticket 05.2 passed in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`.
+Last updated 2026-10-25 (tickets 06 to 10 planned; ticket 06 ready to build). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`; tickets 06 to 10 were planned on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
 
 ## Goal
 
@@ -16,6 +16,8 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 04 Semitone mode | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 05 Drift view | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 05.2 Picture mode | **Done.** Passed in Live by 2026-10-20: the user reported that it works. |
+| 06 Mode menu, Mod knob and bounds | **Ready to build.** Notes below. |
+| 07 to 10 Repel, Echo, Rotate, Wander, Harmony | Planned. Build one at a time after 06 passes in Live. |
 
 ## Ticket 01 results (2026-10-11)
 
@@ -123,6 +125,35 @@ Only `drift-view.js` changed, and it uses `autowatch`, so a loaded device picks 
 7. Hover over a square: the top line names its key and drift. Click **Keys** to go back to the keyboard.
 8. **Speed:** fast passages with Picture showing feel as tight as before.
 
+## Ticket 06: notes for the build
+
+Ticket: [`tickets/06-mode-menu-mod-bounds.md`](tickets/06-mode-menu-mod-bounds.md). Mode rules: "More modes" in [`SPEC.md`](SPEC.md#more-modes). The design was settled with the user on 2026-10-25; the "Choices made here" in the ticket were not pushed back on, so build them as written.
+
+### `m4l/tap.js`
+- Add mode constants for all eight, in panel order: `SWAP = 0` to `HARMONY = 7`. `setMode` accepts 0 to 7 (rounded; anything outside clamps). Modes 3 to 7 are not built yet: in `apply` they change no pitch but still set `lastReleased`, so later tickets only fill in a rule.
+- Replace `semitones` with `mod` (float, clamped to -12 to 12, default 1). Move does `pitches[current] += mod`. Remove `setSemitones`, the `semitones` getter and the `semitones()` Max handler; add `mod()`, `lowest()` and `highest()` handlers and `setMod`, `setLowest`, `setHighest` on the engine and on `createTap`.
+- Add `lowest` (default 0) and `highest` (default 127), ints clamped to 0 to 127. One `bound(pitch)` helper reads them the other way round if lowest is above highest. Every pitch a mode writes goes through it, Swap included, so a key outside new bounds comes back inside when a mode next touches it. Setting a bound changes no pitch and does not call `onChange`.
+- Gravity's `hertz > hertzForPitch(0) ? ... : 0` becomes `bound(...)`. Guard the Hertz to pitch step against a Hertz of 0 or below (it goes to `lowest`).
+- `sync()`: drop `semitones`, add `mod`, `lowest`, `highest`.
+- Keep the file ES5 (the ES5 check in the tests will catch slips).
+
+### `m4l/tests/tap.test.js`
+- Test-first, as before. The existing Semitones tests (around lines 219 to 273, and uses at 300, 324, 578, 653, 768, 782, 836, 880) move to Mod; keep what each one proves.
+- New tests: Move with whole and fractional Mod, Mod clamping, Move held at Highest, Gravity held at Lowest, bounds read the other way round, Swap pulling an out-of-bounds pitch back in, setting a bound not sending a drift table, modes 3 to 7 changing nothing, and `loadInMax` reading `mod`, `lowest` and `highest`.
+
+### `m4l/TAP.maxpat`, then `npm run build --prefix m4l`
+- **Mode:** change `obj-20` from `live.tab` to `live.menu`. Keep its id, `varname` `mode` and parameter name `Mode` so saved sets keep their mode. `parameter_mmax` 7 and the eight names in `parameter_enum`. It still feeds `prepend mode`.
+- **Remove** Semitones: `obj-22`, its comment `obj-23`, `prepend semitones`, their patch lines and the `obj-22` entry in the `parameters` block at the end of the file.
+- **Add** `live.dial` Mod (varname `mod`, float, -12 to 12, initial 1, two decimals; `parameter_steps` 2401 gives steps of 0.01), and `live.numbox` Lowest and Highest (varnames `lowest` and `highest`, int 0 to 127, initial 0 and 127, unit style MIDI note). Each through its own `prepend` into `js tap.js`, and each listed in the `parameters` block with new ids.
+- Fit the panel in the device height (`openrect` height 169). Reset, Output and Drift view keep working; moving them is fine.
+- Regenerate `TAP.amxd` with `npm run build --prefix m4l`. `tests/amxd.test.mjs` fails if the `.amxd` and `.maxpat` are out of sync.
+
+### When it is built
+- Run `npm test --prefix m4l` and expect `# fail 0`.
+- Add "Ticket 06: what was built" and "Testing ticket 06 in Live" sections here, in the style of the earlier tickets, using the ticket's Prototype steps. The patch changed, so the user drags the device in again.
+- Update "Where we are" to "Built, not yet tested in Live", review the diff with the user, then commit and push.
+- Unknowns to watch in Live: whether `live.menu` keeps a saved set's Mode value from the old `live.tab`, and how the Mod dial shows two decimals. If either goes wrong, note it here and ask the user.
+
 ## Why not the VST
 
 Ableton merges all MIDI channels into one when MIDI goes from track to track, so the VST's per-note bends never reached Wavetable (VST ticket 02). The VST in `plugin/` is parked; ask the user before deleting it. History: [`../vst/HANDOFF.md`](../vst/HANDOFF.md).
@@ -152,7 +183,8 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 
 ## Next steps
 
-1. Tickets 06 to 10: a Mode dropdown, one global Mod knob (-12.00 to +12.00), Lowest and Highest bounds, then five new modes (Repel, Echo, Rotate, Wander, Harmony). Decided with the user on 2026-10-25; ticket 06 lists the choices made on top of that.
-2. Later: save the pitch table with the set.
+1. Build ticket 06 (notes above), then the user tests it in Live.
+2. Tickets 07 to 10, one at a time: Repel and Echo, Rotate, Wander, Harmony. They change only `tap.js`.
+3. Later: save the pitch table with the set.
 
 Hosting an instrument inside TAP was explored and is not needed: TAP already works with Waves Grand Rhapsody Piano and Electric 88 placed after it on the same track (which Output was used is not yet recorded).

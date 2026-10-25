@@ -18,6 +18,19 @@
   - **Swap** does nothing on the first release, because last equals current.
 - Saved sets store Mode as a number. Taking modes out of the menu, or reordering them, changes which mode an old set opens on.
 
+## Decided with the user (2026-10-25, round 1)
+
+- **Why:** it was getting too complex too fast. Things should move out slowly. Some new modes overlap with the old ones. The new panel UI (ticket 14) should be tried with three modes first, so there are fewer moving parts. The other modes come back later.
+- **New modes:** take Repel, Echo, Rotate, Wander and Harmony out of the menu. Tickets 07 to 10 stay as paused tickets, so the ideas are not lost.
+- **Feel per mode:** not needed for this ticket.
+- **Gravity stays in Hertz,** as in the web app. It should be more finely tuned, so it is less severe. That tuning can be part of the UI work.
+- **Swap:** unchanged. It is the simplest mode, and doing nothing on the first release is right.
+- **Lowest and Highest:** keep them. A double (range) slider for setting both would be more useful.
+- **Mode change resets every key:** keep it.
+- **Old saved sets:** do not matter.
+- **Tickets 06 and 07:** skip testing them in Live. Only the reworked device gets tested.
+- **Later, out of scope:** a floor at the same note name. If you play A4 and Gravity pulls it down, it stops at the A below instead of going on down. It needs its own ticket.
+
 ## Questions to grill
 
 1. **What happens to the five new modes?** Options: delete them from `tap.js` and the menu; hide them from the menu but keep the code; or keep them in the menu and park only 08 to 10. *Recommendation:* take all five out of the menu and the engine, and keep them in git history (tickets 07 to 10 stay as notes). It keeps the device and the tests small while the core three are reworked.

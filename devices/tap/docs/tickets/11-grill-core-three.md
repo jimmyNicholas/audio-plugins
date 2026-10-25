@@ -40,6 +40,15 @@
 - **Order of work:** grill every ticket (11 to 15) first, then build.
 - **Floor at the same note name:** parked as ticket [17](17-note-floor.md).
 
+## Decided with the user (2026-10-25, round 3)
+
+- **Gravity's curve:** `share = 1% × Mod^1.585`, so each doubling of Mod triples the pull: Mod 1 is 1%, 2 is 3%, 4 is 9%, 8 is 27% and 12 is 51%. It stays in Hertz, never overshoots and never lands one key fully on another. The curve's numbers can be changed in a debug setting.
+- **Gravity with a negative Mod:** pushes the last key away from the current one, on the same curve.
+- **Swap reads Mod:** at +1 it is the normal Swap. From +2 to +12 it rotates pitches through the last keys pressed (this brings ticket 08's Rotate into Swap). A negative Mod turns the rotation the other way.
+- **Move:** unchanged. It adds Mod in semitones, -12 to +12, in 0.01 steps.
+- **Mod's default:** stays at 1.
+- **Mode on the Live strip:** a three-step slider: Swap, Gravity, Move.
+
 ## Questions to grill
 
 1. **What happens to the five new modes?** Options: delete them from `tap.js` and the menu; hide them from the menu but keep the code; or keep them in the menu and park only 08 to 10. *Recommendation:* take all five out of the menu and the engine, and keep them in git history (tickets 07 to 10 stay as notes). It keeps the device and the tests small while the core three are reworked.

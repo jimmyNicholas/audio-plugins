@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-12 (ticket 05.2 built, waiting for a test in Live). Branch: `claude/codebase-vst-ableton-puxbqz`.
+Last updated 2026-10-25 (ticket 05.2 passed in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`.
 
 ## Goal
 
@@ -15,7 +15,7 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 03 Gravity, Move and the panel | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 04 Semitone mode | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 05 Drift view | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
-| 05.2 Picture mode | **Built, not yet tested in Live.** `npm test` passes. |
+| 05.2 Picture mode | **Done.** Passed in Live by 2026-10-20: the user reported that it works. |
 
 ## Ticket 01 results (2026-10-11)
 
@@ -146,11 +146,11 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 - **`js` in Max 8 is ES5:** no `let`, arrow functions, classes, template literals, `Map` or `Promise`. Use `Task` for timers.
 - **Channel 1** is the MPE master channel. Notes on it are not treated as per-note.
 - **Pushing:** check `git log origin/<branch>..HEAD` first so nothing unexpected goes up.
-- **Vercel** fails on every commit on this branch for reasons unrelated to this work. Do not merge to `main`.
+- **Vercel** fails on these branches for reasons unrelated to this work. The user does not need the web app on Vercel, so ignore it.
 - **No PR** unless the user asks.
 - **User preferences:** Australian spelling, no em dashes, small reviewable tickets, review before committing, ask before big changes.
 
 ## Next steps
 
-1. Test ticket 05.2 in Live (steps above).
-2. After that, the only item left in the spec is "later: save the pitch table with the set".
+1. Explore hosting the instrument inside TAP so no MIDI routing is needed (the user's next idea).
+2. The only item left in the spec is "later: save the pitch table with the set".

@@ -49,6 +49,16 @@
 - **Mod's default:** stays at 1.
 - **Mode on the Live strip:** a three-step slider: Swap, Gravity, Move.
 
+## Decided with the user (2026-10-25, rounds 4 to 6)
+
+- **Swap's count:** Mod rounded to a whole number, ignoring the sign, plus 1. Mod +1 swaps 2 keys, +2 rotates 3, and so on up to +12, which rotates 13. A Mod that rounds to 0 changes nothing.
+- **Fewer releases than the count:** rotate what's there. With 2 releases it swaps, with 3 it rotates 3, and so on up to the count.
+- **Turning Mod keeps the list.** TAP always remembers the last 13 releases and rotates the newest N, so an LFO on Mod changes the size of the circle smoothly.
+- **Direction:** with a positive Mod, each place takes the pitch of the place released after it, and the newest takes the oldest's. Release C, E, G at Mod +2: C plays E, E plays G, G plays C. A negative Mod turns it the other way: C plays G, E plays C, G plays E.
+- **Repeats:** the list holds releases, not keys, so a key released twice holds two places. When one rotation gives a key two pitches, its **newest place wins**. Example: Mod +2, release C, E, C: C and E both end up playing C, so pitches can merge over time.
+- **Pedal:** each queued release joins the list and rotates in turn when the pedal lifts, as in every mode.
+- **Gravity's debug settings** (1% at Mod 1, ×3 per doubling): fixed in code for ticket 11. Ticket 14 adds them to a debug section in the panel window. They are not Live parameters and are not saved with the set. Values the user likes become the new defaults in code.
+
 ## Questions to grill
 
 1. **What happens to the five new modes?** Options: delete them from `tap.js` and the menu; hide them from the menu but keep the code; or keep them in the menu and park only 08 to 10. *Recommendation:* take all five out of the menu and the engine, and keep them in git history (tickets 07 to 10 stay as notes). It keeps the device and the tests small while the core three are reworked.

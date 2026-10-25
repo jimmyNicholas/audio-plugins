@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-12 (ticket 05.2 built, waiting for a test in Live). Branch: `claude/codebase-vst-ableton-puxbqz`.
+Last updated 2026-10-25 (ticket 06 built, waiting for a test in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
 
 ## Goal
 
@@ -15,7 +15,9 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 03 Gravity, Move and the panel | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 04 Semitone mode | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
 | 05 Drift view | **Done.** Passed in Live on 2026-10-12: the user reported that it works. |
-| 05.2 Picture mode | **Built, not yet tested in Live.** `npm test` passes. |
+| 05.2 Picture mode | **Done.** Passed in Live by 2026-10-20: the user reported that it works. |
+| 06 Mode menu, Mod knob and bounds | **Built, not yet tested in Live.** `npm test` passes. |
+| 07 to 10 Repel, Echo, Rotate, Wander, Harmony | Planned. Build one at a time after 06 passes in Live. |
 
 ## Ticket 01 results (2026-10-11)
 
@@ -123,6 +125,35 @@ Only `drift-view.js` changed, and it uses `autowatch`, so a loaded device picks 
 7. Hover over a square: the top line names its key and drift. Click **Keys** to go back to the keyboard.
 8. **Speed:** fast passages with Picture showing feel as tight as before.
 
+## Ticket 06: what was built
+
+- `tap.js`:
+  - Mode numbers for all eight modes, in menu order: Swap 0, Gravity 1, Move 2, Repel 3, Echo 4, Rotate 5, Wander 6, Harmony 7. `setMode` rounds and clamps to 0 to 7. Modes 3 to 7 change no pitch yet, but a release still counts as the last release and still updates the drift view, so tickets 07 to 10 only add a rule in `apply`.
+  - `mod` replaces `semitones`: a float from -12 to 12, default 1. Move adds it, so Move now takes fractions and up to an octave.
+  - `lowest` and `highest` (0 to 127, defaults 0 and 127). `bound(pitch)` keeps every pitch a mode writes within them, reading them the other way round if Lowest is above Highest. Swap and Gravity use it too. Setting a bound changes no pitch and does not update the drift view.
+  - Gravity's overshoot below 0 Hz now goes to Lowest instead of note 0.
+  - Max handlers `mod`, `lowest` and `highest`; `semitones` is gone. `sync` reads `mod`, `lowest` and `highest`.
+- `TAP.maxpat` and `TAP.amxd`:
+  - Mode is a `live.menu` with the eight names. It keeps the old `live.tab`'s id, `varname` and parameter name `Mode`.
+  - Semitones, its label and its `prepend` are gone.
+  - New: `live.dial` Mod (-12 to 12, initial 1, 2401 steps so it moves in 0.01s, Float unit style), and `live.numbox` Lowest and Highest (0 to 127, MIDI note unit style) with labels. Each goes through its own `prepend` into the `js`.
+  - Layout: Mode menu under the title; Strength and Mod dials side by side; Lowest and Highest to their right; Reset, Drift view and Output where they were.
+- Tests: Mod and the bounds in the engine, the device and the Max glue; modes 3 to 7 changing nothing; and two new checks on `TAP.maxpat` itself: every control is wired through its `prepend` into the `js`, and the Mode menu lists the eight modes in engine order.
+
+## Testing ticket 06 in Live
+
+The patch changed, so drag the device in again.
+
+1. `git pull` in Cursor, then `npm test --prefix m4l`. The last lines should show `# fail 0`.
+2. MIDI track with **TAP.amxd** then Wavetable (or one of the Waves pianos). The panel now has a Mode dropdown, Strength and Mod dials, and Lowest and Highest boxes.
+3. **Mode:** the dropdown lists Swap, Gravity, Move, Repel, Echo, Rotate, Wander, Harmony. Swap and Gravity work as before. Repel to Harmony change nothing yet.
+4. **Move**, Mod 7.00: each release moves the key up a fifth. Mod -0.50: down a quarter tone (on MPE; Semitone output rounds it).
+5. **Mod dial:** check it shows two decimals and can be set to 0.01 steps (hold Shift while dragging, or type a value).
+6. **Bounds**, Highest C3 (middle C, as Live names it): with Move at +2.00, release a key below middle C again and again. It stops at middle C. Set Lowest above Highest: the bounds still work, read the other way round.
+7. **Saved with the set:** Mode, Mod, Lowest and Highest save with the set and reopen as they were.
+8. **Old sets:** open a set saved with the old device on Gravity or Move. Does it open on the same mode? (Unknown: the Mode control changed from a tab to a menu.) The Semitones value is lost and Mod opens at 1.00.
+9. If the device shows an error, open it in the Max editor and copy the red lines from the Max Console.
+
 ## Why not the VST
 
 Ableton merges all MIDI channels into one when MIDI goes from track to track, so the VST's per-note bends never reached Wavetable (VST ticket 02). The VST in `plugin/` is parked; ask the user before deleting it. History: [`../vst/HANDOFF.md`](../vst/HANDOFF.md).
@@ -146,11 +177,14 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 - **`js` in Max 8 is ES5:** no `let`, arrow functions, classes, template literals, `Map` or `Promise`. Use `Task` for timers.
 - **Channel 1** is the MPE master channel. Notes on it are not treated as per-note.
 - **Pushing:** check `git log origin/<branch>..HEAD` first so nothing unexpected goes up.
-- **Vercel** fails on every commit on this branch for reasons unrelated to this work. Do not merge to `main`.
+- **Vercel** fails on these branches for reasons unrelated to this work. The user does not need the web app on Vercel, so ignore it.
 - **No PR** unless the user asks.
 - **User preferences:** Australian spelling, no em dashes, small reviewable tickets, review before committing, ask before big changes.
 
 ## Next steps
 
-1. Test ticket 05.2 in Live (steps above).
-2. After that, the only item left in the spec is "later: save the pitch table with the set".
+1. Test ticket 06 in Live (steps above).
+2. Tickets 07 to 10, one at a time: Repel and Echo, Rotate, Wander, Harmony. They change only `tap.js`.
+3. Later: save the pitch table with the set.
+
+Hosting an instrument inside TAP was explored and is not needed: TAP already works with Waves Grand Rhapsody Piano and Electric 88 placed after it on the same track (which Output was used is not yet recorded).

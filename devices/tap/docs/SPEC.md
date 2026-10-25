@@ -26,6 +26,23 @@ Unchanged from the VST spec:
 5. **Sustain pedal:** while the pedal is down, released keys are queued. When the pedal lifts, the mode is applied to each queued key in release order.
 6. Changing mode resets every key to concert pitch.
 
+## More modes
+
+Tickets 06 to 10 take TAP from three modes to eight. The new modes are not in the web app. They follow the same rules as the first three: they act on release, the pedal queues them, and Reset or a mode change clears them. They are added after Move, so sets saved with the first three keep their mode.
+
+Mode is a dropdown. One global **Mod** knob, -12.00 to +12.00 in semitones, is read by each mode in its own way. Global **Lowest** and **Highest** notes bound every mode's result; changing them moves no key until a mode next changes it.
+
+| # | Mode | On release | Reads |
+| --- | --- | --- | --- |
+| 0 | Swap | Swap last and current | Nothing |
+| 1 | Gravity | Last is pulled towards current (web formula, in Hertz) | Strength |
+| 2 | Move | Current moves by Mod semitones (was the Semitones box) | Mod |
+| 3 | Repel | Last is pushed away from current (Gravity's formula reversed); strength 10 pushes to a bound | Strength |
+| 4 | Echo | Current takes last's drift, plus Mod | Mod |
+| 5 | Rotate | The last N keys released pass their pitches round; N is Mod rounded, 2 to 12, and a negative Mod turns the other way | Mod |
+| 6 | Wander | Current moves by a random amount up to Mod either way | Mod |
+| 7 | Harmony | Current is retuned to the pure interval Mod from last: +7 is a 3/2 fifth up, -2 a 9/8 down | Mod |
+
 ## Deliberate changes from the web app
 
 - **Gravity at strength 10:** the web formula divides by zero. TAP pulls the key exactly onto the current key's pitch.
@@ -100,6 +117,11 @@ Every ticket ends in something you can try in Live. Each ticket is reviewed befo
 | 04 | [Semitone mode](tickets/04-semitone-mode.md) | Operator plays rounded pitches |
 | 05 | [Drift view](tickets/05-drift-view.md) | See keys drift as you play |
 | 05.2 | [Picture mode](tickets/05.2-picture-mode.md) | A pixel art picture scrambles as keys drift |
+| 06 | [Mode menu, Mod knob and bounds](tickets/06-mode-menu-mod-bounds.md) | Move by any amount; keys stop at the bounds |
+| 07 | [Repel and Echo](tickets/07-repel-echo.md) | Keys push apart; drift trails along a phrase |
+| 08 | [Rotate](tickets/08-rotate.md) | Pitches pass round in threes, either way |
+| 09 | [Wander](tickets/09-wander.md) | Keys drift at random |
+| 10 | [Harmony](tickets/10-harmony.md) | Each key lands a pure interval from the one before |
 | later | Save the pitch table with the set | |
 
 Tickets 04 and 05 can swap places.

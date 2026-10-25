@@ -25,11 +25,18 @@ var CC_SUSTAIN = 64;
 var CC_ALL_SOUND_OFF = 120;
 var CC_ALL_NOTES_OFF = 123;
 
-// Modes, in the order of the panel's Mode tab.
+// Modes, in the order of the panel's Mode menu. New modes go at the end, so saved sets
+// keep their mode. Repel to Harmony are not built yet: tickets 07 to 10.
 var SWAP = 0;
 var GRAVITY = 1;
 var MOVE = 2;
+var REPEL = 3;
+var ECHO = 4;
+var ROTATE = 5;
+var WANDER = 6;
+var HARMONY = 7;
 var MAX_STRENGTH = 10;
+var MAX_MOD = 12; // semitones either way
 
 // Outputs, in the order of the panel's Output tab.
 var MPE = 0;
@@ -77,7 +84,9 @@ function createEngine(onChange) {
   var queue = [];
   var mode = SWAP;
   var strength = 2;
-  var semitones = 1;
+  var mod = 1;
+  var lowest = 0;
+  var highest = NUM_NOTES - 1;
 
   function changed() {
     if (onChange) onChange();
@@ -95,40 +104,45 @@ function createEngine(onChange) {
     changed();
   }
 
+  // Every pitch a mode writes is kept within Lowest and Highest, read the other way round
+  // if Lowest is above Highest. Changing a bound moves nothing until a mode next writes.
+  function bound(pitch) {
+    return clamp(pitch, Math.min(lowest, highest), Math.max(lowest, highest));
+  }
+
   function swap(last, current) {
     var swapped = pitches[last];
-    pitches[last] = pitches[current];
-    pitches[current] = swapped;
+    pitches[last] = bound(pitches[current]);
+    pitches[current] = bound(swapped);
   }
 
   // As in gravity.ts, in Hertz. Strength 10 divides by zero there, so here it pulls the
   // last key exactly onto the current key. Just below 10 the web formula overshoots a long
-  // way, so the result is kept at or above note 0.
+  // way, even below 0 Hz, so the result is kept within the bounds.
   function gravity(last, current) {
     if (strength >= MAX_STRENGTH) {
-      pitches[last] = pitches[current];
+      pitches[last] = bound(pitches[current]);
       return;
     }
     var lastHertz = hertzForPitch(pitches[last]);
     var currentHertz = hertzForPitch(pitches[current]);
     var hertz = lastHertz - (lastHertz - currentHertz) / (MAX_STRENGTH - strength);
-    pitches[last] = hertz > hertzForPitch(0) ? pitchForHertz(hertz) : 0;
+    pitches[last] = hertz > 0 ? bound(pitchForHertz(hertz)) : bound(-Infinity);
   }
 
   function apply(current) {
     // As in useKeyboard.ts: on the very first release the last key is the current key.
     var last = lastReleased < 0 ? current : lastReleased;
-    if (mode === MOVE) pitches[current] += semitones;
+    if (mode === MOVE) pitches[current] = bound(pitches[current] + mod);
     else if (last !== current && mode === GRAVITY) gravity(last, current);
-    else if (last !== current) swap(last, current);
+    else if (last !== current && mode === SWAP) swap(last, current);
     lastReleased = current;
   }
 
   // Changing mode resets every key, as in the web app. The same mode again does not.
   function setMode(value) {
     if (!isNumber(value)) return;
-    var next = Math.round(value);
-    if (next !== SWAP && next !== GRAVITY && next !== MOVE) next = SWAP;
+    var next = clamp(Math.round(value), SWAP, HARMONY);
     if (next === mode) return;
     mode = next;
     reset();
@@ -162,8 +176,14 @@ function createEngine(onChange) {
     setStrength: function (value) {
       if (isNumber(value)) strength = clamp(value, 1, MAX_STRENGTH);
     },
-    setSemitones: function (value) {
-      if (isNumber(value)) semitones = clamp(Math.round(value), -2, 2);
+    setMod: function (value) {
+      if (isNumber(value)) mod = clamp(value, -MAX_MOD, MAX_MOD);
+    },
+    setLowest: function (value) {
+      if (isNumber(value)) lowest = clamp(Math.round(value), 0, NUM_NOTES - 1);
+    },
+    setHighest: function (value) {
+      if (isNumber(value)) highest = clamp(Math.round(value), 0, NUM_NOTES - 1);
     },
     mode: function () {
       return mode;
@@ -171,8 +191,14 @@ function createEngine(onChange) {
     strength: function () {
       return strength;
     },
-    semitones: function () {
-      return semitones;
+    mod: function () {
+      return mod;
+    },
+    lowest: function () {
+      return lowest;
+    },
+    highest: function () {
+      return highest;
     },
     pitchForNote: function (note) {
       return pitches[note];
@@ -466,7 +492,9 @@ function createTap(send, onDrift) {
     setOutput: setOutput,
     setMode: engine.setMode,
     setStrength: engine.setStrength,
-    setSemitones: engine.setSemitones,
+    setMod: engine.setMod,
+    setLowest: engine.setLowest,
+    setHighest: engine.setHighest,
     reset: engine.reset,
     drift: engine.drift,
   };
@@ -495,8 +523,16 @@ function strength(value) {
   tap.setStrength(value);
 }
 
-function semitones(value) {
-  tap.setSemitones(value);
+function mod(value) {
+  tap.setMod(value);
+}
+
+function lowest(value) {
+  tap.setLowest(value);
+}
+
+function highest(value) {
+  tap.setHighest(value);
 }
 
 function output(value) {
@@ -515,7 +551,9 @@ function sync() {
   var controls = [
     ["mode", mode],
     ["strength", strength],
-    ["semitones", semitones],
+    ["mod", mod],
+    ["lowest", lowest],
+    ["highest", highest],
     ["output", output],
   ];
   for (var i = 0; i < controls.length; i++) {

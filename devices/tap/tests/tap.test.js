@@ -157,16 +157,19 @@ test("pressing the pedal twice does not lose the queue", () => {
 const SWAP = 0;
 const GRAVITY = 1;
 const MOVE = 2;
+const NOT_BUILT = [3, 4, 5, 6, 7]; // Repel, Echo, Rotate, Wander, Harmony: tickets 07 to 10
 
 function near(actual, expected, tolerance = 1e-9) {
   assert.ok(Math.abs(actual - expected) < tolerance, `${actual} is not close to ${expected}`);
 }
 
-test("the default mode is Swap, strength 2 and 1 semitone", () => {
+test("the default mode is Swap, strength 2, Mod 1 and bounds 0 to 127", () => {
   const engine = createEngine();
   assert.equal(engine.mode(), SWAP);
   assert.equal(engine.strength(), 2);
-  assert.equal(engine.semitones(), 1);
+  assert.equal(engine.mod(), 1);
+  assert.equal(engine.lowest(), 0);
+  assert.equal(engine.highest(), 127);
 });
 
 test("Gravity pulls the last key toward the current key as in the web app", () => {
@@ -207,7 +210,7 @@ test("Gravity at strength 10 pulls the last key exactly onto the current key", (
   assert.equal(engine.pitchForNote(67), 67);
 });
 
-test("Gravity never gives a pitch below note 0, even when the web formula overshoots", () => {
+test("Gravity never gives a pitch below the Lowest bound, even when the web formula overshoots", () => {
   const engine = createEngine();
   engine.setMode(GRAVITY);
   engine.setStrength(9.9); // pulls 10 times the gap: 880 - 4400 Hz
@@ -216,7 +219,7 @@ test("Gravity never gives a pitch below note 0, even when the web formula oversh
   assert.equal(engine.pitchForNote(81), 0);
 });
 
-test("Move shifts the released key by the semitones setting, from the first release", () => {
+test("Move shifts the released key by Mod semitones, from the first release", () => {
   const engine = createEngine();
   engine.setMode(MOVE);
   engine.noteReleased(69);
@@ -229,17 +232,17 @@ test("Move shifts the released key by the semitones setting, from the first rele
 test("Move down shifts the released key down and leaves the last key alone", () => {
   const engine = createEngine();
   engine.setMode(MOVE);
-  engine.setSemitones(-1);
+  engine.setMod(-1);
   engine.noteReleased(69);
   engine.noteReleased(71);
   assert.equal(engine.pitchForNote(71), 70); // move.test.ts: 493.88 Hz down one is 466.16 Hz
   assert.equal(engine.pitchForNote(69), 68);
 });
 
-test("Move at 0 semitones changes nothing", () => {
+test("Move with Mod at 0 changes nothing", () => {
   const engine = createEngine();
   engine.setMode(MOVE);
-  engine.setSemitones(0);
+  engine.setMod(0);
   engine.noteReleased(60);
   assert.equal(engine.pitchForNote(60), 60);
 });
@@ -250,14 +253,22 @@ test("settings are kept in range", () => {
   assert.equal(engine.strength(), 1);
   engine.setStrength(11);
   assert.equal(engine.strength(), 10);
-  engine.setSemitones(-3);
-  assert.equal(engine.semitones(), -2);
-  engine.setSemitones(5);
-  assert.equal(engine.semitones(), 2);
-  engine.setSemitones(1.4);
-  assert.equal(engine.semitones(), 1);
-  engine.setMode(3);
-  assert.equal(engine.mode(), SWAP);
+  engine.setMod(-13);
+  assert.equal(engine.mod(), -12);
+  engine.setMod(12.5);
+  assert.equal(engine.mod(), 12);
+  engine.setMod(1.4);
+  assert.equal(engine.mod(), 1.4);
+  engine.setLowest(-5);
+  assert.equal(engine.lowest(), 0);
+  engine.setHighest(200);
+  assert.equal(engine.highest(), 127);
+  engine.setLowest(40.6);
+  assert.equal(engine.lowest(), 41);
+  engine.setMode(7);
+  assert.equal(engine.mode(), 7);
+  engine.setMode(9);
+  assert.equal(engine.mode(), 7);
   engine.setMode(-1);
   assert.equal(engine.mode(), SWAP);
 });
@@ -267,10 +278,14 @@ test("settings that are not numbers are ignored", () => {
   engine.setMode(MOVE);
   engine.setMode("bang");
   engine.setStrength("bang");
-  engine.setSemitones(NaN);
+  engine.setMod(NaN);
+  engine.setLowest("bang");
+  engine.setHighest(NaN);
   assert.equal(engine.mode(), MOVE);
   assert.equal(engine.strength(), 2);
-  assert.equal(engine.semitones(), 1);
+  assert.equal(engine.mod(), 1);
+  assert.equal(engine.lowest(), 0);
+  assert.equal(engine.highest(), 127);
 });
 
 test("changing mode resets every key and forgets the last release", () => {
@@ -297,7 +312,7 @@ test("changing a setting does not reset the keys", () => {
   const engine = createEngine();
   engine.setMode(MOVE);
   engine.noteReleased(60);
-  engine.setSemitones(2);
+  engine.setMod(2);
   engine.setStrength(7);
   assert.equal(engine.pitchForNote(60), 61);
   engine.noteReleased(60);
@@ -321,9 +336,105 @@ test("the pedal queue uses the mode that is on when the pedal lifts", () => {
   engine.setPedal(true);
   engine.noteReleased(60);
   engine.noteReleased(60);
-  engine.setSemitones(2);
+  engine.setMod(2);
   engine.setPedal(false);
   assert.equal(engine.pitchForNote(60), 64);
+});
+
+// ---- Engine: Mod, bounds and the modes still to build (ticket 06) ----
+
+test("Move takes fractions of a semitone and moves up to an octave", () => {
+  const engine = createEngine();
+  engine.setMode(MOVE);
+  engine.setMod(0.5);
+  engine.noteReleased(60);
+  near(engine.pitchForNote(60), 60.5);
+  engine.setMod(-12);
+  engine.noteReleased(62);
+  assert.equal(engine.pitchForNote(62), 50);
+});
+
+test("Move stops at the Highest bound", () => {
+  const engine = createEngine();
+  engine.setMode(MOVE);
+  engine.setHighest(60);
+  engine.setMod(2);
+  engine.noteReleased(57);
+  assert.equal(engine.pitchForNote(57), 59);
+  engine.noteReleased(57);
+  assert.equal(engine.pitchForNote(57), 60);
+  engine.noteReleased(57);
+  assert.equal(engine.pitchForNote(57), 60);
+});
+
+test("Move stops at the Lowest bound", () => {
+  const engine = createEngine();
+  engine.setMode(MOVE);
+  engine.setLowest(48);
+  engine.setMod(-12);
+  engine.noteReleased(55);
+  assert.equal(engine.pitchForNote(55), 48);
+});
+
+test("Gravity's overshoot stops at the Lowest bound", () => {
+  const engine = createEngine();
+  engine.setMode(GRAVITY);
+  engine.setLowest(36);
+  engine.setStrength(9.9);
+  engine.noteReleased(81);
+  engine.noteReleased(69);
+  assert.equal(engine.pitchForNote(81), 36);
+});
+
+test("bounds set the wrong way round are read the other way round", () => {
+  const engine = createEngine();
+  engine.setMode(MOVE);
+  engine.setLowest(72);
+  engine.setHighest(60);
+  engine.setMod(12);
+  engine.noteReleased(65);
+  assert.equal(engine.pitchForNote(65), 72);
+  engine.setMod(-12);
+  engine.noteReleased(64);
+  assert.equal(engine.pitchForNote(64), 60);
+});
+
+test("changing a bound moves no key until a mode changes it", () => {
+  let changes = 0;
+  const engine = createEngine(() => changes++);
+  engine.setMode(MOVE);
+  engine.setMod(12);
+  engine.noteReleased(60); // 72
+  const before = changes;
+  engine.setHighest(64);
+  assert.equal(engine.pitchForNote(60), 72);
+  assert.equal(changes, before); // the drift view is not told
+  engine.setMod(0);
+  engine.noteReleased(60);
+  assert.equal(engine.pitchForNote(60), 64);
+});
+
+test("Swap keeps both swapped pitches within the bounds", () => {
+  const engine = createEngine();
+  engine.setHighest(64);
+  engine.noteReleased(60);
+  engine.noteReleased(70); // 60 would take 70, above Highest
+  assert.equal(engine.pitchForNote(60), 64);
+  assert.equal(engine.pitchForNote(70), 60);
+});
+
+test("modes not built yet change nothing on release", () => {
+  for (const mode of NOT_BUILT) {
+    let changes = 0;
+    const engine = createEngine(() => changes++);
+    engine.setMode(mode);
+    const before = changes;
+    engine.noteReleased(60);
+    engine.noteReleased(62);
+    assert.equal(engine.pitchForNote(60), 60, `mode ${mode}`);
+    assert.equal(engine.pitchForNote(62), 62, `mode ${mode}`);
+    assert.equal(changes, before + 2, `mode ${mode}`); // the view is still told, as for any release
+  }
 });
 
 // ---- Router: MPE channels (from plugin/tests/MpeRouterTests.cpp and the spike tests) ----
@@ -575,7 +686,7 @@ test("real time and sysex pass through", () => {
 test("the panel's mode, settings and reset reach the engine", () => {
   const { tap, play } = setup();
   tap.setMode(MOVE);
-  tap.setSemitones(2);
+  tap.setMod(2);
   play([0x90, 60, 100, 0x80, 60, 0]); // C4 moves up 2
   assert.deepEqual(messages(play([0x90, 60, 100])).at(-1).slice(1), [62, 100]);
   play([0x80, 60, 0]); // up 2 again
@@ -650,7 +761,7 @@ test("Semitone output: Swap stays exact on channel 1", () => {
 test("Semitone output: Move stays exact", () => {
   const { tap, play } = semitoneDevice();
   tap.setMode(MOVE);
-  tap.setSemitones(-2);
+  tap.setMod(-2);
   play([0x90, 60, 100, 0x80, 60, 0]);
   assert.deepEqual(play([0x90, 60, 100]), [0x90, 58, 100]);
 });
@@ -765,9 +876,24 @@ function loadInMax(panel) {
 }
 
 test("on load the device reads its settings from the panel", () => {
-  const { play } = loadInMax({ mode: MOVE, strength: 4, semitones: -2 });
+  const { play } = loadInMax({ mode: MOVE, strength: 4, mod: -2 });
   play([0x90, 60, 100, 0x80, 60, 0]);
   assert.deepEqual(play([0x90, 60, 100]).at(-1), [58, 100]);
+});
+
+test("on load the device reads Mod and the bounds from the panel", () => {
+  const { play } = loadInMax({ mode: MOVE, mod: 12, lowest: 40, highest: 66 });
+  play([0x90, 60, 100, 0x80, 60, 0]); // 72, held at 66
+  assert.deepEqual(play([0x90, 60, 100]).at(-1), [66, 100]);
+});
+
+test("panel messages change Mod and the bounds", () => {
+  const { max, play } = loadInMax({ mode: MOVE });
+  max.mod(-12);
+  max.lowest(55);
+  max.highest(70);
+  play([0x90, 60, 100, 0x80, 60, 0]); // 48, held at 55
+  assert.deepEqual(play([0x90, 60, 100]).at(-1), [55, 100]);
 });
 
 test("a missing control leaves its setting at the default", () => {
@@ -779,7 +905,7 @@ test("a missing control leaves its setting at the default", () => {
 test("panel messages change the mode and settings, and only a press resets", () => {
   const { max, play } = loadInMax({});
   max.mode(MOVE);
-  max.semitones(2);
+  max.mod(2);
   play([0x90, 60, 100, 0x80, 60, 0]);
   max.reset(0); // button let go
   assert.deepEqual(play([0x90, 60, 100, 0x80, 60, 0]).at(1), [62, 100]); // reset ignored
@@ -820,6 +946,33 @@ test("a panel reset clears the drift view", () => {
   assert.equal(drift.at(-1)[60], 0);
 });
 
+// ---- The patch: every control reaches the js ----
+
+test("each panel control is wired through its prepend into the js", () => {
+  const patcher = JSON.parse(fs.readFileSync(path.join(__dirname, "../TAP.maxpat"), "utf8")).patcher;
+  const boxes = patcher.boxes.map((b) => b.box);
+  const byId = Object.fromEntries(boxes.map((box) => [box.id, box]));
+  const into = (id) => patcher.lines.filter((l) => l.patchline.source[0] === id).map((l) => byId[l.patchline.destination[0]]);
+  for (const name of ["mode", "strength", "mod", "lowest", "highest", "reset", "output"]) {
+    const control = boxes.find((box) => box.varname === name);
+    assert.ok(control, `no control named ${name}`);
+    const prepend = into(control.id).find((box) => box.text === `prepend ${name}`);
+    assert.ok(prepend, `${name} is not wired to prepend ${name}`);
+    assert.ok(into(prepend.id).some((box) => box.text === "js tap.js"), `prepend ${name} does not reach the js`);
+  }
+  assert.equal(boxes.find((box) => box.varname === "semitones"), undefined);
+});
+
+test("the Mode menu lists the eight modes in engine order", () => {
+  const patcher = JSON.parse(fs.readFileSync(path.join(__dirname, "../TAP.maxpat"), "utf8")).patcher;
+  const mode = patcher.boxes.map((b) => b.box).find((box) => box.varname === "mode");
+  assert.equal(mode.maxclass, "live.menu");
+  const valueof = mode.saved_attribute_attributes.valueof;
+  assert.equal(valueof.parameter_longname, "Mode");
+  assert.deepEqual(valueof.parameter_enum, ["Swap", "Gravity", "Move", "Repel", "Echo", "Rotate", "Wander", "Harmony"]);
+  assert.equal(valueof.parameter_mmax, 7);
+});
+
 // ---- Drift: what the view is sent ----
 
 function driftSetup() {
@@ -833,7 +986,7 @@ function driftSetup() {
 test("drift is each key's offset from concert pitch in cents", () => {
   const { tap, play } = driftSetup();
   tap.setMode(MOVE);
-  tap.setSemitones(-2);
+  tap.setMod(-2);
   play([0x90, 64, 100, 0x80, 64, 0]);
   const drift = tap.drift();
   assert.equal(drift.length, 128);
@@ -877,7 +1030,9 @@ test("reset and a mode change tell the view; other settings do not", () => {
   assert.equal(changes(), 2);
   tap.setMode(GRAVITY); // same mode again
   tap.setStrength(5);
-  tap.setSemitones(2);
+  tap.setMod(2);
+  tap.setLowest(30);
+  tap.setHighest(90);
   tap.setOutput(SEMITONE);
   assert.equal(changes(), 2);
 });

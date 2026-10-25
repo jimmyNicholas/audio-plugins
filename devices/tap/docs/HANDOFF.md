@@ -152,5 +152,7 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 
 ## Next steps
 
-1. Explore hosting the instrument inside TAP so no MIDI routing is needed (the user's next idea).
-2. The only item left in the spec is "later: save the pitch table with the set".
+1. Tickets 06 to 10: five new modes (Repel, Echo, Rotate, Wander, Harmony) and a tidier panel. Settle the "Check with the user first" points in tickets 06 and 09 before building.
+2. Later: save the pitch table with the set.
+
+Hosting an instrument inside TAP was explored and is not needed: TAP already works with Waves Grand Rhapsody Piano and Electric 88 placed after it on the same track (which Output was used is not yet recorded).

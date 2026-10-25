@@ -26,6 +26,20 @@ Unchanged from the VST spec:
 5. **Sustain pedal:** while the pedal is down, released keys are queued. When the pedal lifts, the mode is applied to each queued key in release order.
 6. Changing mode resets every key to concert pitch.
 
+## More modes
+
+Tickets 06 to 10 take TAP from three modes to eight. The new modes are not in the web app. They follow the same rules as the first three: they act on release, the pedal queues them, and Reset or a mode change clears them. They are added after Move, so sets saved with the first three keep their mode.
+
+| # | Mode | On release | Setting |
+| --- | --- | --- | --- |
+| 3 | Repel | Last is pushed away from current by `gap / (11 - strength)` semitones | Strength (shared with Gravity) |
+| 4 | Echo | Current takes last's drift plus a nudge | Nudge, -50 to 50 cents |
+| 5 | Rotate | The last N keys released pass their pitches round in a circle | Length, 2 to 5 |
+| 6 | Wander | Current moves by a random amount | Range, 1 to 100 cents |
+| 7 | Harmony | Current snaps to the nearest pure interval from last | Ratios, Just or Pure |
+
+Pitches are kept within notes 0 to 127.
+
 ## Deliberate changes from the web app
 
 - **Gravity at strength 10:** the web formula divides by zero. TAP pulls the key exactly onto the current key's pitch.
@@ -100,6 +114,11 @@ Every ticket ends in something you can try in Live. Each ticket is reviewed befo
 | 04 | [Semitone mode](tickets/04-semitone-mode.md) | Operator plays rounded pitches |
 | 05 | [Drift view](tickets/05-drift-view.md) | See keys drift as you play |
 | 05.2 | [Picture mode](tickets/05.2-picture-mode.md) | A pixel art picture scrambles as keys drift |
+| 06 | [Repel and Echo](tickets/06-repel-echo.md) | Keys push apart; drift trails along a phrase |
+| 07 | [Rotate](tickets/07-rotate.md) | Pitches pass round in threes |
+| 08 | [Wander](tickets/08-wander.md) | Keys drift at random |
+| 09 | [Harmony](tickets/09-harmony.md) | Keys snap to pure intervals |
+| 10 | [Panel shows the current mode's settings](tickets/10-mode-panel.md) | One setting per mode, the rest hidden |
 | later | Save the pitch table with the set | |
 
 Tickets 04 and 05 can swap places.

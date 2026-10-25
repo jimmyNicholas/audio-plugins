@@ -152,7 +152,7 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 
 ## Next steps
 
-1. Tickets 06 to 10: five new modes (Repel, Echo, Rotate, Wander, Harmony) and a tidier panel. Settle the "Check with the user first" points in tickets 06 and 09 before building.
+1. Tickets 06 to 10: a Mode dropdown, one global Mod knob (-12.00 to +12.00), Lowest and Highest bounds, then five new modes (Repel, Echo, Rotate, Wander, Harmony). Decided with the user on 2026-10-25; ticket 06 lists the choices made on top of that.
 2. Later: save the pitch table with the set.
 
 Hosting an instrument inside TAP was explored and is not needed: TAP already works with Waves Grand Rhapsody Piano and Electric 88 placed after it on the same track (which Output was used is not yet recorded).

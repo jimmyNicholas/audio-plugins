@@ -1,6 +1,6 @@
 # 11: Back to the core three
 
-**Status:** grilled 2026-10-25. Ready to build, but the user wants tickets 12 to 15 grilled before any code.
+**Status:** built 2026-10-26. `npm test` passes. Not yet tested in Live.
 
 **Goal:** three modes only: Swap, Gravity and Move, each reading the one Mod dial in its own way. Fewer moving parts before the panel window (ticket 14).
 
@@ -22,9 +22,11 @@ Mod is one dial, -12 to +12 in semitones, in 0.01 steps, with a default of 1.
   - Turning Mod does not clear the list, so an LFO on Mod changes the size of the circle smoothly.
   - With fewer releases than N, it rotates the ones it has. The very first release, or the same key twice in a row, changes nothing, as before.
 - **Direction:**
-  - With a positive Mod, each place takes the pitch of the place released after it, and the newest takes the oldest's. Release C, E, G at Mod +2, and C plays E, E plays G, G plays C.
+  - With a positive Mod, each place takes the pitch of the place released after it, and the newest takes the oldest's. With C and E already in the list at concert pitch (say released at Mod 0), release G at Mod +2: C plays E, E plays G, G plays C.
   - A negative Mod turns the other way: C plays G, E plays C, G plays E.
-- **Repeats:** the list holds releases, not keys, so a key released twice holds two places. If one rotation gives a key two pitches, its newest place wins. For example, at Mod +2, release C, E, then C: C and E both end up playing C.
+  - Every release rotates, so from a reset at Mod +2 the release of E swaps C and E first (only two in the list). Then G rotates those pitches: C plays C, E plays G, G plays E. At Mod -2: C plays G, E plays E, G plays C. (Found while building: the worked example above only holds from concert pitch.)
+- **Repeats:** the list holds releases, not keys, so a key released twice holds two places. If one rotation gives a key two pitches, its newest place wins. For example, with C and E in the list at concert pitch, release C at Mod +2: C and E both end up playing C.
+- **Same key twice in a row:** the second release does not join the list, so it changes nothing at any Mod.
 
 ### Gravity
 
@@ -85,7 +87,7 @@ The patch changes, so drag the device in again.
 1. `git pull`, then `npm test --prefix m4l`. The last lines show `# fail 0`.
 2. **Mode slider:** it has three steps, showing Swap, Gravity and Move. Changing it resets the drift view.
 3. **Swap, Mod +1:** release A, then B. Play A: it sounds as B.
-4. **Swap, Mod +2:** release C, E, G. Play C, E, G: they sound as E, G, C. At Mod -2 they sound as G, C, E.
+4. **Swap, Mod +2:** set Mod to 0 and release C, then E (nothing changes). Set Mod to +2 and release G. Play C, E, G: they sound as E, G, C. Press Reset and do it again with Mod -2: they sound as G, C, E.
 5. **Swap with an LFO on Mod:** play a phrase. The circle grows and shrinks with no stuck or silent notes.
 6. **Gravity, Mod 1:** play two keys an octave apart back and forth. They move together very slowly; in the drift view, about 1% of the gap per release.
 7. **Gravity, Mod 12:** each release closes about half the gap. Mod -12 pushes them apart until they reach Lowest and Highest.

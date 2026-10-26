@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-26 (tickets 11 to 15 grilled and ready to build). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
+Last updated 2026-10-26 (ticket 11 built, not yet tested in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
 
 ## Goal
 
@@ -19,7 +19,7 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 06 Mode menu, Mod knob and bounds | **Built, not yet tested in Live.** `npm test` passes. |
 | 07 Gravity on Mod, Repel and Echo | **Built, not yet tested in Live.** `npm test` passes. Test together with 06. |
 | 08 to 10 Rotate, Wander, Harmony | **Paused** (2026-10-25). Rotate becomes part of Swap in ticket 11. |
-| 11 Back to the core three | **Grilled.** Rewritten as a build ticket. Build first. |
+| 11 Back to the core three | **Built, not yet tested in Live.** `npm test` passes. Replaces 06 and 07 in Live testing. |
 | 12 Random range | **Grilled.** Rewritten as a build ticket. Replaces 09. Build after 11. |
 | 13 Chance | **Grilled.** Rewritten as a build ticket. Build after 12. |
 | 14 Panel window | **Grilled.** Rewritten as a build ticket. Build after 13. [Mock-up](https://claude.ai/artifact/EopL6dHcj3qczfJ9DH9Azs). |
@@ -172,6 +172,20 @@ The patch changed, so drag the device in again.
 7. **Saved with the set:** Mode, Mod, Lowest and Highest save with the set and reopen as they were.
 8. **Old sets:** open a set saved with the old device on Gravity or Move. Does it open on the same mode? (Unknown: the Mode control changed from a tab to a menu.) The Strength and Semitones values are lost and Mod opens at 1.00.
 9. If the device shows an error, open it in the Max editor and copy the red lines from the Max Console.
+
+## Ticket 11: what was built
+
+- `tap.js`:
+  - Three modes only: Swap 0, Gravity 1, Move 2. Repel and Echo, their rules and tests are gone, and `setMode` clamps to 0 to 2.
+  - The engine keeps the newest 13 releases (`releases`, oldest first). The same key released twice in a row does not join it. Reset and a mode change clear it.
+  - Swap rotates the newest N places, N = round(|Mod|) + 1, or fewer while the list fills. Positive Mod: each place takes the next place's pitch, the newest takes the oldest's. Negative: the other way. Pitches are read first, then written oldest to newest, so a key's newest place wins. At Mod ±1 it matches the old Swap release for release.
+  - Gravity: `share = GRAVITY_AT_ONE × |Mod|^log2(GRAVITY_PER_DOUBLING)`, with the constants at the top of the file (0.01 and 3) for ticket 14. Positive pulls, negative pushes, in Hertz; a push below 0 Hz goes to Lowest. The old 1 to 10 strength curve is gone.
+- `TAP.maxpat` and `TAP.amxd`: Mode is a horizontal three-step `live.slider` (enum Swap, Gravity, Move), keeping the id, `varname` and parameter name `Mode`.
+- Found while building: the ticket's worked example (release C, E, G at Mod +2 to get E, G, C) only holds from concert pitch, because E's release already swaps C and E. The rule was kept and the example and test step corrected in the ticket.
+
+## Testing ticket 11 in Live
+
+The patch changed, so drag the device in again. Steps 1 to 8 of the prototype in [`tickets/11-grill-core-three.md`](tickets/11-grill-core-three.md). Also check the Mode slider shows the name (Swap, Gravity, Move) and fits above the Mod dial; it has not been seen in Max yet.
 
 ## Why not the VST
 

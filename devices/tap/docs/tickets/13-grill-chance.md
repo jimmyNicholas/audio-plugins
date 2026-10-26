@@ -11,6 +11,12 @@
   - **Chance:** at 30%, about three releases in ten change pitch fully and the rest change nothing.
   - **Amount:** at 30%, every release changes pitch, but only 30% of the way. Swap would move each key 30% of the way toward the other's pitch.
 
+## Decided with the user (2026-10-26, round 1)
+
+- **Chance only.** At 30%, about three releases in ten fire fully and the rest change nothing. Amount is dropped: Mod already sets how far Gravity and Move go, so Amount would mostly repeat it.
+- **One control for every mode,** like Mod and Effect Range. It sits next to them on the panel.
+- **A Live parameter:** a `live.dial`, saved with the set and automatable.
+
 ## Questions to grill
 
 1. **Chance, Amount, or both?** *Recommendation:* Chance first, since that is what "chance to fire" says. Amount could come later as its own control.

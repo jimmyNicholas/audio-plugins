@@ -11,6 +11,14 @@
 - Ticket 09 (Wander) planned "current moves by a random amount up to Mod either way". This ticket would replace it.
 - An LFO that drifts slowly gives **neighbouring releases similar amounts**. A fresh random number per release does not. The two feel different.
 
+## Decided with the user (2026-10-26, round 1)
+
+- **What they liked about the LFO:** the range was balanced. It went back and forth and landed anywhere within it, say one or two semitones up or down, with every amount equally likely. The same should work for Gravity.
+- **Not a mode:** Random is a modifier on every mode, not a new mode and not only part of Move.
+- **Its own knob:** Mod stays the normal setting, wherever it is set. A separate Random knob sets how far each release can land from it.
+- **Any amount,** not whole semitones. No snap switch for now.
+- **Not repeatable:** no seed.
+
 ## Questions to grill
 
 1. **Which part of the LFO setup did they like?** The range staying within ±2, the slow change between releases, or both? *Recommendation:* ask the user to play the LFO setup again and say which. It decides question 2.

@@ -20,6 +20,12 @@
 - **Replaces Keys and Picture for now.** The user wants ideas for other ways to show or warp the drift.
 - **Jump** to the new state on each change. No animation.
 
+## Decided with the user (2026-10-26, round 2)
+
+- **A pitch map, confirmed.** Across is the key (note 0 at the left), up is the pitch it plays (note 0 at the bottom). Concert pitch is the diagonal.
+- **Drawn as a faint diagonal guide plus a stem** from the diagonal to each drifted key's pitch, red when sharp and blue when flat. Keys at concert pitch draw no stem.
+- **Other views** go to a parked ticket, [18](18-other-views.md). The user liked the pitch-class circle, the rubber sheet and the warped picture.
+
 ## Questions to grill
 
 1. **Is that reading right?** One column per key, low notes at the left, with lines growing up and down from a horizontal middle line? *Recommendation:* confirm with a quick mock-up.

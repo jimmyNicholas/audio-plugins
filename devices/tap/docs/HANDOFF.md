@@ -23,7 +23,7 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 12 Random range | **Grilled.** Rewritten as a build ticket. Replaces 09. Build after 11, once 14 and 15 are grilled. |
 | 13 Chance | **Grilled.** Rewritten as a build ticket. Build after 12, once 14 and 15 are grilled. |
 | 14, 15 New direction | **To grill.** Panel window, square visualiser. |
-| 16, 17 | **Parked.** Double slider for the bounds; floor at the same note name. |
+| 16 to 18 | **Parked.** Double slider for the bounds; floor at the same note name; other views. |
 
 ## Ticket 01 results (2026-10-11)
 

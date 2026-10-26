@@ -13,6 +13,17 @@
   - **A. Real `live.*` controls inside the window's subpatcher.** They are still the device's Live parameters, so saving, automation and mapping all work. Live draws them, so they look like Live.
   - **B. Controls drawn in the `jsui`.** These give full control over the look, but they are not Live parameters. Each one would have to send its value to a hidden `live.*` control, and redraw when that control changes (for example from automation). That is more code, and it is easy to get out of step.
 
+## Decided with the user (2026-10-26, round 1)
+
+- **Every control stays on the strip:** Mode, Mod, Effect Range, Chance, Lowest, Highest, Output, Reset and the window button. The device plays fully without the window.
+- **Window controls are real `live.*` controls** (A). Where a control is in both places, the window's copy follows the strip's.
+- **How it works:** fixed text per mode, written fresh for the three modes, changing with Mode.
+- **Mod is labelled for the selected mode** under its knob (for example Swap "Keys passed round: 3", Gravity "Pull: 3% of the gap", Move "+2.00 semitones").
+- **Debug section** behind a Debug toggle in the window, collapsed by default. It holds ticket 11's Gravity tuning and ticket 15's size and header settings.
+- **Look:** Live's default for the controls; the visualiser keeps its own colours.
+- **Open automatically:** the answer was "yes" to a recommendation of "no". To confirm in round 2.
+- **A mock-up first,** to agree the layout before Max work.
+
 ## Questions to grill
 
 1. **What stays on the device strip?** All controls (the window repeats them), a few (Mode, the main knob, Reset, the window button), or only the button? *Recommendation:* Mode, Reset and the window button, plus each mode's main knob. The user can play without opening the window.

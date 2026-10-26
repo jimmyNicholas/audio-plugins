@@ -1,54 +1,79 @@
-# 14 (grill): Panel window
+# 14: Panel window
 
-**Status:** to grill. Depends on ticket 11 (which controls exist) and ticket 15 (the visualiser section).
+**Status:** grilled 2026-10-26. Build after tickets 11 to 13. Ticket 15 then fills the visualiser slot.
 
-**Idea (the user, 2026-10-25):** sliders and knobs that map to a better pop-out window. The window is a panel showing the selected mode, how it works and its modifiers, similar to the web app. The last section is the visualiser (ticket 15).
+**Goal:** a pop-out panel window showing the selected mode, how it works, every control and (from ticket 15) the visualiser, like the web app's options panel. The strip keeps every control, so the device plays fully without the window.
 
-## Where things stand
+Mock-up: https://claude.ai/artifact/EopL6dHcj3qczfJ9DH9Azs (window, window with Debug open, device strip).
 
-- **Device strip:** `live.*` controls drawn by Live in presentation mode, 169 pixels tall. These are the Live parameters: they save with the set and can be automated or mapped to an LFO.
-- **Pop-out window:** the Drift view button opens `p Drift` through `pcontrol`. Inside is one `jsui` (`drift-view.js`) that draws everything with `mgraphics` and has its own Keys / Picture switch.
-- **Web app:** a mode dropdown, a short description of each mode, the selected mode's modifiers and a Reset button (`src/_components/optionsPanel/Modes.tsx`, descriptions in `src/_lib/_data/modes/`).
-- There are two ways to put controls in the window:
-  - **A. Real `live.*` controls inside the window's subpatcher.** They are still the device's Live parameters, so saving, automation and mapping all work. Live draws them, so they look like Live.
-  - **B. Controls drawn in the `jsui`.** These give full control over the look, but they are not Live parameters. Each one would have to send its value to a hidden `live.*` control, and redraw when that control changes (for example from automation). That is more code, and it is easy to get out of step.
+## The strip
 
-## Decided with the user (2026-10-26, round 1)
+- 360 wide, 169 tall, Live's own look.
+- At the left: the Mode slider (Swap, Gravity, Move), then the Mod, Effect Range and Chance dials in a row, then Reset and **Open**.
+- At the right: Lowest, Highest and Output.
+- **Open** replaces Drift view. It is not a Live parameter. The window never opens on its own when the device loads.
 
-- **Every control stays on the strip:** Mode, Mod, Effect Range, Chance, Lowest, Highest, Output, Reset and the window button. The device plays fully without the window.
-- **Window controls are real `live.*` controls** (A). Where a control is in both places, the window's copy follows the strip's.
-- **How it works:** fixed text per mode, written fresh for the three modes, changing with Mode.
-- **Mod is labelled for the selected mode** under its knob (for example Swap "Keys passed round: 3", Gravity "Pull: 3% of the gap", Move "+2.00 semitones").
-- **Debug section** behind a Debug toggle in the window, collapsed by default. It holds ticket 11's Gravity tuning and ticket 15's size and header settings.
-- **Look:** Live's default for the controls; the visualiser keeps its own colours.
-- **Open automatically:** the answer was "yes" to a recommendation of "no". To confirm in round 2.
-- **A mock-up first,** to agree the layout before Max work.
+## The window
 
-## Decided with the user (2026-10-26, round 2)
+About 920 by 320, four sections side by side:
 
-Against the mock-up at https://claude.ai/artifact/EopL6dHcj3qczfJ9DH9Azs (window, window with Debug open, device strip).
+1. **Mode:** the Mode slider, Reset and Output.
+2. **How it works:** the mode's name and a short text that changes with Mode (the mock-up's drafts, for now):
+   - **Swap:** "Each release passes pitches round the keys you let go most recently. Mod sets how many: +1 swaps two keys, +2 rotates three, up to thirteen. A negative Mod turns the other way."
+   - **Gravity:** "Each release pulls the key let go before it towards the one you just let go, by a share of the gap. Each doubling of Mod triples the pull. A negative Mod pushes them apart."
+   - **Move:** "Each release moves the key you let go by Mod semitones. Fractions give microtones, and a negative Mod moves it down."
+3. **Modifiers:** the Mod, Effect Range and Chance dials, Lowest and Highest, and a line under Mod saying what it does in the selected mode:
+   - **Swap:** "Keys passed round: N" (N from ticket 11's count; "No swap" when it rounds to 0).
+   - **Gravity:** "Pull: X% of the gap", or "Push: X% of the gap" for a negative Mod, from ticket 11's share curve.
+   - **Move:** "+2.00 semitones each release".
+4. **Visualiser:** an empty black 256 square, filled by ticket 15.
 
-- **Opening:** answered "yes" to the recommendation that it stays a button, read as: it does not open on load.
-- **The window repeats every strip control,** each window copy following its strip copy.
-- **Layout as in the mock-up:** Mode, How it works, Modifiers and the visualiser side by side, about 920 by 320. Debug opens below, to about 430.
-- **How it works:** the mock-up's drafts, for now.
-- **The strip button** is called **Open**.
-- **Strip layout as in the mock-up:** 360 wide, Mode slider and the Mod, Effect Range and Chance dials at the left; Lowest, Highest and Output at the right; Reset and Open below.
-- **One build ticket** for the window, its sections and Debug, with an empty visualiser slot that ticket 15 fills.
+Under the sections, a **Debug** toggle, collapsed by default. Open, the window grows to about 430 and shows:
 
-## Questions to grill
+- **Gravity tuning:** pull at Mod 1 (default 1%) and the factor per doubling (default 3), from ticket 11.
+- **View size** (128, 256, 384, 512) and **Header summary** (off or on), for ticket 15.
+- None of these are Live parameters or saved with the set. They reset when the device loads.
 
-1. **What stays on the device strip?** All controls (the window repeats them), a few (Mode, the main knob, Reset, the window button), or only the button? *Recommendation:* Mode, Reset and the window button, plus each mode's main knob. The user can play without opening the window.
-2. **Controls in the window: A or B?** *Recommendation:* A, real `live.*` controls. If the same parameter must appear both on the strip and in the window, one copy follows the other through `live.remote~` or a hidden link. Say which controls need to be in both places.
-3. **"How it works":** fixed text per mode (as in the web app), a small diagram, or an animation of the last release (for example, an arrow from last to current)? *Recommendation:* fixed text first, written fresh for the reworked core three. An animation of the last release could be a later ticket.
-4. **Layout:** sections side by side (Mode, How it works, Modifiers, Visualiser), or stacked? What window size? *Recommendation:* side by side in one row, about 900 by 260, with the visualiser square at the right. Ask for a quick sketch.
-5. **Only the selected mode's modifiers, or all three modes' at once?** *Recommendation:* only the selected mode's, as in the web app. In Max that means showing and hiding controls in presentation mode when Mode changes.
-6. **Keys and Picture views:** settled in ticket 15: the square replaces them. The window needs a slot for it (128 to 512 square, 256 by default), and the debug section needs ticket 15's View size and Header summary settings beside ticket 11's Gravity tuning.
-7. **Look:** Live's default look, or a custom colour scheme? *Recommendation:* Live's default for the controls, and the visualiser keeps its own colours.
-8. **Open the window automatically when the device loads?** *Recommendation:* no. It stays a button.
-9. **Is a first mock-up wanted before Max work?** A static picture (or an HTML sketch) of the window is quick to change. *Recommendation:* yes, one mock-up to agree the layout.
+## How the window's controls follow the strip
 
-## Done when grilled
+- The strip's controls stay the device's Live parameters, so saving, automation and mapping are unchanged.
+- Each window copy is the same `live.*` object with its parameter turned off. Turning a window copy sets its strip control; a change to a strip control (by hand, automation or an LFO) sets the window copy with `set`, so it does not send the value back.
 
-- Answers recorded here, with an agreed layout sketch.
-- Rewritten as one or more build tickets (the window and its sections, then moving controls off the strip).
+## Tasks
+
+- `tap.js`, test-first:
+  - `modLabel()`: the text under Mod for the current mode and Mod, as above. A third outlet sends it on every change to Mode or Mod, and on `sync`.
+  - Gravity tuning: `setGravityAtOne` and `setGravityPerDoubling`, with Max handlers, replacing ticket 11's two constants as defaults. They change no pitch and are not read by `sync`.
+- Tests:
+  - The label for each mode: Swap counts (including "No swap"), Gravity pull and push at the Mod values in ticket 11's table, Move with signs and two decimals.
+  - The label is sent on Mode and Mod changes and on `sync`, not on releases.
+  - Gravity tuning changes the share: at pull 2% and factor 2, Mod 4 gives 8%.
+  - The ES5 check still passes.
+- Patch:
+  - Rename `p Drift` to `p Panel` and lay out the window as above, in presentation mode, with its window size set. Keep `pcontrol`, and the `---` sends so two devices each get their own window.
+  - The strip as above, with **Open** in place of Drift view.
+  - A window copy for each control (Mode, Mod, Effect Range, Chance, Lowest, Highest, Output, Reset), parameter off, linked both ways as above.
+  - How it works: a `live.comment` or `comment` whose text changes with Mode.
+  - The Mod label from `tap.js`'s third outlet into a comment under Mod.
+  - The Debug toggle shows and hides the debug controls and resizes the window. Gravity tuning goes into the `js`; View size and Header summary go to the visualiser slot, ready for ticket 15.
+  - Update the patch tests: every strip control is still wired through its `prepend`, every window copy has its parameter off and is linked to its strip control, and Drift view is gone.
+  - Regenerate `TAP.amxd`.
+- Remove the old Drift view's window. Its `jsui` is rewritten in ticket 15; until then the slot stays empty.
+
+## Prototype
+
+The patch changes, so drag the device in again.
+
+1. `git pull`, then `npm test --prefix m4l`. The last lines show `# fail 0`.
+2. **Strip:** matches the mock-up, with **Open** in place of Drift view. Everything plays as before without opening the window.
+3. **Open:** the window opens at about 920 by 320, with the four sections. It does not open by itself when the set loads.
+4. **Follow:** turn Mod on the strip; the window's Mod follows. Turn it in the window; the strip follows. Do the same for each control.
+5. **Automation and LFO:** an LFO on Mod moves both copies, with no jumps or loops. Automation lanes list each control once.
+6. **How it works and the label:** change Mode; the text changes. Turn Mod in each mode and read the label: Swap counts keys, Gravity gives a percentage (pull or push), Move gives semitones.
+7. **Debug:** click Debug; the window grows and shows the tuning, size and header settings. Set the pull at Mod 1 to 2%; Gravity at Mod 1 pulls twice as fast, and the label reads 2%. Reload the device; Debug is back to its defaults.
+8. **Saved with the set:** save, close and reopen. The strip's values come back and the window copies match them when opened.
+
+## Done when
+
+- Tests pass, including the ES5 check and the patch checks.
+- The user has opened the window in Live, used every control from both places, and tried Debug.

@@ -162,8 +162,8 @@ function near(actual, expected, tolerance = 1e-9) {
   assert.ok(Math.abs(actual - expected) < tolerance, `${actual} is not close to ${expected}`);
 }
 
-function released(mode, mod, keys, setup = () => {}) {
-  const engine = createEngine();
+function released(mode, mod, keys, setup = () => {}, random = undefined) {
+  const engine = createEngine(undefined, random);
   engine.setMode(mode);
   engine.setMod(mod);
   setup(engine);
@@ -573,12 +573,7 @@ function sequence(...values) {
 }
 
 function ranged(mode, mod, range, random, keys) {
-  const engine = createEngine(undefined, random);
-  engine.setMode(mode);
-  engine.setMod(mod);
-  engine.setRange(range);
-  keys.forEach((key) => engine.noteReleased(key));
-  return engine;
+  return released(mode, mod, keys, (engine) => engine.setRange(range), random);
 }
 
 const NEVER = () => {
@@ -622,18 +617,18 @@ test("Mod plus the random amount stops at ±12", () => {
 });
 
 test("Gravity with a large Effect Range sometimes pushes", () => {
-  // Mod 1, Effect Range 4: anywhere from -1 to 3.
+  // Mod 1, Effect Range 4: anywhere from -1 to just under 3.
   const push = ranged(GRAVITY, 1, 4, sequence(0), [57, 69]);
   near(hertzForPitch(push.pitchForNote(57)), 220 - 220 * gravityShare(1), 1e-6);
-  const pull = ranged(GRAVITY, 1, 4, sequence(1), [57, 69]);
-  near(hertzForPitch(pull.pitchForNote(57)), 220 + 220 * gravityShare(3), 1e-6);
+  const pull = ranged(GRAVITY, 1, 4, sequence(0.999), [57, 69]);
+  near(hertzForPitch(pull.pitchForNote(57)), 220 + 220 * gravityShare(2.996), 1e-6);
 });
 
 test("Swap's count and direction change with the random amount", () => {
   const keys = [60, 62, 64, 65, 67];
   // Mod 2, Effect Range 2: Mod 1 to 3, so 2 to 4 keys.
   assert.deepEqual(pitchesOf(ranged(SWAP, 2, 2, sequence(0), keys), keys), pitchesOf(released(SWAP, 1, keys), keys));
-  assert.deepEqual(pitchesOf(ranged(SWAP, 2, 2, sequence(1), keys), keys), pitchesOf(released(SWAP, 3, keys), keys));
+  assert.deepEqual(pitchesOf(ranged(SWAP, 2, 2, sequence(0.999), keys), keys), pitchesOf(released(SWAP, 3, keys), keys));
   // Mod 0, Effect Range 4: a negative result turns the other way.
   assert.deepEqual(pitchesOf(ranged(SWAP, 0, 4, sequence(0), keys), keys), pitchesOf(released(SWAP, -2, keys), keys));
   // A result that rounds to 0 changes nothing.

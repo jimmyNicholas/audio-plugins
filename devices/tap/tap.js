@@ -114,7 +114,8 @@ function createEngine(onChange, random) {
   // Passes pitches round the newest N releases, where N is Mod rounded, ignoring the sign,
   // plus 1, or fewer while the list fills. With a positive Mod each place takes the pitch
   // of the place released after it and the newest takes the oldest's; a negative Mod turns
-  // the other way. A key with two places takes the pitch of its newest place.
+  // the other way. A key with two places takes the pitch of its newest place. amount is
+  // this release's Mod, from releaseMod.
   function swap(amount) {
     var count = Math.min(Math.round(Math.abs(amount)) + 1, releases.length);
     if (count < 2) return;
@@ -134,7 +135,7 @@ function createEngine(onChange, random) {
 
   // Gravity in Hertz, as in gravity.ts. A positive Mod pulls the last key toward the
   // current key and a negative one pushes it away. A pull never reaches the current key;
-  // a push below 0 Hz goes to Lowest.
+  // a push below 0 Hz goes to Lowest. amount is this release's Mod, from releaseMod.
   function gravity(last, current, amount) {
     var lastHertz = hertzForPitch(pitches[last]);
     var currentHertz = hertzForPitch(pitches[current]);

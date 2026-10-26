@@ -60,3 +60,5 @@ The patch changes, so drag the device in again.
 
 - Tests pass, including the ES5 check and the patch checks.
 - The user has played Chance in all three modes in Live.
+
+At the end of each ticket, open a pull request into main.

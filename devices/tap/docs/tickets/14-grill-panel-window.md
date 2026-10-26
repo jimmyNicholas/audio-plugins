@@ -77,3 +77,5 @@ The patch changes, so drag the device in again.
 
 - Tests pass, including the ES5 check and the patch checks.
 - The user has opened the window in Live, used every control from both places, and tried Debug.
+
+At the end of each ticket, open a pull request into main.

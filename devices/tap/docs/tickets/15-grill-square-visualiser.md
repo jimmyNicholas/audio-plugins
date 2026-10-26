@@ -58,3 +58,5 @@ From ticket 14's debug section. Neither is a Live parameter or saved with the se
 
 - Tests pass, including the ES5 check.
 - The user has played all three modes with the view open in Live and picked a size.
+
+At the end of each ticket, open a pull request into main.

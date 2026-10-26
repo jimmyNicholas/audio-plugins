@@ -18,8 +18,10 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 05.2 Picture mode | **Done.** Passed in Live by 2026-10-20: the user reported that it works. |
 | 06 Mode menu, Mod knob and bounds | **Built, not yet tested in Live.** `npm test` passes. |
 | 07 Gravity on Mod, Repel and Echo | **Built, not yet tested in Live.** `npm test` passes. Test together with 06. |
-| 08 to 10 Rotate, Wander, Harmony | **Paused** (2026-10-25). The user wants to go back to the core three first; see ticket 11. |
-| 11 to 15 New direction | **To grill.** Core three, Move by a random range, Chance, panel window, square visualiser. |
+| 08 to 10 Rotate, Wander, Harmony | **Paused** (2026-10-25). Rotate becomes part of Swap in ticket 11. |
+| 11 Back to the core three | **Grilled.** Rewritten as a build ticket. Build after 12 to 15 are grilled. |
+| 12 to 15 New direction | **To grill.** Move by a random range, Chance, panel window, square visualiser. |
+| 16, 17 | **Parked.** Double slider for the bounds; floor at the same note name. |
 
 ## Ticket 01 results (2026-10-11)
 

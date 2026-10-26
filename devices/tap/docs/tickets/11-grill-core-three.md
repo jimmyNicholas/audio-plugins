@@ -1,81 +1,97 @@
-# 11 (grill): Back to the core three
+# 11: Back to the core three
 
-**Status:** to grill. No code until the questions below are answered and this is rewritten as a build ticket.
+**Status:** grilled 2026-10-25. Ready to build, but the user wants tickets 12 to 15 grilled before any code.
 
-**Idea (the user, 2026-10-25):** pause and see the modes clearly. Not confident about how the new modes were added. Go back to Swap, Gravity and Move and implement them well.
+**Goal:** three modes only: Swap, Gravity and Move, each reading the one Mod dial in its own way. Fewer moving parts before the panel window (ticket 14).
 
-## Where things stand
+## Why
 
-- The Mode menu lists eight modes (ticket 06). Repel and Echo work (ticket 07). Rotate, Wander and Harmony do nothing yet (tickets 08 to 10).
-- Tickets 06 and 07 are built but **not yet tested in Live**.
-- Swap reads nothing. Gravity reads Mod as its strength, and a negative Mod pushes instead of pulls. Move adds Mod, a float from -12 to +12.
-- Lowest and Highest bound every mode's result.
-- The web app had a separate control per mode: Strength 1 to 10 (default 2) for Gravity, Semitones -2 to 2 in whole steps (default 1) for Move.
-- Known rough edges in the core three:
-  - **Gravity just below 10:** the web formula `1 / (10 - s)` overshoots a long way. At 9.9 it moves ten times the gap, so the result is held at a bound.
-  - **Gravity works in Hertz,** so a pull upward and a pull downward of the same interval move by different amounts in semitones.
-  - **Move** walks off the keyboard quickly at large Mod values. The user found an LFO between -2 and +2 felt better (see ticket 12).
-  - **Swap** does nothing on the first release, because last equals current.
-- Saved sets store Mode as a number. Taking modes out of the menu, or reordering them, changes which mode an old set opens on.
+It was getting too complex too fast. Some new modes overlap with the old ones. The new panel should be tried with three modes first, and the others come back later and slowly. Tickets 07, 09 and 10 stay as paused tickets. Ticket 08 (Rotate) becomes part of Swap.
 
-## Decided with the user (2026-10-25, round 1)
+## The modes
 
-- **Why:** it was getting too complex too fast. Things should move out slowly. Some new modes overlap with the old ones. The new panel UI (ticket 14) should be tried with three modes first, so there are fewer moving parts. The other modes come back later.
-- **New modes:** take Repel, Echo, Rotate, Wander and Harmony out of the menu. Tickets 07 to 10 stay as paused tickets, so the ideas are not lost.
-- **Feel per mode:** not needed for this ticket.
-- **Gravity stays in Hertz,** as in the web app. It should be more finely tuned, so it is less severe. That tuning can be part of the UI work.
-- **Swap:** unchanged. It is the simplest mode, and doing nothing on the first release is right.
-- **Lowest and Highest:** keep them. A double (range) slider for setting both would be more useful.
-- **Mode change resets every key:** keep it.
-- **Old saved sets:** do not matter.
-- **Tickets 06 and 07:** skip testing them in Live. Only the reworked device gets tested.
-- **Later, out of scope:** a floor at the same note name. If you play A4 and Gravity pulls it down, it stops at the A below instead of going on down. It needs its own ticket.
+Mod is one dial, -12 to +12 in semitones, in 0.01 steps, with a default of 1.
 
-## Decided with the user (2026-10-25, round 2)
+### Swap
 
-- **One shared Mod dial for every mode,** reading -12 to +12 in semitones. Gravity turns the Mod value into its own strength.
-- **Gravity is far too strong.** It needs bringing down a lot: Mod 12 should pull about 50% of the gap, Mod 1 about 1% and Mod 2 about 3%, rising like an exponential in between.
-- **Mode control on the Live strip:** a slider for now.
-- **Double slider for Lowest and Highest:** its own ticket ([16](16-range-slider.md)), blocked by tickets 11 to 15.
-- **Order of work:** grill every ticket (11 to 15) first, then build.
-- **Floor at the same note name:** parked as ticket [17](17-note-floor.md).
+- **Count:** Swap passes pitches round the newest N releases, where N is Mod rounded to a whole number, ignoring the sign, plus 1.
+  - Mod +1 swaps 2 keys, the normal Swap.
+  - Mod +2 rotates 3 keys, and so on up to Mod +12, which rotates 13.
+  - A Mod that rounds to 0 changes nothing.
+- **The list:** TAP always keeps the last 13 releases.
+  - Turning Mod does not clear the list, so an LFO on Mod changes the size of the circle smoothly.
+  - With fewer releases than N, it rotates the ones it has. The very first release, or the same key twice in a row, changes nothing, as before.
+- **Direction:**
+  - With a positive Mod, each place takes the pitch of the place released after it, and the newest takes the oldest's. Release C, E, G at Mod +2, and C plays E, E plays G, G plays C.
+  - A negative Mod turns the other way: C plays G, E plays C, G plays E.
+- **Repeats:** the list holds releases, not keys, so a key released twice holds two places. If one rotation gives a key two pitches, its newest place wins. For example, at Mod +2, release C, E, then C: C and E both end up playing C.
 
-## Decided with the user (2026-10-25, round 3)
+### Gravity
 
-- **Gravity's curve:** `share = 1% × Mod^1.585`, so each doubling of Mod triples the pull: Mod 1 is 1%, 2 is 3%, 4 is 9%, 8 is 27% and 12 is 51%. It stays in Hertz, never overshoots and never lands one key fully on another. The curve's numbers can be changed in a debug setting.
-- **Gravity with a negative Mod:** pushes the last key away from the current one, on the same curve.
-- **Swap reads Mod:** at +1 it is the normal Swap. From +2 to +12 it rotates pitches through the last keys pressed (this brings ticket 08's Rotate into Swap). A negative Mod turns the rotation the other way.
-- **Move:** unchanged. It adds Mod in semitones, -12 to +12, in 0.01 steps.
-- **Mod's default:** stays at 1.
-- **Mode on the Live strip:** a three-step slider: Swap, Gravity, Move.
+- Gravity still works in Hertz.
+- **Strength:** the last key moves `share × gap` towards the current key, where `share = 1% × |Mod|^log2(3)`. Each doubling of Mod triples the pull:
 
-## Decided with the user (2026-10-25, rounds 4 to 6)
+  | Mod | 0.5 | 1 | 2 | 4 | 8 | 12 |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | Share of gap | 0.3% | 1% | 3% | 9% | 27% | 51% |
 
-- **Swap's count:** Mod rounded to a whole number, ignoring the sign, plus 1. Mod +1 swaps 2 keys, +2 rotates 3, and so on up to +12, which rotates 13. A Mod that rounds to 0 changes nothing.
-- **Fewer releases than the count:** rotate what's there. With 2 releases it swaps, with 3 it rotates 3, and so on up to the count.
-- **Turning Mod keeps the list.** TAP always remembers the last 13 releases and rotates the newest N, so an LFO on Mod changes the size of the circle smoothly.
-- **Direction:** with a positive Mod, each place takes the pitch of the place released after it, and the newest takes the oldest's. Release C, E, G at Mod +2: C plays E, E plays G, G plays C. A negative Mod turns it the other way: C plays G, E plays C, G plays E.
-- **Repeats:** the list holds releases, not keys, so a key released twice holds two places. When one rotation gives a key two pitches, its **newest place wins**. Example: Mod +2, release C, E, C: C and E both end up playing C, so pitches can merge over time.
-- **Pedal:** each queued release joins the list and rotates in turn when the pedal lifts, as in every mode.
-- **Gravity's debug settings** (1% at Mod 1, ×3 per doubling): fixed in code for ticket 11. Ticket 14 adds them to a debug section in the panel window. They are not Live parameters and are not saved with the set. Values the user likes become the new defaults in code.
+- **Negative Mod:** pushes the last key away from the current one, on the same curve.
+- **Never lands on the key:** no setting lands one key fully on another, and a pull never overshoots.
+- **Below 0 Hz:** a push that would go below 0 Hz goes to Lowest.
+- **Tuning:** the 1% and the ×3 are constants in code for now. Ticket 14 adds them to a debug section in the panel window. They are not Live parameters and are not saved with the set.
 
-## Questions to grill
+### Move
 
-1. **What happens to the five new modes?** Options: delete them from `tap.js` and the menu; hide them from the menu but keep the code; or keep them in the menu and park only 08 to 10. *Recommendation:* take all five out of the menu and the engine, and keep them in git history (tickets 07 to 10 stay as notes). It keeps the device and the tests small while the core three are reworked.
-2. **What is wrong with how they were added?** Too many modes, the shared Mod knob meaning different things per mode, the menu, or the modes themselves? *Recommendation:* answer this before the rest, because it decides whether the shared Mod knob survives.
-3. **One shared Mod knob, or a control per mode** (as in the web app)? *Recommendation:* a control per mode, with the panel showing only the selected mode's controls (ties into ticket 14). Each control can then have its own name, range and unit.
-4. **Gravity's control:** go back to Strength 1 to 10 (web) or keep the -12 to +12 range with negative pushing? *Recommendation:* Strength 0 to 10, no push. Pushing was the Repel idea, which question 1 parks.
-5. **Gravity's curve:** keep the web formula with its overshoot below 10, or smooth it so the share of the gap moved rises evenly from 0 at strength 0 to 1 (a full pull) at 10? *Recommendation:* smooth it. The overshoot is a divide-by-zero side effect, not a musical choice.
-6. **Gravity in Hertz or in semitones?** *Recommendation:* semitones, so a pull feels the same in every register. Ask whether matching the web app exactly matters more.
-7. **Move's control:** whole semitones -2 to +2 (web), or fractions? *Recommendation:* settle this together with ticket 12, since the random range may replace the fixed amount.
-8. **Swap on the first release:** keep doing nothing? *Recommendation:* keep it. It matches the web app and nothing obvious is better.
-9. **Lowest and Highest:** keep them for all modes? *Recommendation:* keep them. They are what stops Move and Gravity running off the keyboard.
-10. **Mode change resets every key:** keep it? *Recommendation:* keep it (web behaviour), with Reset still separate.
-11. **Old sets:** does it matter if sets saved with the eight-mode device open on the wrong mode? *Recommendation:* no. The device is only for the user so far.
-12. **What does "implemented well" mean?** Write down two or three things the user wants to feel when playing each of the three modes. These become the Prototype steps of the build ticket.
+Unchanged: the released key moves by Mod semitones.
 
-## Done when grilled
+### All modes
 
-- Each question has an answer recorded here.
-- Tickets 08 to 10 are marked parked or removed.
-- This ticket is rewritten as a build ticket with Tasks, Prototype and Done when, in the style of tickets 02 to 07.
+- Lowest and Highest bound every result.
+- Changing mode or pressing Reset puts every key back to concert pitch and clears the list of releases.
+- The sustain pedal queues releases. Each one is applied in turn when the pedal lifts.
+
+## Tasks
+
+- `tap.js`, test-first:
+  - Take out Repel, Echo, Rotate, Wander and Harmony: their constants, rules and tests. `setMode` clamps to 0 to 2.
+  - Swap: a list of the last 13 releases, plus the rotation above.
+  - Gravity: the new `share` curve, with its two constants (`GRAVITY_AT_ONE = 0.01` and `GRAVITY_PER_DOUBLING = 3`) named in one place for ticket 14.
+- Tests:
+  - **Swap:**
+    - Mod +1 matches the old Swap, release for release.
+    - Mod +2 rotates C, E, G both ways.
+    - It rotates fewer keys than N while the list fills.
+    - Mod rounding to 0 changes nothing.
+    - Turning Mod keeps the list.
+    - A repeated key's newest place wins.
+    - The pedal applies releases one by one.
+    - Reset and a mode change clear the list.
+  - **Gravity:**
+    - The share table above.
+    - A negative Mod pushes.
+    - Mod 0 changes nothing.
+    - A push past 0 Hz goes to Lowest.
+    - Keys never land exactly on the current key.
+  - The ES5 check still passes.
+- Patch:
+  - Replace the Mode menu with a three-step `live.slider` (Swap, Gravity, Move), keeping the `mode` varname and the parameter name `Mode`. It shows the mode's name, not a number.
+  - Update the patch tests: the slider has three steps in engine order, and every control is still wired through its `prepend`.
+  - Regenerate `TAP.amxd`.
+
+## Prototype
+
+The patch changes, so drag the device in again.
+
+1. `git pull`, then `npm test --prefix m4l`. The last lines show `# fail 0`.
+2. **Mode slider:** it has three steps, showing Swap, Gravity and Move. Changing it resets the drift view.
+3. **Swap, Mod +1:** release A, then B. Play A: it sounds as B.
+4. **Swap, Mod +2:** release C, E, G. Play C, E, G: they sound as E, G, C. At Mod -2 they sound as G, C, E.
+5. **Swap with an LFO on Mod:** play a phrase. The circle grows and shrinks with no stuck or silent notes.
+6. **Gravity, Mod 1:** play two keys an octave apart back and forth. They move together very slowly; in the drift view, about 1% of the gap per release.
+7. **Gravity, Mod 12:** each release closes about half the gap. Mod -12 pushes them apart until they reach Lowest and Highest.
+8. **Move:** as before.
+
+## Done when
+
+- Tests pass, including the ES5 check and the patch checks.
+- The user has played all three modes in Live.

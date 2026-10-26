@@ -1,5 +1,7 @@
 # 08: Rotate
 
+**Status:** folded into Swap by ticket 11 (2026-10-25): Mod +2 to +12 rotates through the last releases. Kept for its notes.
+
 **Goal:** Swap for more than two keys.
 
 ## The mode

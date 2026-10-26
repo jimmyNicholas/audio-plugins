@@ -1,5 +1,7 @@
 # 09: Wander
 
+**Status:** paused (2026-10-25). Ticket 11 takes it out of the device. Ticket 12 may replace it.
+
 **Goal:** each released key drifts at random.
 
 ## The mode

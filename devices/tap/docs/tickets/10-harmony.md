@@ -1,5 +1,7 @@
 # 10: Harmony
 
+**Status:** paused (2026-10-25). Ticket 11 takes it out of the device. The idea comes back after the core three and the panel.
+
 **Goal:** the released key is retuned to a pure interval from the last one.
 
 ## The mode

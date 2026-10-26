@@ -1,5 +1,7 @@
 # 07: Gravity on Mod, Repel and Echo
 
+**Status:** paused (2026-10-25). Ticket 11 takes it out of the device. The idea comes back after the core three and the panel.
+
 **Goal:** the first two new modes, with Gravity and Repel both reading the Mod knob.
 
 ## Decided with the user (2026-10-25)

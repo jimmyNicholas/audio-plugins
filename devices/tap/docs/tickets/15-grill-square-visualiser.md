@@ -11,6 +11,15 @@
 - `tap.js` sends 128 offsets in cents whenever the pitch table changes. The new view needs no engine change.
 - The reading below is what's assumed until confirmed: 128 columns, one per key from note 0 at the left to 127 at the right. Each column is a vertical line from the centre that grows up when the key is sharp and down when it is flat.
 
+## Decided with the user (2026-10-26, round 1)
+
+- **The line runs from bottom left to top right,** not across the middle. The user changed their mind about the centre line. Read as a pitch map: across is the key, up is the pitch it plays, so concert pitch is the diagonal. To confirm in round 2.
+- **Pixel size and full scale:** open again, because the diagonal changes them.
+- **Colour:** red when sharp, blue when flat, deeper the further.
+- **No hover readout.**
+- **Replaces Keys and Picture for now.** The user wants ideas for other ways to show or warp the drift.
+- **Jump** to the new state on each change. No animation.
+
 ## Questions to grill
 
 1. **Is that reading right?** One column per key, low notes at the left, with lines growing up and down from a horizontal middle line? *Recommendation:* confirm with a quick mock-up.

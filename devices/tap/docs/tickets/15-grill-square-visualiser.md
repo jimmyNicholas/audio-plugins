@@ -36,6 +36,14 @@
 - **Keys and Picture code is deleted.** Git history keeps it.
 - **Header summary line:** off by default. The debug section can turn it on.
 
+## Decided with the user (2026-10-26, round 4)
+
+- **Each key is a white pixel on the diagonal.** When it drifts, the pixel turns red or blue and a stem in the same colour runs from the diagonal to the pitch it plays. Drift too small for a stem shows as colour only.
+- **Flat colour:** full red or full blue at any drift. Round 1's "deeper the further" is dropped; stem length shows the amount.
+- **Debug sizes:** 128, 256, 384 and 512, opening at 256. Once the user picks one in Live, it becomes fixed and the option goes.
+- **Debug settings are not saved:** size and the header toggle are not Live parameters and reset on load, like ticket 11's Gravity tuning.
+- **A separate build ticket after 14:** ticket 14 builds the window and the debug section with an empty visualiser slot, and ticket 15 fills it.
+
 ## Questions to grill
 
 1. **Is that reading right?** One column per key, low notes at the left, with lines growing up and down from a horizontal middle line? *Recommendation:* confirm with a quick mock-up.

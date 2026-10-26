@@ -563,6 +563,118 @@ test("Gravity never lands one key exactly on another", () => {
   }
 });
 
+// ---- Engine: Effect Range (ticket 12) ----
+
+// A random function that returns each value in turn and counts its calls.
+function sequence(...values) {
+  const random = () => values[random.calls++ % values.length];
+  random.calls = 0;
+  return random;
+}
+
+function ranged(mode, mod, range, random, keys) {
+  const engine = createEngine(undefined, random);
+  engine.setMode(mode);
+  engine.setMod(mod);
+  engine.setRange(range);
+  keys.forEach((key) => engine.noteReleased(key));
+  return engine;
+}
+
+const NEVER = () => {
+  throw new Error("random was called");
+};
+
+test("Effect Range defaults to 0", () => {
+  assert.equal(createEngine().range(), 0);
+});
+
+test("Effect Range 0 gives the same pitches as before and never calls the random function", () => {
+  const keys = [60, 64, 67, 60, 72, 64];
+  for (const mode of [SWAP, GRAVITY, MOVE]) {
+    for (const mod of [-3, 1, 2.5]) {
+      const before = released(mode, mod, keys);
+      const after = ranged(mode, mod, 0, NEVER, keys);
+      assert.deepEqual(pitchesOf(after, keys), pitchesOf(before, keys), `mode ${mode}, Mod ${mod}`);
+    }
+  }
+});
+
+test("Move at Mod 0, Effect Range 2 moves by anywhere from -1 to just under +1", () => {
+  const engine = ranged(MOVE, 0, 2, sequence(0, 0.5, 0.999), []);
+  engine.noteReleased(60);
+  assert.equal(engine.pitchForNote(60), 59);
+  engine.noteReleased(60);
+  assert.equal(engine.pitchForNote(60), 59);
+  engine.noteReleased(60);
+  near(engine.pitchForNote(60), 59.998);
+});
+
+test("Effect Range is centred on Mod", () => {
+  near(ranged(MOVE, 1, 1, sequence(0), [60]).pitchForNote(60), 60.5);
+  near(ranged(MOVE, 1, 1, sequence(0.999), [60]).pitchForNote(60), 61.499);
+});
+
+test("Mod plus the random amount stops at ±12", () => {
+  assert.equal(ranged(MOVE, 12, 24, sequence(0.999), [60]).pitchForNote(60), 72);
+  assert.equal(ranged(MOVE, -12, 24, sequence(0), [60]).pitchForNote(60), 48);
+  assert.equal(ranged(MOVE, 6, 24, sequence(0.999), [60]).pitchForNote(60), 72);
+});
+
+test("Gravity with a large Effect Range sometimes pushes", () => {
+  // Mod 1, Effect Range 4: anywhere from -1 to 3.
+  const push = ranged(GRAVITY, 1, 4, sequence(0), [57, 69]);
+  near(hertzForPitch(push.pitchForNote(57)), 220 - 220 * gravityShare(1), 1e-6);
+  const pull = ranged(GRAVITY, 1, 4, sequence(1), [57, 69]);
+  near(hertzForPitch(pull.pitchForNote(57)), 220 + 220 * gravityShare(3), 1e-6);
+});
+
+test("Swap's count and direction change with the random amount", () => {
+  const keys = [60, 62, 64, 65, 67];
+  // Mod 2, Effect Range 2: Mod 1 to 3, so 2 to 4 keys.
+  assert.deepEqual(pitchesOf(ranged(SWAP, 2, 2, sequence(0), keys), keys), pitchesOf(released(SWAP, 1, keys), keys));
+  assert.deepEqual(pitchesOf(ranged(SWAP, 2, 2, sequence(1), keys), keys), pitchesOf(released(SWAP, 3, keys), keys));
+  // Mod 0, Effect Range 4: a negative result turns the other way.
+  assert.deepEqual(pitchesOf(ranged(SWAP, 0, 4, sequence(0), keys), keys), pitchesOf(released(SWAP, -2, keys), keys));
+  // A result that rounds to 0 changes nothing.
+  assert.deepEqual(pitchesOf(ranged(SWAP, 2, 4, sequence(0), keys), keys), keys);
+});
+
+test("the pedal picks one number per queued release, when it lifts", () => {
+  const random = sequence(0, 0.5, 0.75);
+  const engine = ranged(MOVE, 0, 2, random, []);
+  engine.setPedal(true);
+  [60, 62, 64].forEach((key) => engine.noteReleased(key));
+  assert.equal(random.calls, 0);
+  engine.setPedal(false);
+  assert.equal(random.calls, 3);
+  assert.deepEqual(pitchesOf(engine, [60, 62, 64]), [59, 62, 64.5]);
+});
+
+test("Effect Range is kept from 0 to 24, and anything but a number is ignored", () => {
+  const engine = createEngine();
+  engine.setRange(-1);
+  assert.equal(engine.range(), 0);
+  engine.setRange(30);
+  assert.equal(engine.range(), 24);
+  engine.setRange(2.37);
+  assert.equal(engine.range(), 2.37);
+  engine.setRange("bang");
+  engine.setRange(NaN);
+  assert.equal(engine.range(), 2.37);
+});
+
+test("setting Effect Range changes no pitch and does not tell the view", () => {
+  let changes = 0;
+  const engine = createEngine(() => changes++, sequence(0));
+  engine.setMode(MOVE);
+  engine.noteReleased(60);
+  changes = 0;
+  engine.setRange(4);
+  assert.equal(engine.pitchForNote(60), 61);
+  assert.equal(changes, 0);
+});
+
 // ---- Router: MPE channels (from plugin/tests/MpeRouterTests.cpp and the spike tests) ----
 
 function routerSetup() {
@@ -1043,6 +1155,17 @@ test("panel messages change the mode and settings, and only a press resets", () 
   assert.deepEqual(play([0x90, 60, 100]).at(-1), [67, 100]);
 });
 
+test("on load the device reads Effect Range from the panel, and panel messages change it", () => {
+  // Real randomness here, so only the spread is checked: Mod 0, Effect Range 2 stays within a semitone.
+  const { max, play, drift } = loadInMax({ mode: MOVE, mod: 0, range: 2 });
+  play([0x90, 60, 100, 0x80, 60, 0]);
+  assert.ok(Math.abs(drift.at(-1)[60]) <= 100);
+  assert.notEqual(drift.at(-1)[60], 0);
+  max.range(0);
+  play([0x90, 62, 100, 0x80, 62, 0]);
+  assert.equal(drift.at(-1)[62], 0);
+});
+
 test("on load the device reads Output from the panel, and panel messages change it", () => {
   const { max, play } = loadInMax({ output: SEMITONE });
   assert.deepEqual(play([0x90, 60, 100]), [[60, 100]]); // plain note on, no bend
@@ -1078,7 +1201,7 @@ test("each panel control is wired through its prepend into the js", () => {
   const boxes = patcher.boxes.map((b) => b.box);
   const byId = Object.fromEntries(boxes.map((box) => [box.id, box]));
   const into = (id) => patcher.lines.filter((l) => l.patchline.source[0] === id).map((l) => byId[l.patchline.destination[0]]);
-  for (const name of ["mode", "mod", "lowest", "highest", "reset", "output"]) {
+  for (const name of ["mode", "mod", "range", "lowest", "highest", "reset", "output"]) {
     const control = boxes.find((box) => box.varname === name);
     assert.ok(control, `no control named ${name}`);
     const prepend = into(control.id).find((box) => box.text === `prepend ${name}`);
@@ -1157,6 +1280,7 @@ test("reset and a mode change tell the view; other settings do not", () => {
   assert.equal(changes(), 2);
   tap.setMode(GRAVITY); // same mode again
   tap.setMod(2);
+  tap.setRange(4);
   tap.setLowest(30);
   tap.setHighest(90);
   tap.setOutput(SEMITONE);

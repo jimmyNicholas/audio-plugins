@@ -24,6 +24,18 @@
 - **Open automatically:** the answer was "yes" to a recommendation of "no". To confirm in round 2.
 - **A mock-up first,** to agree the layout before Max work.
 
+## Decided with the user (2026-10-26, round 2)
+
+Against the mock-up at https://claude.ai/artifact/EopL6dHcj3qczfJ9DH9Azs (window, window with Debug open, device strip).
+
+- **Opening:** answered "yes" to the recommendation that it stays a button, read as: it does not open on load.
+- **The window repeats every strip control,** each window copy following its strip copy.
+- **Layout as in the mock-up:** Mode, How it works, Modifiers and the visualiser side by side, about 920 by 320. Debug opens below, to about 430.
+- **How it works:** the mock-up's drafts, for now.
+- **The strip button** is called **Open**.
+- **Strip layout as in the mock-up:** 360 wide, Mode slider and the Mod, Effect Range and Chance dials at the left; Lowest, Highest and Output at the right; Reset and Open below.
+- **One build ticket** for the window, its sections and Debug, with an empty visualiser slot that ticket 15 fills.
+
 ## Questions to grill
 
 1. **What stays on the device strip?** All controls (the window repeats them), a few (Mode, the main knob, Reset, the window button), or only the button? *Recommendation:* Mode, Reset and the window button, plus each mode's main knob. The user can play without opening the window.

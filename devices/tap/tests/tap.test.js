@@ -157,12 +157,27 @@ test("pressing the pedal twice does not lose the queue", () => {
 const SWAP = 0;
 const GRAVITY = 1;
 const MOVE = 2;
-const REPEL = 3;
-const ECHO = 4;
-const NOT_BUILT = [5, 6, 7]; // Rotate, Wander, Harmony: tickets 08 to 10
 
 function near(actual, expected, tolerance = 1e-9) {
   assert.ok(Math.abs(actual - expected) < tolerance, `${actual} is not close to ${expected}`);
+}
+
+function released(mode, mod, keys, setup = () => {}) {
+  const engine = createEngine();
+  engine.setMode(mode);
+  engine.setMod(mod);
+  setup(engine);
+  keys.forEach((key) => engine.noteReleased(key));
+  return engine;
+}
+
+function pitchesOf(engine, keys) {
+  return keys.map((key) => engine.pitchForNote(key));
+}
+
+// Gravity's share of the gap at a Mod: 1% at Mod 1, three times as much per doubling.
+function gravityShare(mod) {
+  return 0.01 * Math.pow(Math.abs(mod), Math.log2(3));
 }
 
 test("the default mode is Swap, Mod 1 and bounds 0 to 127", () => {
@@ -173,24 +188,12 @@ test("the default mode is Swap, Mod 1 and bounds 0 to 127", () => {
   assert.equal(engine.highest(), 127);
 });
 
-test("Gravity pulls the last key toward the current key as in the web app, with Mod as strength", () => {
-  const engine = createEngine();
-  engine.setMode(GRAVITY);
-  engine.setMod(2);
-  engine.noteReleased(69); // A4, 440 Hz
-  engine.noteReleased(71); // B4, 493.88 Hz
-  // gravity.test.ts: 440 - (440 - 493.88) / (10 - 2) = 446.735 Hz
-  near(hertzForPitch(engine.pitchForNote(69)), 446.735, 1e-2);
-  assert.equal(engine.pitchForNote(71), 71); // the current key does not move
-});
-
-test("Gravity works in Hertz, so the pull follows Mod", () => {
-  const engine = createEngine();
-  engine.setMode(GRAVITY);
-  engine.setMod(5);
-  engine.noteReleased(57); // A3, 220 Hz
-  engine.noteReleased(69); // A4, 440 Hz
-  near(hertzForPitch(engine.pitchForNote(57)), 220 + 220 / 5);
+test("Gravity pulls the last key toward the current key, in Hertz", () => {
+  const engine = released(GRAVITY, 2, [57, 69]); // A3 220 Hz, A4 440 Hz
+  near(hertzForPitch(engine.pitchForNote(57)), 220 + 220 * 0.03, 1e-6);
+  assert.equal(engine.pitchForNote(69), 69); // the current key does not move
+  const down = released(GRAVITY, 2, [69, 57]); // A4 pulled down toward A3
+  near(hertzForPitch(down.pitchForNote(69)), 440 - 220 * 0.03, 1e-6);
 });
 
 test("Gravity does nothing on the first release or when the same key is released twice", () => {
@@ -200,25 +203,6 @@ test("Gravity does nothing on the first release or when the same key is released
   assert.equal(engine.pitchForNote(69), 69);
   engine.noteReleased(69);
   assert.equal(engine.pitchForNote(69), 69);
-});
-
-test("Gravity at Mod 10 pulls the last key exactly onto the current key", () => {
-  const engine = createEngine();
-  engine.setMode(GRAVITY);
-  engine.setMod(10);
-  engine.noteReleased(60);
-  engine.noteReleased(67);
-  assert.equal(engine.pitchForNote(60), 67);
-  assert.equal(engine.pitchForNote(67), 67);
-});
-
-test("Gravity never gives a pitch below the Lowest bound, even when the web formula overshoots", () => {
-  const engine = createEngine();
-  engine.setMode(GRAVITY);
-  engine.setMod(9.9); // pulls 10 times the gap: 880 - 4400 Hz
-  engine.noteReleased(81); // A5, 880 Hz
-  engine.noteReleased(69); // A4, 440 Hz
-  assert.equal(engine.pitchForNote(81), 0);
 });
 
 test("Move shifts the released key by Mod semitones, from the first release", () => {
@@ -263,10 +247,10 @@ test("settings are kept in range", () => {
   assert.equal(engine.highest(), 127);
   engine.setLowest(40.6);
   assert.equal(engine.lowest(), 41);
-  engine.setMode(7);
-  assert.equal(engine.mode(), 7);
-  engine.setMode(9);
-  assert.equal(engine.mode(), 7);
+  engine.setMode(MOVE);
+  assert.equal(engine.mode(), MOVE);
+  engine.setMode(3);
+  assert.equal(engine.mode(), MOVE);
   engine.setMode(-1);
   assert.equal(engine.mode(), SWAP);
 });
@@ -337,7 +321,7 @@ test("the pedal queue uses the mode that is on when the pedal lifts", () => {
   assert.equal(engine.pitchForNote(60), 64);
 });
 
-// ---- Engine: Mod, bounds and the modes still to build (ticket 06) ----
+// ---- Engine: Mod and bounds (ticket 06) ----
 
 test("Move takes fractions of a semitone and moves up to an octave", () => {
   const engine = createEngine();
@@ -372,14 +356,11 @@ test("Move stops at the Lowest bound", () => {
   assert.equal(engine.pitchForNote(55), 48);
 });
 
-test("Gravity's overshoot stops at the Lowest bound", () => {
-  const engine = createEngine();
-  engine.setMode(GRAVITY);
-  engine.setLowest(36);
-  engine.setMod(9.9);
-  engine.noteReleased(81);
-  engine.noteReleased(69);
-  assert.equal(engine.pitchForNote(81), 36);
+test("Gravity stops at the bounds", () => {
+  const low = released(GRAVITY, -12, [69, 81], (e) => e.setLowest(68)); // pushed down from A4
+  assert.equal(low.pitchForNote(69), 68);
+  const high = released(GRAVITY, 12, [57, 81], (e) => e.setHighest(60)); // pulled up from A3
+  assert.equal(high.pitchForNote(57), 60);
 });
 
 test("bounds set the wrong way round are read the other way round", () => {
@@ -419,35 +400,148 @@ test("Swap keeps both swapped pitches within the bounds", () => {
   assert.equal(engine.pitchForNote(70), 60);
 });
 
-test("modes not built yet change nothing on release", () => {
-  for (const mode of NOT_BUILT) {
-    let changes = 0;
-    const engine = createEngine(() => changes++);
-    engine.setMode(mode);
-    const before = changes;
-    engine.noteReleased(60);
-    engine.noteReleased(62);
-    assert.equal(engine.pitchForNote(60), 60, `mode ${mode}`);
-    assert.equal(engine.pitchForNote(62), 62, `mode ${mode}`);
-    assert.equal(changes, before + 2, `mode ${mode}`); // the view is still told, as for any release
+// ---- Engine: Swap passes pitches round the newest releases (ticket 11) ----
+
+const C = 60;
+const E = 64;
+const G = 67;
+
+// The Swap from before ticket 11: the last two released keys trade pitches.
+function oldSwap(keys) {
+  const pitches = Array.from({ length: 128 }, (_, note) => note);
+  let last = -1;
+  for (const key of keys) {
+    if (last >= 0 && last !== key) [pitches[last], pitches[key]] = [pitches[key], pitches[last]];
+    last = key;
+  }
+  return pitches;
+}
+
+test("Swap at Mod +1 or -1 matches the old Swap, release for release", () => {
+  let seed = 7;
+  const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const keys = Array.from({ length: 300 }, () => 48 + Math.floor(random() * 12));
+  for (const mod of [1, -1, 0.6, -1.4]) {
+    const engine = createEngine();
+    engine.setMod(mod);
+    keys.forEach((key, i) => {
+      engine.noteReleased(key);
+      const expected = oldSwap(keys.slice(0, i + 1));
+      for (let note = 48; note < 60; note++) assert.equal(engine.pitchForNote(note), expected[note], `Mod ${mod}`);
+    });
   }
 });
 
-// ---- Engine: Gravity's sign, Repel and Echo (ticket 07) ----
+test("Swap at Mod +2 rotates the newest three releases forward", () => {
+  // Mod 0 fills the list without changing anything, so the rotation starts from concert pitch.
+  const engine = released(SWAP, 0, [C, E]);
+  engine.setMod(2);
+  engine.noteReleased(G);
+  assert.deepEqual(pitchesOf(engine, [C, E, G]), [E, G, C]);
+});
 
-function released(mode, mod, keys, setup = () => {}) {
-  const engine = createEngine();
-  engine.setMode(mode);
-  engine.setMod(mod);
-  setup(engine);
-  keys.forEach((key) => engine.noteReleased(key));
-  return engine;
-}
+test("Swap at Mod -2 rotates the newest three releases the other way", () => {
+  const engine = released(SWAP, 0, [C, E]);
+  engine.setMod(-2);
+  engine.noteReleased(G);
+  assert.deepEqual(pitchesOf(engine, [C, E, G]), [G, C, E]);
+});
 
-test("Gravity with a negative Mod pushes the last key away instead", () => {
-  const engine = released(GRAVITY, -5, [57, 69]); // A3 220 Hz, A4 440 Hz
-  near(hertzForPitch(engine.pitchForNote(57)), 220 - 220 / 5);
-  assert.equal(engine.pitchForNote(69), 69);
+test("Swap at Mod +2 from concert pitch swaps on the second release, then rotates three", () => {
+  const engine = released(SWAP, 2, [C, E]);
+  assert.deepEqual(pitchesOf(engine, [C, E]), [E, C]);
+  engine.noteReleased(G); // C takes E's pitch (C), E takes G's, G takes C's (E)
+  assert.deepEqual(pitchesOf(engine, [C, E, G]), [C, G, E]);
+  const back = released(SWAP, -2, [C, E, G]); // C takes G's, E takes C's (E), G takes E's (C)
+  assert.deepEqual(pitchesOf(back, [C, E, G]), [G, E, C]);
+});
+
+test("Swap rotates fewer keys than Mod asks for while the list fills", () => {
+  const engine = released(SWAP, 12, [60]);
+  assert.equal(engine.pitchForNote(60), 60); // the very first release
+  engine.noteReleased(62);
+  assert.deepEqual(pitchesOf(engine, [60, 62]), [62, 60]);
+  engine.noteReleased(64);
+  assert.deepEqual(pitchesOf(engine, [60, 62, 64]), [60, 64, 62]);
+});
+
+test("Swap rotates at most the newest 13 releases", () => {
+  const keys = Array.from({ length: 15 }, (_, i) => 40 + i); // 40 to 54
+  const engine = released(SWAP, 0, keys);
+  engine.setMod(12);
+  engine.noteReleased(55);
+  for (let key = 40; key <= 42; key++) assert.equal(engine.pitchForNote(key), key); // left the list
+  for (let key = 43; key <= 54; key++) assert.equal(engine.pitchForNote(key), key + 1);
+  assert.equal(engine.pitchForNote(55), 43);
+});
+
+test("Swap with a Mod that rounds to 0 changes nothing", () => {
+  for (const mod of [0, 0.4, -0.4]) {
+    const engine = released(SWAP, mod, [60, 62, 64, 60]);
+    assert.deepEqual(pitchesOf(engine, [60, 62, 64]), [60, 62, 64], `Mod ${mod}`);
+  }
+});
+
+test("Swap: the same key twice in a row changes nothing", () => {
+  const engine = released(SWAP, 2, [60, 62]);
+  engine.noteReleased(62);
+  assert.deepEqual(pitchesOf(engine, [60, 62]), [62, 60]);
+});
+
+test("Swap: a key released twice takes the pitch of its newest place", () => {
+  const engine = released(SWAP, 0, [C, E]);
+  engine.setMod(2);
+  engine.noteReleased(C); // places C, E, C: E takes C's pitch, the newest C takes the old C's
+  assert.deepEqual(pitchesOf(engine, [C, E]), [C, C]);
+});
+
+test("Swap with the pedal applies each release in turn when it lifts", () => {
+  const engine = released(SWAP, 2, [], (e) => e.setPedal(true));
+  [C, E, G].forEach((key) => engine.noteReleased(key));
+  assert.deepEqual(pitchesOf(engine, [C, E, G]), [C, E, G]);
+  engine.setPedal(false);
+  assert.deepEqual(pitchesOf(engine, [C, E, G]), pitchesOf(released(SWAP, 2, [C, E, G]), [C, E, G]));
+});
+
+test("reset and a mode change clear Swap's list", () => {
+  const afterReset = released(SWAP, 0, [C, E]);
+  afterReset.reset();
+  afterReset.setMod(2);
+  afterReset.noteReleased(G); // a first release again
+  assert.deepEqual(pitchesOf(afterReset, [C, E, G]), [C, E, G]);
+  const afterMode = released(SWAP, 0, [C, E]);
+  afterMode.setMode(MOVE);
+  afterMode.setMode(SWAP);
+  afterMode.setMod(2);
+  afterMode.noteReleased(G);
+  assert.deepEqual(pitchesOf(afterMode, [C, E, G]), [C, E, G]);
+});
+
+// ---- Engine: Gravity's curve (ticket 11) ----
+
+test("Gravity's share of the gap triples each time Mod doubles", () => {
+  const table = [
+    [0.5, 0.3],
+    [1, 1],
+    [2, 3],
+    [4, 9],
+    [8, 27],
+    [12, 51.3],
+  ];
+  for (const [mod, percent] of table) {
+    const engine = released(GRAVITY, mod, [57, 69]); // A3 220 Hz, A4 440 Hz: a 220 Hz gap
+    const share = (hertzForPitch(engine.pitchForNote(57)) - 220) / 220;
+    near(share, gravityShare(mod), 1e-9);
+    assert.equal(Math.round(share * 1000) / 10, percent, `Mod ${mod}`);
+  }
+});
+
+test("Gravity with a negative Mod pushes the last key away on the same curve", () => {
+  const down = released(GRAVITY, -4, [57, 69]);
+  near(hertzForPitch(down.pitchForNote(57)), 220 - 220 * 0.09, 1e-6);
+  const up = released(GRAVITY, -4, [69, 57]); // A4 pushed up, away from A3
+  near(hertzForPitch(up.pitchForNote(69)), 440 + 220 * 0.09, 1e-6);
+  assert.equal(up.pitchForNote(57), 57);
 });
 
 test("Gravity at Mod 0 changes nothing", () => {
@@ -455,80 +549,18 @@ test("Gravity at Mod 0 changes nothing", () => {
   assert.equal(engine.pitchForNote(57), 57);
 });
 
-test("Gravity below Mod 1 fades in from nothing, meeting the web formula at 1", () => {
-  const half = released(GRAVITY, 0.5, [57, 69]);
-  near(hertzForPitch(half.pitchForNote(57)), 220 + 220 / 18);
-  const one = released(GRAVITY, 1, [57, 69]);
-  near(hertzForPitch(one.pitchForNote(57)), 220 + 220 / 9);
+test("a Gravity push below 0 Hz goes to Lowest", () => {
+  // A3 220 Hz pushed away from A5 880 Hz by 51% of the 660 Hz gap would go below 0 Hz.
+  assert.equal(released(GRAVITY, -12, [57, 81]).pitchForNote(57), 0);
+  assert.equal(released(GRAVITY, -12, [57, 81], (e) => e.setLowest(24)).pitchForNote(57), 24);
 });
 
-test("Gravity above Mod 10 still pulls exactly onto the current key", () => {
-  const engine = released(GRAVITY, 12, [60, 67]);
-  assert.equal(engine.pitchForNote(60), 67);
-});
-
-test("Repel pushes the last key away from the current key", () => {
-  const engine = released(REPEL, 5, [57, 69]);
-  near(hertzForPitch(engine.pitchForNote(57)), 220 - 220 / 5);
-  assert.equal(engine.pitchForNote(69), 69);
-  const up = released(REPEL, 5, [69, 57]); // A4 pushed up, away from A3
-  near(hertzForPitch(up.pitchForNote(69)), 440 + 220 / 5);
-});
-
-test("Repel with a negative Mod pulls, as Gravity does with a positive one", () => {
-  const repel = released(REPEL, -5, [57, 69]);
-  const gravity = released(GRAVITY, 5, [57, 69]);
-  near(repel.pitchForNote(57), gravity.pitchForNote(57));
-});
-
-test("Repel at Mod 10 pushes the last key all the way to a bound", () => {
-  const down = released(REPEL, 10, [57, 69], (e) => e.setLowest(24));
-  assert.equal(down.pitchForNote(57), 24);
-  const up = released(REPEL, 10, [69, 57], (e) => e.setHighest(100));
-  assert.equal(up.pitchForNote(69), 100);
-  const gravity = released(GRAVITY, -12, [57, 69]);
-  assert.equal(gravity.pitchForNote(57), 0);
-});
-
-test("Repel does nothing on the first release, the same key twice, or keys at one pitch", () => {
-  const first = released(REPEL, 10, [60]);
-  assert.equal(first.pitchForNote(60), 60);
-  const twice = released(REPEL, 10, [60, 60]);
-  assert.equal(twice.pitchForNote(60), 60);
-  // Repel at -10 pulls 60 exactly onto 67. Then 67 has no direction to be pushed in.
-  const engine = released(REPEL, -10, [60, 67]);
-  assert.equal(engine.pitchForNote(60), 67);
-  engine.setMod(10);
-  engine.noteReleased(60); // last is 67, current 60, both at 67
-  assert.equal(engine.pitchForNote(67), 67);
-  assert.equal(engine.pitchForNote(60), 67);
-});
-
-test("Repel stops at the bounds", () => {
-  const engine = released(REPEL, 9.9, [69, 81], (e) => e.setLowest(40)); // pushes ten times the gap
-  assert.equal(engine.pitchForNote(69), 40);
-});
-
-test("Echo gives the current key the last key's drift plus Mod", () => {
-  const engine = released(ECHO, 0.1, [60, 62, 64, 65]);
-  near(engine.pitchForNote(60), 60.1); // the first release just moves by Mod
-  near(engine.pitchForNote(62), 62.2);
-  near(engine.pitchForNote(64), 64.3);
-  near(engine.pitchForNote(65), 65.4);
-  engine.noteReleased(60); // the trail carries on from the last key
-  near(engine.pitchForNote(60), 60.5);
-});
-
-test("Echo with a negative Mod leaves a falling trail", () => {
-  const engine = released(ECHO, -0.25, [60, 61]);
-  near(engine.pitchForNote(60), 59.75);
-  near(engine.pitchForNote(61), 60.5);
-});
-
-test("Echo stops at the bounds", () => {
-  const engine = released(ECHO, 12, [60, 62], (e) => e.setHighest(80));
-  assert.equal(engine.pitchForNote(60), 72);
-  assert.equal(engine.pitchForNote(62), 80); // 62 + 12 + 12 = 86
+test("Gravity never lands one key exactly on another", () => {
+  const engine = released(GRAVITY, 12, []);
+  for (let i = 0; i < 20; i++) {
+    engine.noteReleased(i % 2 === 0 ? 60 : 72); // each release pulls the other key closer
+    assert.ok(engine.pitchForNote(60) < engine.pitchForNote(72), `release ${i}`);
+  }
 });
 
 // ---- Router: MPE channels (from plugin/tests/MpeRouterTests.cpp and the spike tests) ----
@@ -787,8 +819,8 @@ test("the panel's mode, settings and reset reach the engine", () => {
   tap.reset();
   assert.deepEqual(messages(play([0x90, 60, 100])).at(-1).slice(1), [60, 100]);
   play([0x80, 60, 0]);
-  tap.setMode(GRAVITY);
-  tap.setMod(10);
+  tap.setMode(SWAP);
+  tap.setMod(1);
   play([0x90, 60, 100, 0x80, 60, 0, 0x90, 67, 100, 0x80, 67, 0]);
   assert.deepEqual(messages(play([0x90, 60, 100])).at(-1).slice(1), [67, 100]);
 });
@@ -863,18 +895,17 @@ test("Semitone output: Move stays exact", () => {
 test("Semitone output: Gravity is rounded to the nearest semitone", () => {
   const { tap, play } = semitoneDevice();
   tap.setMode(GRAVITY);
-  tap.setMod(5);
+  tap.setMod(12);
   play([0x90, 57, 100, 0x80, 57, 0]); // A3, 220 Hz
-  play([0x90, 69, 100, 0x80, 69, 0]); // A4, 440 Hz: A3 goes to 264 Hz, note 60.16
-  assert.deepEqual(play([0x90, 57, 100]), [0x90, 60, 100]);
+  play([0x90, 69, 100, 0x80, 69, 0]); // A4, 440 Hz: A3 goes to 333 Hz, note 64.17
+  assert.deepEqual(play([0x90, 57, 100]), [0x90, 64, 100]);
 });
 
 test("Semitone output: two keys tuned to one note do not stick", () => {
   const { tap, play } = semitoneDevice();
-  tap.setMode(GRAVITY);
-  tap.setMod(10);
-  play([0x90, 60, 100, 0x80, 60, 0]);
-  play([0x90, 64, 100, 0x80, 64, 0]); // key 60 is pulled onto E
+  tap.setMode(MOVE);
+  tap.setMod(4);
+  play([0x90, 60, 100, 0x80, 60, 0]); // key 60 moves onto E
   assert.deepEqual(play([0x90, 60, 100]), [0x90, 64, 100]);
   assert.deepEqual(play([0x90, 64, 100]), [0x80, 64, 0, 0x90, 64, 100]); // E restarts
   assert.deepEqual(play([0x80, 60, 0]), []); // E is still held by key 64
@@ -1006,8 +1037,8 @@ test("panel messages change the mode and settings, and only a press resets", () 
   max.reset(1);
   assert.deepEqual(play([0x90, 60, 100]).at(-1), [60, 100]);
   max.reset("bang");
-  max.mode(GRAVITY);
-  max.mod(10);
+  max.mode(SWAP);
+  max.mod(1);
   play([0x80, 60, 0, 0x90, 67, 100, 0x80, 67, 0]);
   assert.deepEqual(play([0x90, 60, 100]).at(-1), [67, 100]);
 });
@@ -1058,14 +1089,15 @@ test("each panel control is wired through its prepend into the js", () => {
   assert.equal(boxes.find((box) => box.varname === "strength"), undefined);
 });
 
-test("the Mode menu lists the eight modes in engine order", () => {
+test("the Mode slider has three steps, named in engine order", () => {
   const patcher = JSON.parse(fs.readFileSync(path.join(__dirname, "../TAP.maxpat"), "utf8")).patcher;
   const mode = patcher.boxes.map((b) => b.box).find((box) => box.varname === "mode");
-  assert.equal(mode.maxclass, "live.menu");
+  assert.equal(mode.maxclass, "live.slider");
   const valueof = mode.saved_attribute_attributes.valueof;
   assert.equal(valueof.parameter_longname, "Mode");
-  assert.deepEqual(valueof.parameter_enum, ["Swap", "Gravity", "Move", "Repel", "Echo", "Rotate", "Wander", "Harmony"]);
-  assert.equal(valueof.parameter_mmax, 7);
+  assert.equal(valueof.parameter_type, 2); // an enum, so it shows the name, not a number
+  assert.deepEqual(valueof.parameter_enum, ["Swap", "Gravity", "Move"]);
+  assert.equal(valueof.parameter_mmax, 2);
 });
 
 // ---- Drift: what the view is sent ----

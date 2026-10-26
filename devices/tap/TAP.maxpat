@@ -146,28 +146,30 @@
       {
         "box": {
           "id": "obj-20",
-          "maxclass": "live.menu",
+          "maxclass": "live.slider",
           "varname": "mode",
           "numinlets": 1,
-          "numoutlets": 3,
+          "numoutlets": 2,
           "outlettype": [
-            "",
             "",
             "float"
           ],
+          "orientation": 1,
+          "showname": 0,
+          "shownumber": 1,
           "parameter_enable": 1,
           "patching_rect": [
             120,
             24,
             110,
-            15
+            24
           ],
           "presentation": 1,
           "presentation_rect": [
             4,
-            26,
+            22,
             110,
-            15
+            24
           ],
           "saved_attribute_attributes": {
             "valueof": {
@@ -175,7 +177,7 @@
               "parameter_shortname": "Mode",
               "parameter_type": 2,
               "parameter_mmin": 0,
-              "parameter_mmax": 7,
+              "parameter_mmax": 2,
               "parameter_initial": [
                 0
               ],
@@ -184,13 +186,9 @@
               "parameter_enum": [
                 "Swap",
                 "Gravity",
-                "Move",
-                "Repel",
-                "Echo",
-                "Rotate",
-                "Wander",
-                "Harmony"
-              ]
+                "Move"
+              ],
+              "parameter_steps": 3
             }
           }
         }

@@ -25,18 +25,17 @@ var CC_SUSTAIN = 64;
 var CC_ALL_SOUND_OFF = 120;
 var CC_ALL_NOTES_OFF = 123;
 
-// Modes, in the order of the panel's Mode menu. New modes go at the end, so saved sets
-// keep their mode. Rotate, Wander and Harmony are not built yet: tickets 08 to 10.
+// Modes, in the order of the panel's Mode slider.
 var SWAP = 0;
 var GRAVITY = 1;
 var MOVE = 2;
-var REPEL = 3;
-var ECHO = 4;
-var ROTATE = 5;
-var WANDER = 6;
-var HARMONY = 7;
-var MAX_STRENGTH = 10;
 var MAX_MOD = 12; // semitones either way
+var MAX_RELEASES = MAX_MOD + 1; // the most keys Swap passes pitches round
+
+// Gravity's curve: the share of the gap moved at Mod 1, and how much each doubling of Mod
+// multiplies it. Ticket 14 makes these tunable in the panel window.
+var GRAVITY_AT_ONE = 0.01;
+var GRAVITY_PER_DOUBLING = 3;
 
 // Outputs, in the order of the panel's Output tab.
 var MPE = 0;
@@ -79,7 +78,7 @@ function dataLength(status) {
 // after each change to the table: a release, a pedal lift with releases waiting, a reset.
 function createEngine(onChange) {
   var pitches = [];
-  var lastReleased = -1;
+  var releases = []; // the newest releases, oldest first, never the same key twice in a row
   var pedalDown = false;
   var queue = [];
   var mode = SWAP;
@@ -93,7 +92,7 @@ function createEngine(onChange) {
 
   function clear() {
     for (var note = 0; note < NUM_NOTES; note++) pitches[note] = note;
-    lastReleased = -1;
+    releases = [];
     queue = [];
   }
 
@@ -109,64 +108,56 @@ function createEngine(onChange) {
     return clamp(pitch, Math.min(lowest, highest), Math.max(lowest, highest));
   }
 
-  function swap(last, current) {
-    var swapped = pitches[last];
-    pitches[last] = bound(pitches[current]);
-    pitches[current] = bound(swapped);
+  // Passes pitches round the newest N releases, where N is Mod rounded, ignoring the sign,
+  // plus 1, or fewer while the list fills. With a positive Mod each place takes the pitch
+  // of the place released after it and the newest takes the oldest's; a negative Mod turns
+  // the other way. A key with two places takes the pitch of its newest place.
+  function swap() {
+    var count = Math.min(Math.round(Math.abs(mod)) + 1, releases.length);
+    if (count < 2) return;
+    var places = releases.slice(releases.length - count);
+    var step = mod > 0 ? 1 : count - 1;
+    var taken = [];
+    var i;
+    for (i = 0; i < count; i++) taken.push(pitches[places[(i + step) % count]]);
+    for (i = 0; i < count; i++) pitches[places[i]] = bound(taken[i]);
   }
 
-  // The share of the gap a pull or push moves, for a strength of 0 or more. From 1 to 10
-  // it is the web formula's 1 / (10 - strength); below 1 it fades in from nothing, so
-  // strength 0 changes nothing. At 10 and above it is Infinity.
-  function share(strength) {
-    if (strength >= MAX_STRENGTH) return Infinity;
-    if (strength >= 1) return 1 / (MAX_STRENGTH - strength);
-    return strength / (MAX_STRENGTH - 1);
+  // The share of the gap Gravity moves for a Mod of 0 or more: GRAVITY_AT_ONE at Mod 1,
+  // multiplied by GRAVITY_PER_DOUBLING each time Mod doubles.
+  function share(size) {
+    return GRAVITY_AT_ONE * Math.pow(size, Math.log(GRAVITY_PER_DOUBLING) / Math.LN2);
   }
 
-  // Gravity as in gravity.ts, in Hertz, with Mod as the strength. A positive strength pulls
-  // the last key toward the current key and a negative one pushes it away, which is Repel.
-  // A full pull lands exactly on the current key; a full push goes to a bound. Just below
-  // 10 the web formula overshoots a long way, even below 0 Hz, so results are bounded.
-  function gravity(last, current, strength) {
+  // Gravity in Hertz, as in gravity.ts. A positive Mod pulls the last key toward the
+  // current key and a negative one pushes it away. A pull never reaches the current key;
+  // a push below 0 Hz goes to Lowest.
+  function gravity(last, current) {
     var lastHertz = hertzForPitch(pitches[last]);
     var currentHertz = hertzForPitch(pitches[current]);
-    if (strength === 0 || lastHertz === currentHertz) return;
-    var amount = share(Math.abs(strength));
-    if (strength > 0 && amount === Infinity) {
-      pitches[last] = bound(pitches[current]);
-      return;
-    }
-    var away = lastHertz > currentHertz ? 1 : -1; // the direction that pushes away
-    if (amount === Infinity) {
-      pitches[last] = bound(away * Infinity);
-      return;
-    }
+    if (mod === 0 || lastHertz === currentHertz) return;
+    var toward = lastHertz < currentHertz ? 1 : -1;
     var gap = Math.abs(lastHertz - currentHertz);
-    var hertz = lastHertz + (strength > 0 ? -away : away) * gap * amount;
+    var hertz = lastHertz + (mod > 0 ? toward : -toward) * gap * share(Math.abs(mod));
     pitches[last] = hertz > 0 ? bound(pitchForHertz(hertz)) : bound(-Infinity);
-  }
-
-  // The current key takes the last key's drift from concert pitch, plus Mod.
-  function echo(last, current) {
-    pitches[current] = bound(current + (pitches[last] - last) + mod);
   }
 
   function apply(current) {
     // As in useKeyboard.ts: on the very first release the last key is the current key.
-    var last = lastReleased < 0 ? current : lastReleased;
+    var last = releases.length > 0 ? releases[releases.length - 1] : current;
+    if (last !== current || releases.length === 0) {
+      releases.push(current);
+      if (releases.length > MAX_RELEASES) releases.shift();
+    }
     if (mode === MOVE) pitches[current] = bound(pitches[current] + mod);
-    else if (mode === ECHO) echo(last, current);
-    else if (last !== current && mode === GRAVITY) gravity(last, current, mod);
-    else if (last !== current && mode === REPEL) gravity(last, current, -mod);
-    else if (last !== current && mode === SWAP) swap(last, current);
-    lastReleased = current;
+    else if (last !== current && mode === GRAVITY) gravity(last, current);
+    else if (last !== current && mode === SWAP) swap();
   }
 
   // Changing mode resets every key, as in the web app. The same mode again does not.
   function setMode(value) {
     if (!isNumber(value)) return;
-    var next = clamp(Math.round(value), SWAP, HARMONY);
+    var next = clamp(Math.round(value), SWAP, MOVE);
     if (next === mode) return;
     mode = next;
     reset();

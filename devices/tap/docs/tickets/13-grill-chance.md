@@ -17,6 +17,14 @@
 - **One control for every mode,** like Mod and Effect Range. It sits next to them on the panel.
 - **A Live parameter:** a `live.dial`, saved with the set and automatable.
 
+## Decided with the user (2026-10-26, round 2)
+
+- **Name:** Chance.
+- **Range:** 0 to 100%, in 1% steps, default 100% (every release fires, as now).
+- **A miss still counts:** it joins Swap's list and becomes Gravity's last key, as if the mode had nothing to do that time.
+- **Rolls:** each queued release gets its own roll when the pedal lifts. Chance is rolled first; on a miss, no Effect Range number is picked. At 100%, no roll is made, so existing tests pass unchanged. Chance uses ticket 12's random function.
+- **Drift view:** misses are not shown. The view still updates after every release.
+
 ## Questions to grill
 
 1. **Chance, Amount, or both?** *Recommendation:* Chance first, since that is what "chance to fire" says. Amount could come later as its own control.

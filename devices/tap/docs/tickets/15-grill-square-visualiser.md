@@ -26,6 +26,16 @@
 - **Drawn as a faint diagonal guide plus a stem** from the diagonal to each drifted key's pitch, red when sharp and blue when flat. Keys at concert pitch draw no stem.
 - **Other views** go to a parked ticket, [18](18-other-views.md). The user liked the pitch-class circle, the rubber sheet and the warped picture.
 
+## Decided with the user (2026-10-26, round 3)
+
+- **Size:** not settled. The user wants to try sizes from the debug section of the panel window (ticket 14).
+- **True scale.** A stem ends exactly at the pitch played, so small drift draws a short stem or none.
+- **Colour shows any drift:** on a black background a key starts white. Drift of 0.001 semitones (0.1 cent, the smallest step `tap.js` sends) or more turns it red when sharp and blue when flat.
+- **No extras:** no bounds, last key or held keys. So no engine change.
+- **Built straight into the panel window,** not into the current Drift view window first.
+- **Keys and Picture code is deleted.** Git history keeps it.
+- **Header summary line:** off by default. The debug section can turn it on.
+
 ## Questions to grill
 
 1. **Is that reading right?** One column per key, low notes at the left, with lines growing up and down from a horizontal middle line? *Recommendation:* confirm with a quick mock-up.

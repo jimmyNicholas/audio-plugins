@@ -1,5 +1,7 @@
 # 09: Wander
 
+**Status:** replaced (2026-10-26) by ticket 12, Random range: an Effect Range knob that randomises Mod for every mode.
+
 **Goal:** each released key drifts at random.
 
 ## The mode

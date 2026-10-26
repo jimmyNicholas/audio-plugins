@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-25 (tickets 06 and 07 built, waiting for a test in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
+Last updated 2026-10-26 (tickets 11 to 15 grilled and ready to build). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
 
 ## Goal
 
@@ -18,7 +18,13 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 05.2 Picture mode | **Done.** Passed in Live by 2026-10-20: the user reported that it works. |
 | 06 Mode menu, Mod knob and bounds | **Built, not yet tested in Live.** `npm test` passes. |
 | 07 Gravity on Mod, Repel and Echo | **Built, not yet tested in Live.** `npm test` passes. Test together with 06. |
-| 08 to 10 Rotate, Wander, Harmony | Planned. |
+| 08 to 10 Rotate, Wander, Harmony | **Paused** (2026-10-25). Rotate becomes part of Swap in ticket 11. |
+| 11 Back to the core three | **Grilled.** Rewritten as a build ticket. Build first. |
+| 12 Random range | **Grilled.** Rewritten as a build ticket. Replaces 09. Build after 11. |
+| 13 Chance | **Grilled.** Rewritten as a build ticket. Build after 12. |
+| 14 Panel window | **Grilled.** Rewritten as a build ticket. Build after 13. [Mock-up](https://claude.ai/artifact/EopL6dHcj3qczfJ9DH9Azs). |
+| 15 Square visualiser | **Grilled.** Rewritten as a build ticket: a pitch map that replaces Keys and Picture. Build after 14. |
+| 16 to 18 | **Parked.** Double slider for the bounds; floor at the same note name; other views. |
 
 ## Ticket 01 results (2026-10-11)
 
@@ -194,10 +200,22 @@ None from ticket 01. Questions 1 to 5 from the earlier list are answered in the 
 - **No PR** unless the user asks.
 - **User preferences:** Australian spelling, no em dashes, small reviewable tickets, review before committing, ask before big changes.
 
+## New direction (2026-10-25)
+
+The user is not confident about how the new modes were added and wants to pause them, rework Swap, Gravity and Move, and build a better pop-out panel. Each idea has a grilling ticket: a list of questions, each with a recommended answer, to settle with the user before any code. Grill in this order, because the later ones depend on the first:
+
+1. [11 Back to the core three](tickets/11-grill-core-three.md)
+2. [12 Random range](tickets/12-grill-move-random-range.md) (replaces ticket 09; grilled)
+3. [13 Chance](tickets/13-grill-chance.md) (grilled)
+4. [15 Square visualiser](tickets/15-grill-square-visualiser.md) (grilled)
+5. [14 Panel window](tickets/14-grill-panel-window.md) (grilled)
+
+Once a ticket is grilled, rewrite it as a build ticket with Tasks, Prototype and Done when.
+
 ## Next steps
 
-1. Test tickets 06 and 07 in Live (steps above).
-2. Tickets 08 to 10, one at a time: Rotate, Wander, Harmony. They change only `tap.js`.
+1. Build tickets 11, 12, 13, 14 and 15, in that order, each tested in Live before the next.
+2. Whether tickets 06 and 07 still need testing in Live depends on ticket 11.
 3. Later: save the pitch table with the set.
 
 Hosting an instrument inside TAP was explored and is not needed: TAP already works with Waves Grand Rhapsody Piano and Electric 88 placed after it on the same track (which Output was used is not yet recorded).

@@ -19,9 +19,10 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 06 Mode menu, Mod knob and bounds | **Built, not yet tested in Live.** `npm test` passes. |
 | 07 Gravity on Mod, Repel and Echo | **Built, not yet tested in Live.** `npm test` passes. Test together with 06. |
 | 08 to 10 Rotate, Wander, Harmony | **Paused** (2026-10-25). Rotate becomes part of Swap in ticket 11. |
-| 11 Back to the core three | **Grilled.** Rewritten as a build ticket. Build after 12 to 15 are grilled. |
-| 12 Random range | **Grilled.** Rewritten as a build ticket. Replaces 09. Build after 11, once 13 to 15 are grilled. |
-| 13 to 15 New direction | **To grill.** Chance, panel window, square visualiser. |
+| 11 Back to the core three | **Grilled.** Rewritten as a build ticket. Build after 14 and 15 are grilled. |
+| 12 Random range | **Grilled.** Rewritten as a build ticket. Replaces 09. Build after 11, once 14 and 15 are grilled. |
+| 13 Chance | **Grilled.** Rewritten as a build ticket. Build after 12, once 14 and 15 are grilled. |
+| 14, 15 New direction | **To grill.** Panel window, square visualiser. |
 | 16, 17 | **Parked.** Double slider for the bounds; floor at the same note name. |
 
 ## Ticket 01 results (2026-10-11)
@@ -204,7 +205,7 @@ The user is not confident about how the new modes were added and wants to pause 
 
 1. [11 Back to the core three](tickets/11-grill-core-three.md)
 2. [12 Random range](tickets/12-grill-move-random-range.md) (replaces ticket 09; grilled)
-3. [13 Chance to fire](tickets/13-grill-chance.md)
+3. [13 Chance](tickets/13-grill-chance.md) (grilled)
 4. [15 Square visualiser](tickets/15-grill-square-visualiser.md)
 5. [14 Panel window](tickets/14-grill-panel-window.md)
 

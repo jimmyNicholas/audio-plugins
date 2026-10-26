@@ -22,11 +22,16 @@
 ## Decided with the user (2026-10-26, round 2)
 
 - **Fresh each release:** every release picks a new amount, every amount in the range equally likely. No slow walk.
-- **One rule for every mode:** on each release, pick a number from -Range to +Range, add it to Mod, and the mode uses the result as if it were Mod. Move at Mod 0, Range 2 moves anywhere from -2 to +2. Gravity can push when Range is bigger than Mod. Swap's count and direction can change.
+- **One rule for every mode:** on each release, pick a number from -Range to +Range, add it to Mod, and the mode uses the result as if it were Mod. Move at Mod 0, Range 2 moves anywhere from -2 to +2. (Changed in round 3: Range is the total width.) Gravity can push when Range is bigger than Mod. Swap's count and direction can change.
 - **The knob:** 0 to +12, positive only, in 0.01 steps, default 0. Mod plus the random amount stops at ±12.
 - **Pedal:** each queued release gets its own amount when the pedal lifts.
-- **Where:** a `live.dial` named **Range** on the strip next to Mod, saved with the set and automatable.
+- **Where:** a `live.dial` named **Range** (renamed in round 3) on the strip next to Mod, saved with the set and automatable.
 - **Ticket 09 (Wander)** is replaced by this ticket, which becomes "Random range".
+
+## Decided with the user (2026-10-26, round 3)
+
+- **Range is the total width,** centred on Mod, and takes fractions. Mod 0 with Range 2 lands anywhere from -1 to +1. So each release picks from -Range/2 to +Range/2.
+- **Name:** the knob is **Effect Range**, so it does not clash with ticket 16's slider for Lowest and Highest.
 
 ## Questions to grill
 

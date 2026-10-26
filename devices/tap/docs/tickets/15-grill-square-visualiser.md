@@ -1,62 +1,60 @@
-# 15 (grill): Square visualiser
+# 15: Square visualiser
 
-**Status:** to grill. Can be grilled on its own; it ends up as the last section of the panel window (ticket 14).
+**Status:** grilled 2026-10-26. Build after ticket 14, which makes the panel window, its debug section and an empty slot for this view.
 
-**Idea (the user, 2026-10-25):** a square version of the current drift view, 128 by 128. The zero line runs across the middle. As keys drift up or down, their line gets longer.
+**Goal:** a square pitch map of all 128 keys in the panel window, replacing the Keys and Picture views. The user's idea was a square version of the drift view, 128 by 128, where drift makes a key's line longer.
 
-## Where things stand
+## The view
 
-- `drift-view.js` draws a header line, a lane of bars (up for sharp, down for flat, from a centre line) and a keyboard of 128 keys, 960 by 200. A Picture mode shows a 16 by 8 landscape instead.
-- Bar length and colour use a log scale up to an octave (`FULL_SCALE_CENTS = 1200`), so a few cents still show.
-- `tap.js` sends 128 offsets in cents whenever the pitch table changes. The new view needs no engine change.
-- The reading below is what's assumed until confirmed: 128 columns, one per key from note 0 at the left to 127 at the right. Each column is a vertical line from the centre that grows up when the key is sharp and down when it is flat.
+- **A pitch map on a true linear scale.** Across is the key, note 0 at the left. Up is the pitch it plays, note 0 at the bottom. At concert pitch every key sits on the diagonal from bottom left to top right.
+- **Size:** a square of 128, 256, 384 or 512 pixels, so each note is a whole number of pixels (1 to 4). It opens at 256.
+- **Drawing:** a black background. Each key is one note-sized pixel on the diagonal:
+  - **White** at concert pitch: drift under 0.1 cent, the smallest step `tap.js` sends.
+  - **Full red** when sharp and **full blue** when flat, at any drift. There is no shading by distance.
+  - **A stem** in the same colour runs from the diagonal pixel to the exact pitch the key plays. Drift too small for a stem shows as colour only.
+- **Header summary line** ("12 keys drifted" or "Every key at concert pitch"): off by default.
+- It jumps to the new state on each change. No animation, no hover.
+- No bounds, last key or held keys are shown, so `tap.js` does not change.
 
-## Decided with the user (2026-10-26, round 1)
+## Debug settings
 
-- **The line runs from bottom left to top right,** not across the middle. The user changed their mind about the centre line. Read as a pitch map: across is the key, up is the pitch it plays, so concert pitch is the diagonal. To confirm in round 2.
-- **Pixel size and full scale:** open again, because the diagonal changes them.
-- **Colour:** red when sharp, blue when flat, deeper the further.
-- **No hover readout.**
-- **Replaces Keys and Picture for now.** The user wants ideas for other ways to show or warp the drift.
-- **Jump** to the new state on each change. No animation.
+From ticket 14's debug section. Neither is a Live parameter or saved with the set; both reset on load, like ticket 11's Gravity tuning.
 
-## Decided with the user (2026-10-26, round 2)
+- **Size:** 128, 256, 384 or 512. Once the user picks one in Live, it becomes fixed and the setting goes.
+- **Header summary:** on or off.
 
-- **A pitch map, confirmed.** Across is the key (note 0 at the left), up is the pitch it plays (note 0 at the bottom). Concert pitch is the diagonal.
-- **Drawn as a faint diagonal guide plus a stem** from the diagonal to each drifted key's pitch, red when sharp and blue when flat. Keys at concert pitch draw no stem.
-- **Other views** go to a parked ticket, [18](18-other-views.md). The user liked the pitch-class circle, the rubber sheet and the warped picture.
+## Tasks
 
-## Decided with the user (2026-10-26, round 3)
+- `drift-view.js`, test-first:
+  - Delete the Keys and Picture views: the keyboard, bars, landscape, buttons, hover and their constants.
+  - `squareLayout(size)`: pixels per note (`size / 128`) and the square's position under the header, when it is shown.
+  - `keyRect(note, cents, layout)`: the diagonal pixel for a key, and `stemRect` from it to the pitch played (`note + cents / 100`), or none when shorter than one pixel.
+  - `keyColour(cents)`: white under 0.1 cent, else full red or blue.
+  - Max handlers `size` (snaps to 128, 256, 384 or 512) and `summary` (0 or 1), each redrawing the view. `list` stays as it is.
+- Tests (`tests/drift-view.test.js`):
+  - Drop the Keys and Picture tests.
+  - Concert pitch draws 128 white pixels on the diagonal and no stems.
+  - Move +3 on note 60 at size 256: a red pixel at note 60's diagonal place and a red stem 6 pixels up.
+  - A Swap pair: one red stem up, one blue stem down, of equal length.
+  - 0.1 cent sharp turns the pixel red with no stem; 0.05 cents stays white.
+  - Each size gives 1 to 4 pixels per note, and other sizes snap to the nearest.
+  - The header is hidden by default and shows the summary when turned on.
+  - The ES5 check still passes.
+- Patch: ticket 14 puts this `jsui` in the window and wires the debug section's `size` and `summary` messages to it. Regenerate `TAP.amxd` if the patch changes.
 
-- **Size:** not settled. The user wants to try sizes from the debug section of the panel window (ticket 14).
-- **True scale.** A stem ends exactly at the pitch played, so small drift draws a short stem or none.
-- **Colour shows any drift:** on a black background a key starts white. Drift of 0.001 semitones (0.1 cent, the smallest step `tap.js` sends) or more turns it red when sharp and blue when flat.
-- **No extras:** no bounds, last key or held keys. So no engine change.
-- **Built straight into the panel window,** not into the current Drift view window first.
-- **Keys and Picture code is deleted.** Git history keeps it.
-- **Header summary line:** off by default. The debug section can turn it on.
+## Prototype
 
-## Decided with the user (2026-10-26, round 4)
+1. `git pull`, then `npm test --prefix m4l`. The last lines show `# fail 0`.
+2. Open the panel window. The visualiser shows a white diagonal on black, 256 square, with no header.
+3. **Move,** Mod 3: release middle C. Its pixel turns red with a stem 3 notes up.
+4. **Move,** Mod 0.01: release a key. Its pixel turns red with no visible stem.
+5. **Swap,** Mod +1: release A then B. A red stem up and a blue stem down appear.
+6. **Gravity,** Mod 2: keys turn red and blue with short stems.
+7. **Reset** and a mode change put the white diagonal back.
+8. **Debug:** try each size, and turn the header on and off. Pick a size to keep.
+9. **Speed:** fast passages with the window open feel as tight as before.
 
-- **Each key is a white pixel on the diagonal.** When it drifts, the pixel turns red or blue and a stem in the same colour runs from the diagonal to the pitch it plays. Drift too small for a stem shows as colour only.
-- **Flat colour:** full red or full blue at any drift. Round 1's "deeper the further" is dropped; stem length shows the amount.
-- **Debug sizes:** 128, 256, 384 and 512, opening at 256. Once the user picks one in Live, it becomes fixed and the option goes.
-- **Debug settings are not saved:** size and the header toggle are not Live parameters and reset on load, like ticket 11's Gravity tuning.
-- **A separate build ticket after 14:** ticket 14 builds the window and the debug section with an empty visualiser slot, and ticket 15 fills it.
+## Done when
 
-## Questions to grill
-
-1. **Is that reading right?** One column per key, low notes at the left, with lines growing up and down from a horizontal middle line? *Recommendation:* confirm with a quick mock-up.
-2. **Pixel size:** literally 128 by 128 pixels (one pixel per key), or square and scaled up (for example 256 by 256, two pixels per key)? *Recommendation:* scaled up, at a whole number of pixels per key, so lines stay crisp. 128 pixels is small on a laptop screen.
-3. **Full scale:** how much drift reaches the top or bottom edge? ±12 semitones, ±2 (the range the user liked for Move), or the Lowest and Highest bounds? *Recommendation:* ±12 semitones. Ask whether the scale should be linear (simple to read) or log as now (a few cents still show).
-4. **Past full scale:** clip at the edge, or mark the line (for example a brighter tip)? *Recommendation:* clip, with a brighter tip.
-5. **Colour:** red up and blue down as now, one colour, or colour by how far? *Recommendation:* keep red and blue, deeper the further.
-6. **Extras:** show keys that are held, the last key released, or the Lowest and Highest bounds as faint vertical lines? *Recommendation:* the bounds and the last key released. Held keys later.
-7. **Hover:** keep the readout ("C3 +300.0 cents (plays near D#3)")? *Recommendation:* yes, in the panel's header line.
-8. **Keys and Picture views:** keep them as switchable views, or does the square replace them? *Recommendation:* the square becomes the default. Keep Picture as a switch, since the user liked it. Drop Keys if the square covers it.
-9. **Smoothing:** jump to the new length on each change, or animate briefly? *Recommendation:* jump. It is cheaper and shows exactly when a release lands.
-
-## Done when grilled
-
-- Answers recorded here.
-- Rewritten as a build ticket. It changes `drift-view.js` (or adds a new `jsui` file) and its tests.
+- Tests pass, including the ES5 check.
+- The user has played all three modes with the view open in Live and picked a size.

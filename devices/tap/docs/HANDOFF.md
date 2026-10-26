@@ -22,7 +22,8 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 11 Back to the core three | **Grilled.** Rewritten as a build ticket. Build after 14 and 15 are grilled. |
 | 12 Random range | **Grilled.** Rewritten as a build ticket. Replaces 09. Build after 11, once 14 and 15 are grilled. |
 | 13 Chance | **Grilled.** Rewritten as a build ticket. Build after 12, once 14 and 15 are grilled. |
-| 14, 15 New direction | **To grill.** Panel window, square visualiser. |
+| 14 Panel window | **To grill.** Next to grill. |
+| 15 Square visualiser | **Grilled.** Rewritten as a build ticket: a pitch map that replaces Keys and Picture. Build after 14. |
 | 16 to 18 | **Parked.** Double slider for the bounds; floor at the same note name; other views. |
 
 ## Ticket 01 results (2026-10-11)
@@ -206,7 +207,7 @@ The user is not confident about how the new modes were added and wants to pause 
 1. [11 Back to the core three](tickets/11-grill-core-three.md)
 2. [12 Random range](tickets/12-grill-move-random-range.md) (replaces ticket 09; grilled)
 3. [13 Chance](tickets/13-grill-chance.md) (grilled)
-4. [15 Square visualiser](tickets/15-grill-square-visualiser.md)
+4. [15 Square visualiser](tickets/15-grill-square-visualiser.md) (grilled)
 5. [14 Panel window](tickets/14-grill-panel-window.md)
 
 Once a ticket is grilled, rewrite it as a build ticket with Tasks, Prototype and Done when.

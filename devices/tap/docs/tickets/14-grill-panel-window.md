@@ -20,7 +20,7 @@
 3. **"How it works":** fixed text per mode (as in the web app), a small diagram, or an animation of the last release (for example, an arrow from last to current)? *Recommendation:* fixed text first, written fresh for the reworked core three. An animation of the last release could be a later ticket.
 4. **Layout:** sections side by side (Mode, How it works, Modifiers, Visualiser), or stacked? What window size? *Recommendation:* side by side in one row, about 900 by 260, with the visualiser square at the right. Ask for a quick sketch.
 5. **Only the selected mode's modifiers, or all three modes' at once?** *Recommendation:* only the selected mode's, as in the web app. In Max that means showing and hiding controls in presentation mode when Mode changes.
-6. **Keys and Picture views:** keep them alongside the new square visualiser, or replace them? *Recommendation:* settle this in ticket 15.
+6. **Keys and Picture views:** settled in ticket 15: the square replaces them. The window needs a slot for it (128 to 512 square, 256 by default), and the debug section needs ticket 15's View size and Header summary settings beside ticket 11's Gravity tuning.
 7. **Look:** Live's default look, or a custom colour scheme? *Recommendation:* Live's default for the controls, and the visualiser keeps its own colours.
 8. **Open the window automatically when the device loads?** *Recommendation:* no. It stays a button.
 9. **Is a first mock-up wanted before Max work?** A static picture (or an HTML sketch) of the window is quick to change. *Recommendation:* yes, one mock-up to agree the layout.

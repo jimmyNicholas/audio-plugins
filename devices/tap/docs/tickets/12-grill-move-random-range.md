@@ -1,57 +1,58 @@
-# 12 (grill): Move by a random amount within a range
+# 12: Random range
 
-**Status:** to grill. Depends on ticket 11 (what Move's control becomes).
+**Status:** grilled 2026-10-26. Build after ticket 11, once tickets 13 to 15 are grilled. Replaces ticket 09 (Wander).
 
-**Idea (the user, 2026-10-25):** they mapped an LFO to Move so it drifted slowly between -2 and +2 semitones. It kept things random without the keys shifting off the keyboard too quickly. A random amount within a range would be nice.
+**Goal:** a second knob, Effect Range, that gives every release a random Mod near the one that is set. The user liked a slow LFO on Mod drifting between -2 and +2: a balanced range, landing anywhere within it, with keys never running off the keyboard too quickly.
 
-## Where things stand
+## The rule
 
-- Move adds a fixed amount (currently Mod) to the released key on every release.
-- Mod is a `live.dial`, so a Live LFO can already be mapped to it. That is the setup the user liked.
-- Ticket 09 (Wander) planned "current moves by a random amount up to Mod either way". This ticket would replace it.
-- An LFO that drifts slowly gives **neighbouring releases similar amounts**. A fresh random number per release does not. The two feel different.
+- **Effect Range** is the total width of the range, centred on Mod. It goes from 0 to 24, in 0.01 steps, with a default of 0.
+- On every release, in every mode, TAP picks a fresh number from `-range / 2` to `+range / 2`. Every number in that span is equally likely. There is no seed and no slow walk.
+- The mode uses `mod + that number` as its Mod for that release, clamped to ±12.
+- Effect Range 0 changes nothing, so the device works as it does now until the knob is turned up.
+- With the pedal, each queued release picks its own number when the pedal lifts.
 
-## Decided with the user (2026-10-26, round 1)
+## What it does in each mode
 
-- **What they liked about the LFO:** the range was balanced. It went back and forth and landed anywhere within it, say one or two semitones up or down, with every amount equally likely. The same should work for Gravity.
-- **Not a mode:** Random is a modifier on every mode, not a new mode and not only part of Move.
-- **Its own knob:** Mod stays the normal setting, wherever it is set. A separate Random knob sets how far each release can land from it.
-- **Any amount,** not whole semitones. No snap switch for now.
-- **Not repeatable:** no seed.
+- **Move,** Mod 0, Effect Range 2: each release moves the key anywhere from -1 to +1.
+- **Gravity,** Mod 2, Effect Range 2: each release pulls as if Mod were anywhere from 1 to 3. If Effect Range is more than twice Mod, a release sometimes pushes.
+- **Swap,** Mod 2, Effect Range 2: each release rotates 2, 3 or 4 keys (Mod 1 to 3 rounded, plus 1), and a negative result turns the other way. A result that rounds to 0 changes nothing.
 
-## Decided with the user (2026-10-26, round 2)
+## Tasks
 
-- **Fresh each release:** every release picks a new amount, every amount in the range equally likely. No slow walk.
-- **One rule for every mode:** on each release, pick a number from -Range to +Range, add it to Mod, and the mode uses the result as if it were Mod. Move at Mod 0, Range 2 moves anywhere from -2 to +2. (Changed in round 3: Range is the total width.) Gravity can push when Range is bigger than Mod. Swap's count and direction can change.
-- **The knob:** 0 to +12, positive only, in 0.01 steps, default 0. Mod plus the random amount stops at ±12.
-- **Pedal:** each queued release gets its own amount when the pedal lifts.
-- **Where:** a `live.dial` named **Range** (renamed in round 3) on the strip next to Mod, saved with the set and automatable.
-- **Ticket 09 (Wander)** is replaced by this ticket, which becomes "Random range".
+- `tap.js`, test-first:
+  - `createEngine` takes an optional random function, `Math.random` by default. The tests pass in a fixed one.
+  - `range` setting (0 to `2 × MAX_MOD`, default 0) with `setRange`, `range()` and a Max handler `range`. `sync` reads it.
+  - In `apply`, work out the release's Mod once (`clamp(mod + (random() - 0.5) × range, -MAX_MOD, MAX_MOD)`) and pass it to Swap, Gravity and Move in place of `mod`.
+  - With Effect Range 0, do not call the random function, so every existing test still passes unchanged.
+- Tests:
+  - Effect Range 0 gives the same pitches as before and never calls the random function.
+  - With a random function that returns 0, 0.5 and just under 1, Move at Mod 0, Effect Range 2 moves by -1, 0 and just under +1.
+  - Mod plus the random amount stops at ±12.
+  - Gravity with a large Effect Range sometimes pushes; Swap's count changes with the random amount.
+  - The pedal picks one number per queued release.
+  - Effect Range clamps to 0 to 24, and setting it changes no pitch and does not update the drift view.
+  - The ES5 check still passes.
+- Patch:
+  - A `live.dial` **Effect Range** next to Mod (0 to 24, initial 0, 2401 steps so it moves in 0.01s, Float unit style), through its own `prepend range` into the `js`.
+  - Update the patch tests: Effect Range is wired through its `prepend`.
+  - Regenerate `TAP.amxd`.
+- Mark ticket 09 as replaced by this ticket.
 
-## Decided with the user (2026-10-26, round 3)
+## Prototype
 
-- **Range is the total width,** centred on Mod, and takes fractions. Mod 0 with Range 2 lands anywhere from -1 to +1. So each release picks from -Range/2 to +Range/2.
-- **Name:** the knob is **Effect Range**, so it does not clash with ticket 16's slider for Lowest and Highest.
+The patch changes, so drag the device in again.
 
-## Questions to grill
+1. `git pull`, then `npm test --prefix m4l`. The last lines show `# fail 0`.
+2. **Knob:** Effect Range sits next to Mod, at 0.00. With it at 0, every mode works as before.
+3. **Move,** Mod 0, Effect Range 2: release one key again and again. In the drift view it wanders up and down, never moving more than a semitone each time.
+4. **Move,** Mod 1, Effect Range 1: each release moves up by somewhere between half a semitone and a semitone and a half.
+5. **Gravity,** Mod 1, Effect Range 4: keys mostly pull together, but some releases push apart.
+6. **Swap,** Mod 2, Effect Range 2: the number of keys passed round changes from release to release, with no stuck or silent notes.
+7. **Pedal:** hold it, release several keys, then lift. Each key moves by its own amount.
+8. **Saved with the set:** Effect Range saves with the set and can be automated.
 
-1. **Which part of the LFO setup did they like?** The range staying within ±2, the slow change between releases, or both? *Recommendation:* ask the user to play the LFO setup again and say which. It decides question 2.
-2. **What sort of random?**
-   - **A. Fresh each release:** a new amount between Min and Max on every release.
-   - **B. Random walk:** each release's amount is the last one plus a small random step, kept within the range. This is closest to a slow LFO.
-   - **C. Built-in LFO:** a sine or triangle sampled on each release, with its own rate.
+## Done when
 
-   *Recommendation:* B. It keeps the slow, related feel without tying it to tempo or time.
-3. **How is the range set?** Two controls, Min and Max, or Centre and Spread? *Recommendation:* Min and Max (defaults -2 and +2). They read most clearly on the panel and match how the user described it.
-4. **Whole semitones or any amount?** *Recommendation:* any amount by default, with a "Snap to semitones" switch. In Semitone output the result is rounded anyway.
-5. **Is this a new mode, or an option within Move?** For example, a Move amount switch: Fixed or Random. *Recommendation:* an option within Move. It keeps the menu at three (ticket 11), and Fixed is Random with Min equal to Max.
-6. **Random walk step size (if B):** fixed, or its own control (Speed or Drift rate)? *Recommendation:* its own control, so the user can choose between slow drift and jumpy.
-7. **Each key on its own walk, or one walk shared by every key?** One shared walk is like the LFO they used. *Recommendation:* one shared walk, to start.
-8. **Repeatable?** Should the same playing give the same result each time (a seed), or not? *Recommendation:* not. TAP is meant to be unpredictable.
-9. **Should Gravity or Swap get randomness too,** or is this for Move only? *Recommendation:* Move only for now. Ticket 13 adds chance to every mode.
-
-## Done when grilled
-
-- Answers recorded here.
-- Ticket 09 marked as replaced by this one.
-- Rewritten as a build ticket.
+- Tests pass, including the ES5 check and the patch checks.
+- The user has played Effect Range in all three modes in Live.

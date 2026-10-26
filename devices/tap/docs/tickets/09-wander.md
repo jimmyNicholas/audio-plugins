@@ -1,6 +1,6 @@
 # 09: Wander
 
-**Status:** paused (2026-10-25). Ticket 11 takes it out of the device. Ticket 12 may replace it.
+**Status:** replaced (2026-10-26) by ticket 12, Random range: an Effect Range knob that randomises Mod for every mode.
 
 **Goal:** each released key drifts at random.
 

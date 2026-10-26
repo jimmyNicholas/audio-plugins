@@ -19,6 +19,15 @@
 - **Any amount,** not whole semitones. No snap switch for now.
 - **Not repeatable:** no seed.
 
+## Decided with the user (2026-10-26, round 2)
+
+- **Fresh each release:** every release picks a new amount, every amount in the range equally likely. No slow walk.
+- **One rule for every mode:** on each release, pick a number from -Range to +Range, add it to Mod, and the mode uses the result as if it were Mod. Move at Mod 0, Range 2 moves anywhere from -2 to +2. Gravity can push when Range is bigger than Mod. Swap's count and direction can change.
+- **The knob:** 0 to +12, positive only, in 0.01 steps, default 0. Mod plus the random amount stops at ±12.
+- **Pedal:** each queued release gets its own amount when the pedal lifts.
+- **Where:** a `live.dial` named **Range** on the strip next to Mod, saved with the set and automatable.
+- **Ticket 09 (Wander)** is replaced by this ticket, which becomes "Random range".
+
 ## Questions to grill
 
 1. **Which part of the LFO setup did they like?** The range staying within ±2, the slow change between releases, or both? *Recommendation:* ask the user to play the LFO setup again and say which. It decides question 2.

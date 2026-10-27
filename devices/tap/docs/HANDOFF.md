@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-27 (tickets 11 to 13 built, not yet tested in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
+Last updated 2026-10-27 (tickets 11 to 14 built, not yet tested in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
 
 ## Goal
 
@@ -22,7 +22,7 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 11 Back to the core three | **Built, not yet tested in Live.** `npm test` passes. Replaces 06 and 07 in Live testing. |
 | 12 Random range | **Built, not yet tested in Live.** `npm test` passes. Replaces 09. Test after 11. |
 | 13 Chance | **Built, not yet tested in Live.** `npm test` passes. Test after 12. |
-| 14 Panel window | **Grilled.** Rewritten as a build ticket. Build after 13. [Mock-up](https://claude.ai/artifact/EopL6dHcj3qczfJ9DH9Azs). |
+| 14 Panel window | **Built, not yet tested in Live.** `npm test` passes. Test after 13. [Mock-up](https://claude.ai/artifact/EopL6dHcj3qczfJ9DH9Azs). |
 | 15 Square visualiser | **Grilled.** Rewritten as a build ticket: a pitch map that replaces Keys and Picture. Build after 14. |
 | 16 to 18 | **Parked.** Double slider for the bounds; floor at the same note name; other views. |
 
@@ -213,6 +213,28 @@ The patch changed, so drag the device in again. Steps 1 to 8 of the prototype in
 
 The patch changed, so drag the device in again. Steps 1 to 9 of the prototype in [`tickets/13-grill-chance.md`](tickets/13-grill-chance.md). Also check the dial reads **Chance** and fits beside Effect Range, with Lowest and Highest still readable to its right; the layout has not been seen in Max yet.
 
+## Ticket 14: what was built
+
+- `tap.js`:
+  - `modLabel()`: the line under Mod. Swap: "Keys passed round: N", or "No swap" when Mod rounds to 0. Gravity: "Pull: X% of the gap" or "Push: X% of the gap", to a tenth of a percent. Move: "+2.00 semitones each release", with "0.00" and no sign at 0. A third outlet sends `set <label>` on each change to Mode, Mod or Gravity's tuning, and on `sync`; not on releases.
+  - `howItWorks()`: the mode's name and the ticket's draft text. A fourth outlet sends `name set <name>` and `text set <text>` on each change to Mode and on `sync`. The texts live in `tap.js`, not in the patch, because a message box splits its text at each comma and turns "+1" into the number 1.
+  - Gravity tuning: `setGravityAtOne(percent)` (0 to 100, default 1) and `setGravityPerDoubling(factor)` (1 to 10, default 3), with Max handlers `gravityAtOne` and `gravityPerDoubling`. They change no pitch, do not update the drift view and are not read by `sync`. They do resend the label, so prototype step 7 reads 2%.
+- `TAP.maxpat` and `TAP.amxd`:
+  - The strip, 360 by 169: Mode, then Mod, Effect Range and Chance in a row, then Reset and **Open** on the left; Lowest, Highest and Output on the right. **Open** (`varname` `open`, not a parameter) replaces Drift view and sends `open` to `pcontrol`.
+  - `p Drift` is now `p Panel`, 920 by 320, in presentation mode: Mode, Reset and Output; How it works (the name and text comments, fed by `r ---how` into `route name text`); Modifiers (the three dials, the Mod label comment fed by `r ---label`, Lowest and Highest); and a black 256 square `panel` for ticket 15. The old `jsui` is gone from the patch; `drift-view.js` and its tests stay until ticket 15 rewrites them. `s ---drift` is kept, though nothing receives it until then.
+  - Window copies are the same `live.*` objects as the strip's, `varname` `window-<name>`, parameter off. Each copy sends to `s ---<name>-window`, received next to its strip control. Each strip control goes through `prepend set` to `s ---<name>-strip`, received at its copy, so the copy never sends the value back. Reset is one way only: the window's Reset goes through `sel 1` and bangs the strip's.
+  - `live.thisdevice` bangs every strip control except Reset on load, so the copies start in step with the saved values.
+  - **Debug** (`live.text` toggle, parameter off) sends `window size` to `thispatcher`: 320 tall closed, 430 open. The debug controls sit below 320, so closing Debug hides them. Pull at Mod 1 and Per doubling go through `prepend gravityAtOne` and `prepend gravityPerDoubling` to `s ---tuning`, received at the `js`. View size (128, 256, 384, 512) and Header summary (Off, On) go through `prepend size` and `prepend summary` to `s ---visualiser`, for ticket 15 to receive. `loadmess set` shows the defaults (1, 3 and 256) on load.
+- Tests: each mode's label, including the ticket 11 table, "No swap" and Move's signs; the label and How it works are sent on the right changes and not on releases; tuning at 2% and ×2 gives 8% at Mod 4; tuning limits, no pitch change, not read on load. Patch checks: the strip size, Open and `pcontrol`, the window size, each copy is the same object with its parameter off and linked both ways, the load bangs, the label and How it works wiring, Debug's sizes and the tuning's route into the `js`.
+- Not yet known, check in Live:
+  - Whether a `live.*` object with its parameter off keeps its range, steps and names (Mod's -12 to 12, Output's MPE and Semitone). If not, the copies need their own `_parameter_range` or a different object.
+  - `window size` puts the window back at 120, 120 each time Debug is clicked.
+  - Pull at Mod 1 is not capped against the curve: at 2% and ×3, Mod 12 asks for over 100% of the gap and the last key passes the current key. Debug only; say if it should be capped.
+
+## Testing ticket 14 in Live
+
+The patch changed, so drag the device in again. Steps 1 to 8 of the prototype in [`tickets/14-grill-panel-window.md`](tickets/14-grill-panel-window.md). The layout has not been seen in Max yet: check the strip fits, the How it works text wraps inside its section and the window copies show their names and ranges. If the device shows an error, open it in the Max editor and copy the red lines from the Max Console.
+
 ## Why not the VST
 
 Ableton merges all MIDI channels into one when MIDI goes from track to track, so the VST's per-note bends never reached Wavetable (VST ticket 02). The VST in `plugin/` is parked; ask the user before deleting it. History: [`../vst/HANDOFF.md`](../vst/HANDOFF.md).
@@ -254,7 +276,7 @@ Once a ticket is grilled, rewrite it as a build ticket with Tasks, Prototype and
 
 ## Next steps
 
-1. Test tickets 11, 12 and 13 in Live, then build 14 and 15, in that order.
+1. Test tickets 11 to 14 in Live, then build 15.
 2. Whether tickets 06 and 07 still need testing in Live depends on ticket 11.
 3. Later: save the pitch table with the set.
 

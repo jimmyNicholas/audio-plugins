@@ -9,13 +9,14 @@
 // Semitone, for instruments without MPE: plain notes on channel 1, each pitch rounded to
 // the nearest semitone.
 // The second outlet sends each key's drift from concert pitch, in cents, to the drift view
-// whenever the pitch table changes.
+// whenever the pitch table changes. The third sends the panel window the line under Mod,
+// and the fourth the selected mode's name and how it works.
 //
 // Written in ES5 for Max 8's js object. Also loads in Node for the tests.
 
 autowatch = 1;
 inlets = 1;
-outlets = 2;
+outlets = 4;
 
 var NUM_NOTES = 128;
 var BEND_RANGE_SEMITONES = 48; // MPE default; ticket 01 showed Live agrees
@@ -32,10 +33,28 @@ var MOVE = 2;
 var MAX_MOD = 12; // semitones either way
 var MAX_RELEASES = MAX_MOD + 1; // the most keys Swap passes pitches round
 
-// Gravity's curve: the share of the gap moved at Mod 1, and how much each doubling of Mod
-// multiplies it. Ticket 14 makes these tunable in the panel window.
-var GRAVITY_AT_ONE = 0.01;
+// Gravity's curve, by default: the percentage of the gap moved at Mod 1, and how much each
+// doubling of Mod multiplies it. The panel window's Debug section tunes both.
+var GRAVITY_AT_ONE = 1;
 var GRAVITY_PER_DOUBLING = 3;
+
+// The panel window's How it works, in mode order.
+var HOW_IT_WORKS = [
+  {
+    name: "Swap",
+    text:
+      "Each release passes pitches round the keys you let go most recently. Mod sets how many: +1 swaps two keys, +2 rotates three, up to thirteen. A negative Mod turns the other way.",
+  },
+  {
+    name: "Gravity",
+    text:
+      "Each release pulls the key let go before it towards the one you just let go, by a share of the gap. Each doubling of Mod triples the pull. A negative Mod pushes them apart.",
+  },
+  {
+    name: "Move",
+    text: "Each release moves the key you let go by Mod semitones. Fractions give microtones, and a negative Mod moves it down.",
+  },
+];
 
 // Outputs, in the order of the panel's Output tab.
 var MPE = 0;
@@ -90,6 +109,8 @@ function createEngine(onChange, random) {
   var chance = 100; // the percentage of releases that fire
   var lowest = 0;
   var highest = NUM_NOTES - 1;
+  var gravityAtOne = GRAVITY_AT_ONE; // percent
+  var gravityPerDoubling = GRAVITY_PER_DOUBLING;
 
   function changed() {
     if (onChange) onChange();
@@ -129,10 +150,10 @@ function createEngine(onChange, random) {
     for (i = 0; i < count; i++) pitches[places[i]] = bound(taken[i]);
   }
 
-  // The share of the gap Gravity moves for a Mod of 0 or more: GRAVITY_AT_ONE at Mod 1,
-  // multiplied by GRAVITY_PER_DOUBLING each time Mod doubles.
+  // The share of the gap Gravity moves for a Mod of 0 or more: gravityAtOne percent at
+  // Mod 1, multiplied by gravityPerDoubling each time Mod doubles.
   function share(size) {
-    return GRAVITY_AT_ONE * Math.pow(size, Math.log(GRAVITY_PER_DOUBLING) / Math.LN2);
+    return (gravityAtOne / 100) * Math.pow(size, Math.log(gravityPerDoubling) / Math.LN2);
   }
 
   // Gravity in Hertz, as in gravity.ts. A positive Mod pulls the last key toward the
@@ -178,6 +199,22 @@ function createEngine(onChange, random) {
     if (mode === MOVE) pitches[current] = bound(pitches[current] + amount);
     else if (last !== current && mode === GRAVITY) gravity(last, current, amount);
     else if (last !== current && mode === SWAP) swap(amount);
+  }
+
+  // The line under Mod in the panel window: what Mod does in the selected mode.
+  function modLabel() {
+    if (mode === SWAP) {
+      var count = Math.round(Math.abs(mod)) + 1;
+      return count < 2 ? "No swap" : "Keys passed round: " + count;
+    }
+    if (mode === GRAVITY) {
+      var percent = Math.round(share(Math.abs(mod)) * 1000) / 10;
+      return (mod < 0 ? "Push: " : "Pull: ") + percent + "% of the gap";
+    }
+    var semitones = mod.toFixed(2);
+    if (semitones === "-0.00") semitones = "0.00";
+    else if (semitones !== "0.00" && mod > 0) semitones = "+" + semitones;
+    return semitones + " semitones each release";
   }
 
   // Changing mode resets every key, as in the web app. The same mode again does not.
@@ -229,6 +266,12 @@ function createEngine(onChange, random) {
     setHighest: function (value) {
       if (isNumber(value)) highest = clamp(Math.round(value), 0, NUM_NOTES - 1);
     },
+    setGravityAtOne: function (percent) {
+      if (isNumber(percent)) gravityAtOne = clamp(percent, 0, 100);
+    },
+    setGravityPerDoubling: function (factor) {
+      if (isNumber(factor)) gravityPerDoubling = clamp(factor, 1, 10);
+    },
     mode: function () {
       return mode;
     },
@@ -246,6 +289,16 @@ function createEngine(onChange, random) {
     },
     highest: function () {
       return highest;
+    },
+    gravityAtOne: function () {
+      return gravityAtOne;
+    },
+    gravityPerDoubling: function () {
+      return gravityPerDoubling;
+    },
+    modLabel: modLabel,
+    howItWorks: function () {
+      return HOW_IT_WORKS[mode];
     },
     pitchForNote: function (note) {
       return pitches[note];
@@ -543,8 +596,12 @@ function createTap(send, onDrift) {
     setChance: engine.setChance,
     setLowest: engine.setLowest,
     setHighest: engine.setHighest,
+    setGravityAtOne: engine.setGravityAtOne,
+    setGravityPerDoubling: engine.setGravityPerDoubling,
     reset: engine.reset,
     drift: engine.drift,
+    modLabel: engine.modLabel,
+    howItWorks: engine.howItWorks,
   };
 }
 
@@ -558,6 +615,19 @@ function sendDrift() {
   outlet(1, tap.drift());
 }
 
+// The panel window's line under Mod, sent on each change to Mode, Mod or Gravity's tuning.
+function sendLabel() {
+  outlet(2, "set", tap.modLabel());
+}
+
+// The panel window's How it works, sent on each change to Mode. A route in the patch sends
+// the name and the text to their own comments.
+function sendHowItWorks() {
+  var how = tap.howItWorks();
+  outlet(3, "name", "set", how.name);
+  outlet(3, "text", "set", how.text);
+}
+
 function msg_int(byte) {
   tap.input(byte);
 }
@@ -565,10 +635,13 @@ function msg_int(byte) {
 // Messages from the panel. Each live.* control sends its value with a prepend.
 function mode(value) {
   tap.setMode(value);
+  sendLabel();
+  sendHowItWorks();
 }
 
 function mod(value) {
   tap.setMod(value);
+  sendLabel();
 }
 
 function range(value) {
@@ -589,6 +662,18 @@ function highest(value) {
 
 function output(value) {
   tap.setOutput(value);
+}
+
+// Gravity's tuning, from the panel window's Debug section. Not Live parameters, so sync
+// does not read them and they go back to the defaults when the device loads.
+function gravityAtOne(percent) {
+  tap.setGravityAtOne(percent);
+  sendLabel();
+}
+
+function gravityPerDoubling(factor) {
+  tap.setGravityPerDoubling(factor);
+  sendLabel();
 }
 
 // The Reset button may send 1 then 0, or a bang. Only the press resets.
@@ -614,6 +699,8 @@ function sync() {
     if (control) controls[i][1](control.getvalueof());
   }
   sendDrift();
+  sendLabel();
+  sendHowItWorks();
 }
 
 if (this.patcher) sync();

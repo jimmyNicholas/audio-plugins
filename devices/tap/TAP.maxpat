@@ -237,6 +237,48 @@
       },
       {
         "box": {
+          "id": "obj-34",
+          "maxclass": "live.dial",
+          "varname": "range",
+          "numinlets": 1,
+          "numoutlets": 2,
+          "outlettype": [
+            "",
+            "float"
+          ],
+          "parameter_enable": 1,
+          "patching_rect": [
+            640,
+            64,
+            44,
+            48
+          ],
+          "presentation": 1,
+          "presentation_rect": [
+            56,
+            48,
+            44,
+            48
+          ],
+          "saved_attribute_attributes": {
+            "valueof": {
+              "parameter_longname": "Effect Range",
+              "parameter_shortname": "Range",
+              "parameter_type": 0,
+              "parameter_mmin": 0.0,
+              "parameter_mmax": 24.0,
+              "parameter_initial": [
+                0.0
+              ],
+              "parameter_initial_enable": 1,
+              "parameter_steps": 2401,
+              "parameter_unitstyle": 1
+            }
+          }
+        }
+      },
+      {
+        "box": {
           "id": "obj-32",
           "maxclass": "comment",
           "numinlets": 1,
@@ -250,7 +292,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            56,
+            108,
             46,
             44,
             18
@@ -278,7 +320,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            56,
+            108,
             62,
             44,
             15
@@ -314,7 +356,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            56,
+            108,
             78,
             44,
             18
@@ -342,7 +384,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            56,
+            108,
             94,
             44,
             15
@@ -379,6 +421,24 @@
             20
           ],
           "text": "prepend mod"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-48",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            640,
+            184,
+            80,
+            20
+          ],
+          "text": "prepend range"
         }
       },
       {
@@ -1046,6 +1106,30 @@
             0
           ]
         }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-48",
+            0
+          ],
+          "source": [
+            "obj-34",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-2",
+            0
+          ],
+          "source": [
+            "obj-48",
+            0
+          ]
+        }
       }
     ],
     "parameters": {
@@ -1077,6 +1161,11 @@
       "obj-29": [
         "Highest",
         "Highest",
+        0
+      ],
+      "obj-34": [
+        "Effect Range",
+        "Range",
         0
       ],
       "inherited_shortname": 1

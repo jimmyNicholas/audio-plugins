@@ -76,13 +76,16 @@ function dataLength(status) {
 // The pitch table and the modes. Each key's pitch is stored in semitones from MIDI
 // note 0, so concert pitch is the note number itself. onChange, if given, is called once
 // after each change to the table: a release, a pedal lift with releases waiting, a reset.
-function createEngine(onChange) {
+// random, if given, stands in for Math.random, so the tests can fix Effect Range's picks.
+function createEngine(onChange, random) {
+  random = random || Math.random;
   var pitches = [];
   var releases = []; // the newest releases, oldest first, never the same key twice in a row
   var pedalDown = false;
   var queue = [];
   var mode = SWAP;
   var mod = 1;
+  var range = 0; // Effect Range: the width of the span each release's Mod is picked from
   var lowest = 0;
   var highest = NUM_NOTES - 1;
 
@@ -111,12 +114,13 @@ function createEngine(onChange) {
   // Passes pitches round the newest N releases, where N is Mod rounded, ignoring the sign,
   // plus 1, or fewer while the list fills. With a positive Mod each place takes the pitch
   // of the place released after it and the newest takes the oldest's; a negative Mod turns
-  // the other way. A key with two places takes the pitch of its newest place.
-  function swap() {
-    var count = Math.min(Math.round(Math.abs(mod)) + 1, releases.length);
+  // the other way. A key with two places takes the pitch of its newest place. amount is
+  // this release's Mod, from releaseMod.
+  function swap(amount) {
+    var count = Math.min(Math.round(Math.abs(amount)) + 1, releases.length);
     if (count < 2) return;
     var places = releases.slice(releases.length - count);
-    var step = mod > 0 ? 1 : count - 1;
+    var step = amount > 0 ? 1 : count - 1;
     var taken = [];
     var i;
     for (i = 0; i < count; i++) taken.push(pitches[places[(i + step) % count]]);
@@ -131,15 +135,22 @@ function createEngine(onChange) {
 
   // Gravity in Hertz, as in gravity.ts. A positive Mod pulls the last key toward the
   // current key and a negative one pushes it away. A pull never reaches the current key;
-  // a push below 0 Hz goes to Lowest.
-  function gravity(last, current) {
+  // a push below 0 Hz goes to Lowest. amount is this release's Mod, from releaseMod.
+  function gravity(last, current, amount) {
     var lastHertz = hertzForPitch(pitches[last]);
     var currentHertz = hertzForPitch(pitches[current]);
-    if (mod === 0 || lastHertz === currentHertz) return;
+    if (amount === 0 || lastHertz === currentHertz) return;
     var toward = lastHertz < currentHertz ? 1 : -1;
     var gap = Math.abs(lastHertz - currentHertz);
-    var hertz = lastHertz + (mod > 0 ? toward : -toward) * gap * share(Math.abs(mod));
+    var hertz = lastHertz + (amount > 0 ? toward : -toward) * gap * share(Math.abs(amount));
     pitches[last] = hertz > 0 ? bound(pitchForHertz(hertz)) : bound(-Infinity);
+  }
+
+  // The Mod for one release: a fresh pick from the span Effect Range wide, centred on Mod.
+  // With Effect Range 0 there is nothing to pick, so random is not called.
+  function releaseMod() {
+    if (range === 0) return mod;
+    return clamp(mod + (random() - 0.5) * range, -MAX_MOD, MAX_MOD);
   }
 
   function apply(current) {
@@ -149,9 +160,10 @@ function createEngine(onChange) {
       releases.push(current);
       if (releases.length > MAX_RELEASES) releases.shift();
     }
-    if (mode === MOVE) pitches[current] = bound(pitches[current] + mod);
-    else if (last !== current && mode === GRAVITY) gravity(last, current);
-    else if (last !== current && mode === SWAP) swap();
+    var amount = releaseMod();
+    if (mode === MOVE) pitches[current] = bound(pitches[current] + amount);
+    else if (last !== current && mode === GRAVITY) gravity(last, current, amount);
+    else if (last !== current && mode === SWAP) swap(amount);
   }
 
   // Changing mode resets every key, as in the web app. The same mode again does not.
@@ -191,6 +203,9 @@ function createEngine(onChange) {
     setMod: function (value) {
       if (isNumber(value)) mod = clamp(value, -MAX_MOD, MAX_MOD);
     },
+    setRange: function (value) {
+      if (isNumber(value)) range = clamp(value, 0, 2 * MAX_MOD);
+    },
     setLowest: function (value) {
       if (isNumber(value)) lowest = clamp(Math.round(value), 0, NUM_NOTES - 1);
     },
@@ -202,6 +217,9 @@ function createEngine(onChange) {
     },
     mod: function () {
       return mod;
+    },
+    range: function () {
+      return range;
     },
     lowest: function () {
       return lowest;
@@ -501,6 +519,7 @@ function createTap(send, onDrift) {
     setOutput: setOutput,
     setMode: engine.setMode,
     setMod: engine.setMod,
+    setRange: engine.setRange,
     setLowest: engine.setLowest,
     setHighest: engine.setHighest,
     reset: engine.reset,
@@ -531,6 +550,10 @@ function mod(value) {
   tap.setMod(value);
 }
 
+function range(value) {
+  tap.setRange(value);
+}
+
 function lowest(value) {
   tap.setLowest(value);
 }
@@ -555,6 +578,7 @@ function sync() {
   var controls = [
     ["mode", mode],
     ["mod", mod],
+    ["range", range],
     ["lowest", lowest],
     ["highest", highest],
     ["output", output],

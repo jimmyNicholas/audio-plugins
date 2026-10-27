@@ -1,6 +1,6 @@
 # 12: Random range
 
-**Status:** grilled 2026-10-26. Build after ticket 11, once tickets 13 to 15 are grilled. Replaces ticket 09 (Wander).
+**Status:** built 2026-10-26. `npm test` passes. Not yet tested in Live. Replaces ticket 09 (Wander).
 
 **Goal:** a second knob, Effect Range, that gives every release a random Mod near the one that is set. The user liked a slow LFO on Mod drifting between -2 and +2: a balanced range, landing anywhere within it, with keys never running off the keyboard too quickly.
 

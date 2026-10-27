@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-26 (ticket 11 built, not yet tested in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
+Last updated 2026-10-26 (tickets 11 and 12 built, not yet tested in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
 
 ## Goal
 
@@ -20,7 +20,7 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 07 Gravity on Mod, Repel and Echo | **Built, not yet tested in Live.** `npm test` passes. Test together with 06. |
 | 08 to 10 Rotate, Wander, Harmony | **Paused** (2026-10-25). Rotate becomes part of Swap in ticket 11. |
 | 11 Back to the core three | **Built, not yet tested in Live.** `npm test` passes. Replaces 06 and 07 in Live testing. |
-| 12 Random range | **Grilled.** Rewritten as a build ticket. Replaces 09. Build after 11. |
+| 12 Random range | **Built, not yet tested in Live.** `npm test` passes. Replaces 09. Test after 11. |
 | 13 Chance | **Grilled.** Rewritten as a build ticket. Build after 12. |
 | 14 Panel window | **Grilled.** Rewritten as a build ticket. Build after 13. [Mock-up](https://claude.ai/artifact/EopL6dHcj3qczfJ9DH9Azs). |
 | 15 Square visualiser | **Grilled.** Rewritten as a build ticket: a pitch map that replaces Keys and Picture. Build after 14. |
@@ -186,6 +186,19 @@ The patch changed, so drag the device in again.
 ## Testing ticket 11 in Live
 
 The patch changed, so drag the device in again. Steps 1 to 8 of the prototype in [`tickets/11-grill-core-three.md`](tickets/11-grill-core-three.md). Also check the Mode slider shows the name (Swap, Gravity, Move) and fits above the Mod dial; it has not been seen in Max yet.
+
+## Ticket 12: what was built
+
+- `tap.js`:
+  - `createEngine(onChange, random)`: `random` stands in for `Math.random`, so the tests fix the picks.
+  - `range` (Effect Range): 0 to 24, default 0, with `setRange`, `range()`, a Max handler `range` and a `sync` entry. Setting it changes no pitch and does not update the drift view.
+  - `releaseMod()`: once per release, `clamp(mod + (random() - 0.5) × range, -12, 12)`, passed to Move, Gravity and Swap in place of `mod`. With Effect Range 0 it returns Mod without calling `random`, so the device works as before. Queued pedal releases each pick their own number when the pedal lifts.
+- `TAP.maxpat` and `TAP.amxd`: a `live.dial` beside Mod, parameter name **Effect Range** (short name **Range**, so it fits under the dial), 0 to 24, initial 0, 2401 steps, Float unit style, through `prepend range` into the `js`. Lowest and Highest moved right to make room.
+- Tests: Effect Range 0 matches the old pitches in all three modes and never calls `random`; Move's span; centred on Mod; the ±12 stop; Gravity pushing; Swap's count and direction; the pedal; the setting's limits; the Max glue; the patch wiring.
+
+## Testing ticket 12 in Live
+
+The patch changed, so drag the device in again. Steps 1 to 8 of the prototype in [`tickets/12-grill-move-random-range.md`](tickets/12-grill-move-random-range.md). Also check the dial reads **Range** and fits beside Mod, with Lowest and Highest still readable to its right; the layout has not been seen in Max yet.
 
 ## Why not the VST
 

@@ -37,7 +37,7 @@ Under the sections, a **Debug** toggle, collapsed by default. Open, the window g
 ## How the window's controls follow the strip
 
 - The strip's controls stay the device's Live parameters, so saving, automation and mapping are unchanged.
-- Each window copy is the same `live.*` object with its parameter turned off. Turning a window copy sets its strip control; a change to a strip control (by hand, automation or an LFO) sets the window copy with `set`, so it does not send the value back.
+- Each window copy is the same `live.*` object with its parameter turned off. (Built that way first, those copies showed blank and did nothing in Live 11's Max 8.1, so the window uses plain Max objects instead: see the handoff.) Turning a window copy sets its strip control; a change to a strip control (by hand, automation or an LFO) sets the window copy with `set`, so it does not send the value back.
 
 ## Tasks
 

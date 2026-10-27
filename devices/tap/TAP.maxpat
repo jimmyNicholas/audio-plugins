@@ -1050,8 +1050,8 @@
                   ],
                   "presentation": 1,
                   "presentation_rect": [
-                    84,
-                    293,
+                    90,
+                    295,
                     300,
                     18
                   ],
@@ -1329,52 +1329,36 @@
               },
               {
                 "box": {
-                  "id": "obj-mode",
-                  "maxclass": "live.slider",
-                  "varname": "window-mode",
+                  "maxclass": "tab",
                   "numinlets": 1,
-                  "numoutlets": 2,
+                  "numoutlets": 3,
                   "outlettype": [
+                    "int",
                     "",
-                    "float"
+                    ""
                   ],
-                  "orientation": 1,
-                  "showname": 0,
-                  "shownumber": 1,
-                  "parameter_enable": 0,
+                  "fontname": "Arial",
+                  "fontsize": 10.0,
+                  "tabs": [
+                    "Swap",
+                    "Gravity",
+                    "Move"
+                  ],
+                  "presentation_rect": [
+                    16,
+                    34,
+                    128,
+                    20
+                  ],
+                  "id": "obj-mode",
+                  "varname": "window-mode",
                   "patching_rect": [
                     24,
                     440,
                     60,
                     20
                   ],
-                  "presentation": 1,
-                  "presentation_rect": [
-                    16,
-                    34,
-                    120,
-                    20
-                  ],
-                  "saved_attribute_attributes": {
-                    "valueof": {
-                      "parameter_longname": "Mode",
-                      "parameter_shortname": "Mode",
-                      "parameter_type": 2,
-                      "parameter_mmin": 0,
-                      "parameter_mmax": 2,
-                      "parameter_initial": [
-                        0
-                      ],
-                      "parameter_initial_enable": 1,
-                      "parameter_unitstyle": 9,
-                      "parameter_enum": [
-                        "Swap",
-                        "Gravity",
-                        "Move"
-                      ],
-                      "parameter_steps": 3
-                    }
-                  }
+                  "presentation": 1
                 }
               },
               {
@@ -1412,44 +1396,34 @@
               },
               {
                 "box": {
-                  "id": "obj-mod",
-                  "maxclass": "live.dial",
-                  "varname": "window-mod",
+                  "maxclass": "flonum",
                   "numinlets": 1,
                   "numoutlets": 2,
                   "outlettype": [
                     "",
-                    "float"
+                    "bang"
                   ],
-                  "parameter_enable": 0,
+                  "format": 6,
+                  "minimum": -12.0,
+                  "maximum": 12.0,
+                  "numdecimalplaces": 2,
+                  "fontname": "Arial",
+                  "fontsize": 10.0,
+                  "presentation_rect": [
+                    378,
+                    52,
+                    56,
+                    20
+                  ],
+                  "id": "obj-mod",
+                  "varname": "window-mod",
                   "patching_rect": [
                     136,
                     440,
                     60,
                     20
                   ],
-                  "presentation": 1,
-                  "presentation_rect": [
-                    378,
-                    34,
-                    44,
-                    48
-                  ],
-                  "saved_attribute_attributes": {
-                    "valueof": {
-                      "parameter_longname": "Mod",
-                      "parameter_shortname": "Mod",
-                      "parameter_type": 0,
-                      "parameter_mmin": -12.0,
-                      "parameter_mmax": 12.0,
-                      "parameter_initial": [
-                        1.0
-                      ],
-                      "parameter_initial_enable": 1,
-                      "parameter_steps": 2401,
-                      "parameter_unitstyle": 1
-                    }
-                  }
+                  "presentation": 1
                 }
               },
               {
@@ -1487,44 +1461,34 @@
               },
               {
                 "box": {
-                  "id": "obj-range",
-                  "maxclass": "live.dial",
-                  "varname": "window-range",
+                  "maxclass": "flonum",
                   "numinlets": 1,
                   "numoutlets": 2,
                   "outlettype": [
                     "",
-                    "float"
+                    "bang"
                   ],
-                  "parameter_enable": 0,
+                  "format": 6,
+                  "minimum": 0.0,
+                  "maximum": 24.0,
+                  "numdecimalplaces": 2,
+                  "fontname": "Arial",
+                  "fontsize": 10.0,
+                  "presentation_rect": [
+                    450,
+                    52,
+                    56,
+                    20
+                  ],
+                  "id": "obj-range",
+                  "varname": "window-range",
                   "patching_rect": [
                     248,
                     440,
                     60,
                     20
                   ],
-                  "presentation": 1,
-                  "presentation_rect": [
-                    450,
-                    34,
-                    44,
-                    48
-                  ],
-                  "saved_attribute_attributes": {
-                    "valueof": {
-                      "parameter_longname": "Effect Range",
-                      "parameter_shortname": "Range",
-                      "parameter_type": 0,
-                      "parameter_mmin": 0.0,
-                      "parameter_mmax": 24.0,
-                      "parameter_initial": [
-                        0.0
-                      ],
-                      "parameter_initial_enable": 1,
-                      "parameter_steps": 2401,
-                      "parameter_unitstyle": 1
-                    }
-                  }
+                  "presentation": 1
                 }
               },
               {
@@ -1562,44 +1526,32 @@
               },
               {
                 "box": {
-                  "id": "obj-chance",
-                  "maxclass": "live.dial",
-                  "varname": "window-chance",
+                  "maxclass": "number",
                   "numinlets": 1,
                   "numoutlets": 2,
                   "outlettype": [
                     "",
-                    "float"
+                    "bang"
                   ],
-                  "parameter_enable": 0,
+                  "minimum": 0,
+                  "maximum": 100,
+                  "fontname": "Arial",
+                  "fontsize": 10.0,
+                  "presentation_rect": [
+                    522,
+                    52,
+                    56,
+                    20
+                  ],
+                  "id": "obj-chance",
+                  "varname": "window-chance",
                   "patching_rect": [
                     360,
                     440,
                     60,
                     20
                   ],
-                  "presentation": 1,
-                  "presentation_rect": [
-                    522,
-                    34,
-                    44,
-                    48
-                  ],
-                  "saved_attribute_attributes": {
-                    "valueof": {
-                      "parameter_longname": "Chance",
-                      "parameter_shortname": "Chance",
-                      "parameter_type": 0,
-                      "parameter_mmin": 0.0,
-                      "parameter_mmax": 100.0,
-                      "parameter_initial": [
-                        100.0
-                      ],
-                      "parameter_initial_enable": 1,
-                      "parameter_steps": 101,
-                      "parameter_unitstyle": 5
-                    }
-                  }
+                  "presentation": 1
                 }
               },
               {
@@ -1637,43 +1589,33 @@
               },
               {
                 "box": {
-                  "id": "obj-lowest",
-                  "maxclass": "live.numbox",
-                  "varname": "window-lowest",
+                  "maxclass": "number",
                   "numinlets": 1,
                   "numoutlets": 2,
                   "outlettype": [
                     "",
-                    "float"
+                    "bang"
                   ],
-                  "parameter_enable": 0,
+                  "minimum": 0,
+                  "maximum": 127,
+                  "fontname": "Arial",
+                  "fontsize": 10.0,
+                  "presentation_rect": [
+                    378,
+                    156,
+                    64,
+                    20
+                  ],
+                  "format": 4,
+                  "id": "obj-lowest",
+                  "varname": "window-lowest",
                   "patching_rect": [
                     472,
                     440,
                     60,
                     20
                   ],
-                  "presentation": 1,
-                  "presentation_rect": [
-                    378,
-                    156,
-                    64,
-                    15
-                  ],
-                  "saved_attribute_attributes": {
-                    "valueof": {
-                      "parameter_longname": "Lowest",
-                      "parameter_shortname": "Lowest",
-                      "parameter_type": 1,
-                      "parameter_mmin": 0,
-                      "parameter_mmax": 127,
-                      "parameter_initial": [
-                        0
-                      ],
-                      "parameter_initial_enable": 1,
-                      "parameter_unitstyle": 8
-                    }
-                  }
+                  "presentation": 1
                 }
               },
               {
@@ -1711,43 +1653,33 @@
               },
               {
                 "box": {
-                  "id": "obj-highest",
-                  "maxclass": "live.numbox",
-                  "varname": "window-highest",
+                  "maxclass": "number",
                   "numinlets": 1,
                   "numoutlets": 2,
                   "outlettype": [
                     "",
-                    "float"
+                    "bang"
                   ],
-                  "parameter_enable": 0,
+                  "minimum": 0,
+                  "maximum": 127,
+                  "fontname": "Arial",
+                  "fontsize": 10.0,
+                  "presentation_rect": [
+                    460,
+                    156,
+                    64,
+                    20
+                  ],
+                  "format": 4,
+                  "id": "obj-highest",
+                  "varname": "window-highest",
                   "patching_rect": [
                     584,
                     440,
                     60,
                     20
                   ],
-                  "presentation": 1,
-                  "presentation_rect": [
-                    460,
-                    156,
-                    64,
-                    15
-                  ],
-                  "saved_attribute_attributes": {
-                    "valueof": {
-                      "parameter_longname": "Highest",
-                      "parameter_shortname": "Highest",
-                      "parameter_type": 1,
-                      "parameter_mmin": 0,
-                      "parameter_mmax": 127,
-                      "parameter_initial": [
-                        127
-                      ],
-                      "parameter_initial_enable": 1,
-                      "parameter_unitstyle": 8
-                    }
-                  }
+                  "presentation": 1
                 }
               },
               {
@@ -1785,50 +1717,35 @@
               },
               {
                 "box": {
-                  "id": "obj-output",
-                  "maxclass": "live.tab",
-                  "varname": "window-output",
+                  "maxclass": "tab",
                   "numinlets": 1,
                   "numoutlets": 3,
                   "outlettype": [
+                    "int",
                     "",
-                    "",
-                    "float"
+                    ""
                   ],
-                  "parameter_enable": 0,
-                  "num_lines_patching": 1,
-                  "num_lines_presentation": 1,
+                  "fontname": "Arial",
+                  "fontsize": 10.0,
+                  "tabs": [
+                    "MPE",
+                    "Semitone"
+                  ],
+                  "presentation_rect": [
+                    16,
+                    246,
+                    128,
+                    20
+                  ],
+                  "id": "obj-output",
+                  "varname": "window-output",
                   "patching_rect": [
                     696,
                     440,
                     60,
                     20
                   ],
-                  "presentation": 1,
-                  "presentation_rect": [
-                    16,
-                    246,
-                    120,
-                    20
-                  ],
-                  "saved_attribute_attributes": {
-                    "valueof": {
-                      "parameter_longname": "Output",
-                      "parameter_shortname": "Output",
-                      "parameter_type": 2,
-                      "parameter_mmin": 0,
-                      "parameter_mmax": 1,
-                      "parameter_initial": [
-                        0
-                      ],
-                      "parameter_initial_enable": 1,
-                      "parameter_unitstyle": 9,
-                      "parameter_enum": [
-                        "MPE",
-                        "Semitone"
-                      ]
-                    }
-                  }
+                  "presentation": 1
                 }
               },
               {
@@ -1866,69 +1783,27 @@
               },
               {
                 "box": {
-                  "id": "obj-reset",
-                  "maxclass": "live.text",
-                  "varname": "window-reset",
+                  "maxclass": "button",
                   "numinlets": 1,
-                  "numoutlets": 2,
+                  "numoutlets": 1,
                   "outlettype": [
-                    "",
-                    ""
+                    "bang"
                   ],
-                  "parameter_enable": 0,
-                  "mode": 0,
-                  "text": "Reset",
-                  "texton": "Reset",
+                  "presentation_rect": [
+                    16,
+                    196,
+                    20,
+                    20
+                  ],
+                  "id": "obj-reset",
+                  "varname": "window-reset",
                   "patching_rect": [
                     808,
                     440,
                     60,
                     20
                   ],
-                  "presentation": 1,
-                  "presentation_rect": [
-                    16,
-                    196,
-                    60,
-                    16
-                  ],
-                  "saved_attribute_attributes": {
-                    "valueof": {
-                      "parameter_longname": "Reset",
-                      "parameter_shortname": "Reset",
-                      "parameter_type": 2,
-                      "parameter_mmin": 0,
-                      "parameter_mmax": 1,
-                      "parameter_initial": [
-                        0
-                      ],
-                      "parameter_initial_enable": 1,
-                      "parameter_unitstyle": 9,
-                      "parameter_enum": [
-                        "off",
-                        "on"
-                      ]
-                    }
-                  }
-                }
-              },
-              {
-                "box": {
-                  "id": "obj-reset-sel",
-                  "maxclass": "newobj",
-                  "numinlets": 1,
-                  "numoutlets": 2,
-                  "patching_rect": [
-                    808,
-                    472,
-                    40,
-                    20
-                  ],
-                  "text": "sel 1",
-                  "outlettype": [
-                    "",
-                    ""
-                  ]
+                  "presentation": 1
                 }
               },
               {
@@ -1977,32 +1852,27 @@
               },
               {
                 "box": {
-                  "id": "obj-debug",
-                  "maxclass": "live.text",
-                  "varname": "window-debug",
+                  "maxclass": "toggle",
                   "numinlets": 1,
-                  "numoutlets": 2,
+                  "numoutlets": 1,
                   "outlettype": [
-                    "",
-                    ""
+                    "int"
                   ],
-                  "parameter_enable": 0,
+                  "presentation_rect": [
+                    16,
+                    294,
+                    20,
+                    20
+                  ],
+                  "id": "obj-debug",
+                  "varname": "window-debug",
                   "patching_rect": [
                     24,
                     600,
                     60,
                     16
                   ],
-                  "presentation": 1,
-                  "presentation_rect": [
-                    16,
-                    294,
-                    60,
-                    16
-                  ],
-                  "mode": 1,
-                  "text": "Debug",
-                  "texton": "Debug"
+                  "presentation": 1
                 }
               },
               {
@@ -2063,158 +1933,134 @@
               },
               {
                 "box": {
-                  "id": "obj-pull",
-                  "maxclass": "live.numbox",
-                  "varname": "window-pull",
+                  "maxclass": "flonum",
                   "numinlets": 1,
                   "numoutlets": 2,
                   "outlettype": [
                     "",
-                    ""
+                    "bang"
                   ],
-                  "parameter_enable": 0,
+                  "format": 6,
+                  "minimum": 0.0,
+                  "maximum": 100.0,
+                  "numdecimalplaces": 2,
+                  "fontname": "Arial",
+                  "fontsize": 10.0,
+                  "presentation_rect": [
+                    130,
+                    346,
+                    56,
+                    20
+                  ],
+                  "id": "obj-pull",
+                  "varname": "window-pull",
                   "patching_rect": [
                     320,
                     600,
                     44,
                     15
                   ],
-                  "presentation": 1,
-                  "presentation_rect": [
-                    130,
-                    348,
-                    56,
-                    15
-                  ],
-                  "saved_attribute_attributes": {
-                    "valueof": {
-                      "parameter_type": 0,
-                      "parameter_mmin": 0.0,
-                      "parameter_mmax": 100.0,
-                      "parameter_unitstyle": 1
-                    }
-                  }
+                  "presentation": 1
                 }
               },
               {
                 "box": {
-                  "id": "obj-doubling",
-                  "maxclass": "live.numbox",
-                  "varname": "window-doubling",
+                  "maxclass": "flonum",
                   "numinlets": 1,
                   "numoutlets": 2,
                   "outlettype": [
                     "",
-                    ""
+                    "bang"
                   ],
-                  "parameter_enable": 0,
+                  "format": 6,
+                  "minimum": 1.0,
+                  "maximum": 10.0,
+                  "numdecimalplaces": 2,
+                  "fontname": "Arial",
+                  "fontsize": 10.0,
+                  "presentation_rect": [
+                    130,
+                    370,
+                    56,
+                    20
+                  ],
+                  "id": "obj-doubling",
+                  "varname": "window-doubling",
                   "patching_rect": [
                     400,
                     600,
                     44,
                     15
                   ],
-                  "presentation": 1,
-                  "presentation_rect": [
-                    130,
-                    372,
-                    56,
-                    15
-                  ],
-                  "saved_attribute_attributes": {
-                    "valueof": {
-                      "parameter_type": 0,
-                      "parameter_mmin": 1.0,
-                      "parameter_mmax": 10.0,
-                      "parameter_unitstyle": 1
-                    }
-                  }
+                  "presentation": 1
                 }
               },
               {
                 "box": {
-                  "id": "obj-size",
-                  "maxclass": "live.tab",
-                  "varname": "window-size",
+                  "maxclass": "tab",
                   "numinlets": 1,
                   "numoutlets": 3,
                   "outlettype": [
+                    "int",
                     "",
-                    "",
-                    "float"
+                    ""
                   ],
-                  "parameter_enable": 0,
-                  "patching_rect": [
-                    480,
-                    600,
-                    160,
-                    20
+                  "fontname": "Arial",
+                  "fontsize": 10.0,
+                  "tabs": [
+                    "128",
+                    "256",
+                    "384",
+                    "512"
                   ],
-                  "presentation": 1,
                   "presentation_rect": [
                     240,
                     346,
                     160,
                     20
                   ],
-                  "num_lines_patching": 1,
-                  "num_lines_presentation": 1,
-                  "saved_attribute_attributes": {
-                    "valueof": {
-                      "parameter_type": 2,
-                      "parameter_mmin": 0,
-                      "parameter_mmax": 3,
-                      "parameter_unitstyle": 9,
-                      "parameter_enum": [
-                        "128",
-                        "256",
-                        "384",
-                        "512"
-                      ]
-                    }
-                  }
+                  "id": "obj-size",
+                  "varname": "window-size",
+                  "patching_rect": [
+                    480,
+                    600,
+                    160,
+                    20
+                  ],
+                  "presentation": 1
                 }
               },
               {
                 "box": {
-                  "id": "obj-summary",
-                  "maxclass": "live.tab",
-                  "varname": "window-summary",
+                  "maxclass": "tab",
                   "numinlets": 1,
                   "numoutlets": 3,
                   "outlettype": [
+                    "int",
                     "",
-                    "",
-                    "float"
+                    ""
                   ],
-                  "parameter_enable": 0,
-                  "patching_rect": [
-                    680,
-                    600,
-                    80,
-                    20
+                  "fontname": "Arial",
+                  "fontsize": 10.0,
+                  "tabs": [
+                    "Off",
+                    "On"
                   ],
-                  "presentation": 1,
                   "presentation_rect": [
                     432,
                     346,
                     80,
                     20
                   ],
-                  "num_lines_patching": 1,
-                  "num_lines_presentation": 1,
-                  "saved_attribute_attributes": {
-                    "valueof": {
-                      "parameter_type": 2,
-                      "parameter_mmin": 0,
-                      "parameter_mmax": 1,
-                      "parameter_unitstyle": 9,
-                      "parameter_enum": [
-                        "Off",
-                        "On"
-                      ]
-                    }
-                  }
+                  "id": "obj-summary",
+                  "varname": "window-summary",
+                  "patching_rect": [
+                    680,
+                    600,
+                    80,
+                    20
+                  ],
+                  "presentation": 1
                 }
               },
               {
@@ -2371,6 +2217,121 @@
                     20
                   ],
                   "text": "s ---visualiser"
+                }
+              },
+              {
+                "box": {
+                  "id": "obj-31",
+                  "maxclass": "comment",
+                  "numinlets": 1,
+                  "numoutlets": 0,
+                  "fontname": "Arial",
+                  "patching_rect": [
+                    800,
+                    64,
+                    40,
+                    18
+                  ],
+                  "presentation": 1,
+                  "presentation_rect": [
+                    378,
+                    34,
+                    64,
+                    18
+                  ],
+                  "text": "Mod"
+                }
+              },
+              {
+                "box": {
+                  "id": "obj-32",
+                  "maxclass": "comment",
+                  "numinlets": 1,
+                  "numoutlets": 0,
+                  "fontname": "Arial",
+                  "patching_rect": [
+                    800,
+                    88,
+                    72,
+                    18
+                  ],
+                  "presentation": 1,
+                  "presentation_rect": [
+                    450,
+                    34,
+                    72,
+                    18
+                  ],
+                  "text": "Effect Range"
+                }
+              },
+              {
+                "box": {
+                  "id": "obj-33",
+                  "maxclass": "comment",
+                  "numinlets": 1,
+                  "numoutlets": 0,
+                  "fontname": "Arial",
+                  "patching_rect": [
+                    800,
+                    112,
+                    64,
+                    18
+                  ],
+                  "presentation": 1,
+                  "presentation_rect": [
+                    522,
+                    34,
+                    72,
+                    18
+                  ],
+                  "text": "Chance (%)"
+                }
+              },
+              {
+                "box": {
+                  "id": "obj-34",
+                  "maxclass": "comment",
+                  "numinlets": 1,
+                  "numoutlets": 0,
+                  "fontname": "Arial",
+                  "patching_rect": [
+                    800,
+                    136,
+                    40,
+                    18
+                  ],
+                  "presentation": 1,
+                  "presentation_rect": [
+                    40,
+                    197,
+                    60,
+                    18
+                  ],
+                  "text": "Reset"
+                }
+              },
+              {
+                "box": {
+                  "id": "obj-35",
+                  "maxclass": "comment",
+                  "numinlets": 1,
+                  "numoutlets": 0,
+                  "fontname": "Arial",
+                  "patching_rect": [
+                    800,
+                    160,
+                    40,
+                    18
+                  ],
+                  "presentation": 1,
+                  "presentation_rect": [
+                    40,
+                    295,
+                    44,
+                    18
+                  ],
+                  "text": "Debug"
                 }
               }
             ],
@@ -2595,18 +2556,6 @@
                 "patchline": {
                   "source": [
                     "obj-reset",
-                    0
-                  ],
-                  "destination": [
-                    "obj-reset-sel",
-                    0
-                  ]
-                }
-              },
-              {
-                "patchline": {
-                  "source": [
-                    "obj-reset-sel",
                     0
                   ],
                   "destination": [

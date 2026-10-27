@@ -1309,6 +1309,7 @@ function loadInMax(panel) {
   const labels = []; // each message sent to the Mod label, third outlet
   const how = []; // each message sent to How it works, fourth outlet
   const max = {
+    // MIDI bytes and drift tables are single values; the panel outlets send whole messages.
     outlet: (index, ...values) => [out, drift, labels, how][index].push(index < 2 ? values[0] : values),
     patcher: {
       getnamed: (name) => (name in panel ? { getvalueof: () => panel[name] } : null),
@@ -1540,6 +1541,7 @@ const CONTROLS = ["mode", "mod", "range", "chance", "lowest", "highest", "output
 
 test("the strip is 360 by 169, with every control inside it", () => {
   const { top, strip } = loadPatch();
+  assert.equal(top.devicewidth, 360); // Live's strip width; openrect sizes the editor window
   assert.deepEqual(top.openrect, [0, 0, 360, 169]);
   for (const box of strip.filter((b) => b.presentation)) {
     const [x, y, w, h] = box.presentation_rect;

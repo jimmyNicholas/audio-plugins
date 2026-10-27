@@ -220,7 +220,7 @@ The patch changed, so drag the device in again. Steps 1 to 9 of the prototype in
   - `howItWorks()`: the mode's name and the ticket's draft text. A fourth outlet sends `name set <name>` and `text set <text>` on each change to Mode and on `sync`. The texts live in `tap.js`, not in the patch, because a message box splits its text at each comma and turns "+1" into the number 1.
   - Gravity tuning: `setGravityAtOne(percent)` (0 to 100, default 1) and `setGravityPerDoubling(factor)` (1 to 10, default 3), with Max handlers `gravityAtOne` and `gravityPerDoubling`. They change no pitch, do not update the drift view and are not read by `sync`. They do resend the label, so prototype step 7 reads 2%.
 - `TAP.maxpat` and `TAP.amxd`:
-  - The strip, 360 by 169: Mode, then Mod, Effect Range and Chance in a row, then Reset and **Open** on the left; Lowest, Highest and Output on the right. **Open** (`varname` `open`, not a parameter) replaces Drift view and sends `open` to `pcontrol`.
+  - The strip, 360 by 169 (`devicewidth` 360, so Live does not size it from the rightmost control): Mode, then Mod, Effect Range and Chance in a row, then Reset and **Open** on the left; Lowest, Highest and Output on the right. **Open** (`varname` `open`, not a parameter) replaces Drift view and sends `open` to `pcontrol`.
   - `p Drift` is now `p Panel`, 920 by 320, in presentation mode: Mode, Reset and Output; How it works (the name and text comments, fed by `r ---how` into `route name text`); Modifiers (the three dials, the Mod label comment fed by `r ---label`, Lowest and Highest); and a black 256 square `panel` for ticket 15. The old `jsui` is gone from the patch; `drift-view.js` and its tests stay until ticket 15 rewrites them. `s ---drift` is kept, though nothing receives it until then.
   - Window copies are the same `live.*` objects as the strip's, `varname` `window-<name>`, parameter off. Each copy sends to `s ---<name>-window`, received next to its strip control. Each strip control goes through `prepend set` to `s ---<name>-strip`, received at its copy, so the copy never sends the value back. Reset is one way only: the window's Reset goes through `sel 1` and bangs the strip's.
   - `live.thisdevice` bangs every strip control except Reset on load, so the copies start in step with the saved values.
@@ -229,6 +229,7 @@ The patch changed, so drag the device in again. Steps 1 to 9 of the prototype in
 - Not yet known, check in Live:
   - Whether a `live.*` object with its parameter off keeps its range, steps and names (Mod's -12 to 12, Output's MPE and Semitone). If not, the copies need their own `_parameter_range` or a different object.
   - `window size` puts the window back at 120, 120 each time Debug is clicked.
+  - How it works for Gravity says "triples" even after Debug changes Per doubling. Draft text; say if it should follow the setting.
   - Pull at Mod 1 is not capped against the curve: at 2% and ×3, Mod 12 asks for over 100% of the gap and the last key passes the current key. Debug only; say if it should be capped.
 
 ## Testing ticket 14 in Live

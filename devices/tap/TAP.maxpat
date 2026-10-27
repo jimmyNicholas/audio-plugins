@@ -21,6 +21,7 @@
       360,
       169
     ],
+    "devicewidth": 360.0,
     "openinpresentation": 1,
     "default_fontsize": 10,
     "default_fontname": "Arial Bold",
@@ -1135,7 +1136,7 @@
                     110,
                     18
                   ],
-                  "text": "Per doubling (x)"
+                  "text": "Per doubling (×)"
                 }
               },
               {

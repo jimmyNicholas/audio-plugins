@@ -1583,7 +1583,27 @@ test("the panel window is about 920 by 320 and opens in presentation mode", () =
   const { panelBox } = loadPatch();
   assert.deepEqual(panelBox.patcher.rect.slice(2), [920, 320]);
   assert.equal(panelBox.patcher.openinpresentation, 1);
-  assert.equal(panelBox.patcher.boxes.find((b) => b.box.maxclass === "jsui"), undefined); // filled in ticket 15
+});
+
+test("the visualiser sits in the window, 256 square, fed the drift table and the Debug settings", () => {
+  const { strip, panel, into } = loadPatch();
+  const views = panel.filter((box) => box.maxclass === "jsui");
+  assert.equal(views.length, 1);
+  const [view] = views;
+  assert.equal(view.filename, "drift-view.js");
+  assert.equal(view.presentation, 1);
+  assert.deepEqual(view.presentation_rect.slice(2), [256, 256]);
+  assert.equal(panel.find((box) => box.maxclass === "panel"), undefined); // the empty slot is gone
+  const js = strip.find((box) => box.text === "js tap.js");
+  assert.ok(into(js, 1).includes(view), "the drift table does not reach the visualiser");
+  // View size sends its tab's text (128 to 512), not its index.
+  const size = panel.find((box) => box.varname === "window-size");
+  const prependSize = into(size, 1).find((box) => box.text === "prepend size");
+  assert.ok(prependSize && into(prependSize).includes(view), "View size does not reach the visualiser");
+  assert.ok(!into(size, 0).some((box) => box.text === "prepend size"), "View size sends its index");
+  const summary = panel.find((box) => box.varname === "window-summary");
+  const prependSummary = into(summary, 0).find((box) => box.text === "prepend summary");
+  assert.ok(prependSummary && into(prependSummary).includes(view), "Header summary does not reach the visualiser");
 });
 
 // A live.* object with its parameter off showed blank and passed nothing on in Live 11's

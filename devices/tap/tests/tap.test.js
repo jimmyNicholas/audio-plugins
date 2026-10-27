@@ -775,6 +775,115 @@ test("setting Chance changes no pitch and does not tell the view", () => {
   assert.equal(changes, 0);
 });
 
+// ---- Engine: the Mod label and Gravity tuning (ticket 14) ----
+
+function labelled(mode, mod, setup = () => {}) {
+  const engine = createEngine();
+  engine.setMode(mode);
+  engine.setMod(mod);
+  setup(engine);
+  return engine.modLabel();
+}
+
+test("Swap's label counts the keys passed round, or says no swap", () => {
+  assert.equal(labelled(SWAP, 1), "Keys passed round: 2");
+  assert.equal(labelled(SWAP, 2), "Keys passed round: 3");
+  assert.equal(labelled(SWAP, -2.4), "Keys passed round: 3");
+  assert.equal(labelled(SWAP, 12), "Keys passed round: 13");
+  assert.equal(labelled(SWAP, -12), "Keys passed round: 13");
+  assert.equal(labelled(SWAP, 0.49), "No swap");
+  assert.equal(labelled(SWAP, 0), "No swap");
+  assert.equal(labelled(SWAP, -0.3), "No swap");
+});
+
+test("Gravity's label gives the pull, or the push for a negative Mod, as a share of the gap", () => {
+  const table = [
+    [0.5, "0.3"],
+    [1, "1"],
+    [2, "3"],
+    [4, "9"],
+    [8, "27"],
+    [12, "51.3"],
+  ];
+  for (const [mod, percent] of table) {
+    assert.equal(labelled(GRAVITY, mod), `Pull: ${percent}% of the gap`);
+    assert.equal(labelled(GRAVITY, -mod), `Push: ${percent}% of the gap`);
+  }
+  assert.equal(labelled(GRAVITY, 0), "Pull: 0% of the gap");
+});
+
+test("Move's label gives the semitones with a sign and two decimals", () => {
+  assert.equal(labelled(MOVE, 2), "+2.00 semitones each release");
+  assert.equal(labelled(MOVE, 0.5), "+0.50 semitones each release");
+  assert.equal(labelled(MOVE, -1.25), "-1.25 semitones each release");
+  assert.equal(labelled(MOVE, 12), "+12.00 semitones each release");
+  assert.equal(labelled(MOVE, 0), "0.00 semitones each release");
+  assert.equal(labelled(MOVE, -0.001), "0.00 semitones each release");
+});
+
+test("Gravity tuning defaults to 1% at Mod 1, three times as much per doubling", () => {
+  const engine = createEngine();
+  assert.equal(engine.gravityAtOne(), 1);
+  assert.equal(engine.gravityPerDoubling(), 3);
+});
+
+test("Gravity tuning changes the share: at pull 2% and factor 2, Mod 4 gives 8%", () => {
+  const tune = (engine) => {
+    engine.setGravityAtOne(2);
+    engine.setGravityPerDoubling(2);
+  };
+  const engine = released(GRAVITY, 4, [57, 69], tune); // A3 220 Hz, A4 440 Hz
+  near((hertzForPitch(engine.pitchForNote(57)) - 220) / 220, 0.08);
+  assert.equal(labelled(GRAVITY, 4, tune), "Pull: 8% of the gap");
+  assert.equal(labelled(GRAVITY, 1, tune), "Pull: 2% of the gap");
+});
+
+test("Gravity tuning changes no pitch and does not tell the view", () => {
+  let changes = 0;
+  const engine = createEngine(() => changes++);
+  engine.setMode(GRAVITY);
+  engine.noteReleased(57);
+  engine.noteReleased(69);
+  const before = engine.pitchForNote(57);
+  changes = 0;
+  engine.setGravityAtOne(5);
+  engine.setGravityPerDoubling(2);
+  assert.equal(engine.pitchForNote(57), before);
+  assert.equal(changes, 0);
+});
+
+test("Gravity tuning is kept in range, and anything but a number is ignored", () => {
+  const engine = createEngine();
+  engine.setGravityAtOne(-1);
+  assert.equal(engine.gravityAtOne(), 0);
+  engine.setGravityAtOne(500);
+  assert.equal(engine.gravityAtOne(), 100);
+  engine.setGravityPerDoubling(0.5);
+  assert.equal(engine.gravityPerDoubling(), 1);
+  engine.setGravityPerDoubling(50);
+  assert.equal(engine.gravityPerDoubling(), 10);
+  engine.setGravityAtOne("x");
+  engine.setGravityPerDoubling(NaN);
+  assert.equal(engine.gravityAtOne(), 100);
+  assert.equal(engine.gravityPerDoubling(), 10);
+});
+
+test("each mode has a name and a short text saying how it works", () => {
+  const engine = createEngine();
+  const seen = [];
+  for (const mode of [SWAP, GRAVITY, MOVE]) {
+    engine.setMode(mode);
+    seen.push(engine.howItWorks());
+  }
+  assert.deepEqual(
+    seen.map((how) => how.name),
+    ["Swap", "Gravity", "Move"],
+  );
+  assert.match(seen[0].text, /^Each release passes pitches round the keys you let go most recently\./);
+  assert.match(seen[1].text, /^Each release pulls the key let go before it towards the one you just let go/);
+  assert.match(seen[2].text, /^Each release moves the key you let go by Mod semitones\./);
+});
+
 // ---- Router: MPE channels (from plugin/tests/MpeRouterTests.cpp and the spike tests) ----
 
 function routerSetup() {
@@ -1197,8 +1306,11 @@ test("no stuck notes in Semitone output after fast playing in Gravity", () => {
 function loadInMax(panel) {
   const out = [];
   const drift = []; // each table sent to the drift view
+  const labels = []; // each message sent to the Mod label, third outlet
+  const how = []; // each message sent to How it works, fourth outlet
   const max = {
-    outlet: (index, value) => (index === 0 ? out.push(value) : drift.push(value)),
+    // MIDI bytes and drift tables are single values; the panel outlets send whole messages.
+    outlet: (index, ...values) => [out, drift, labels, how][index].push(index < 2 ? values[0] : values),
     patcher: {
       getnamed: (name) => (name in panel ? { getvalueof: () => panel[name] } : null),
     },
@@ -1209,7 +1321,7 @@ function loadInMax(panel) {
     bytes.forEach((byte) => max.msg_int(byte));
     return messages(out).map((m) => m.slice(1));
   };
-  return { max, play, drift };
+  return { max, play, drift, labels, how };
 }
 
 test("on load the device reads its settings from the panel", () => {
@@ -1303,6 +1415,56 @@ test("a panel reset clears the drift view", () => {
   assert.equal(drift.at(-1)[60], 0);
 });
 
+test("on load the device sends the Mod label and How it works", () => {
+  const { labels, how } = loadInMax({ mode: MOVE, mod: 2 });
+  assert.deepEqual(labels.at(-1), ["set", "+2.00 semitones each release"]);
+  assert.deepEqual(how.at(-2), ["name", "set", "Move"]);
+  assert.equal(how.at(-1)[0], "text");
+  assert.equal(how.at(-1)[1], "set");
+  assert.match(how.at(-1)[2], /^Each release moves the key you let go/);
+});
+
+test("the Mod label is sent on each change to Mode or Mod, and not on releases", () => {
+  const { max, play, labels } = loadInMax({});
+  assert.deepEqual(labels.at(-1), ["set", "Keys passed round: 2"]);
+  max.mod(4);
+  assert.deepEqual(labels.at(-1), ["set", "Keys passed round: 5"]);
+  max.mode(GRAVITY);
+  assert.deepEqual(labels.at(-1), ["set", "Pull: 9% of the gap"]);
+  max.mod(-2);
+  assert.deepEqual(labels.at(-1), ["set", "Push: 3% of the gap"]);
+  const sent = labels.length;
+  play([0x90, 60, 100, 0x80, 60, 0, 0x90, 72, 100, 0x80, 72, 0]);
+  max.range(3);
+  max.chance(50);
+  assert.equal(labels.length, sent);
+});
+
+test("How it works is sent on each change to Mode, and not on Mod or releases", () => {
+  const { max, play, how } = loadInMax({});
+  assert.deepEqual(how.at(-2), ["name", "set", "Swap"]);
+  max.mode(GRAVITY);
+  assert.deepEqual(how.at(-2), ["name", "set", "Gravity"]);
+  assert.match(how.at(-1)[2], /^Each release pulls/);
+  const sent = how.length;
+  max.mod(3);
+  play([0x90, 60, 100, 0x80, 60, 0]);
+  assert.equal(how.length, sent);
+});
+
+test("panel messages tune Gravity and update the label, without being read on load", () => {
+  const { max, play, labels, drift } = loadInMax({ mode: GRAVITY, mod: 1, gravityAtOne: 50 });
+  assert.deepEqual(labels.at(-1), ["set", "Pull: 1% of the gap"]); // not read from the panel
+  max.gravityAtOne(2);
+  assert.deepEqual(labels.at(-1), ["set", "Pull: 2% of the gap"]);
+  max.mod(4);
+  max.gravityPerDoubling(2);
+  assert.deepEqual(labels.at(-1), ["set", "Pull: 8% of the gap"]);
+  play([0x90, 57, 100, 0x80, 57, 0, 0x90, 69, 100, 0x80, 69, 0]);
+  const cents = drift.at(-1)[57];
+  near(hertzForPitch(57 + cents / 100), 220 * 1.08, 0.05);
+});
+
 // ---- The patch: every control reaches the js ----
 
 test("each panel control is wired through its prepend into the js", () => {
@@ -1330,6 +1492,175 @@ test("the Mode slider has three steps, named in engine order", () => {
   assert.equal(valueof.parameter_type, 2); // an enum, so it shows the name, not a number
   assert.deepEqual(valueof.parameter_enum, ["Swap", "Gravity", "Move"]);
   assert.equal(valueof.parameter_mmax, 2);
+});
+
+// ---- The patch: the strip and the panel window (ticket 14) ----
+
+// The device patch and its p Panel window, with a way to follow cables. A send (s name)
+// leads to every receive (r name) in either patcher, as it does in Max.
+function loadPatch() {
+  const top = JSON.parse(fs.readFileSync(path.join(__dirname, "../TAP.maxpat"), "utf8")).patcher;
+  const strip = top.boxes.map((b) => ({ ...b.box, key: `0:${b.box.id}` }));
+  const panelBox = strip.find((box) => box.text === "p Panel");
+  const panel = panelBox ? panelBox.patcher.boxes.map((b) => ({ ...b.box, key: `1:${b.box.id}` })) : [];
+  const boxes = strip.concat(panel);
+  const byKey = Object.fromEntries(boxes.map((box) => [box.key, box]));
+  const lines = [top, ...(panelBox ? [panelBox.patcher] : [])].flatMap((p, i) =>
+    p.lines.map((l) => ({ ...l.patchline, patcher: i })),
+  );
+  const keyOf = (box) => box.key;
+  // Boxes a box's outlet (any outlet if none is given) is cabled to, with sends followed.
+  function into(key, outlet) {
+    const [patcher, id] = key.split(":");
+    const out = lines
+      .filter((l) => `${l.patcher}` === patcher && l.source[0] === id && (outlet === undefined || l.source[1] === outlet))
+      .map((l) => byKey[`${l.patcher}:${l.destination[0]}`]);
+    return out.flatMap((box) => {
+      const send = /^s (\S+)$/.exec(box.text || "");
+      if (!send) return [box];
+      return boxes.filter((b) => b.text === `r ${send[1]}`).flatMap((r) => into(r.key));
+    });
+  }
+  // Whether from reaches to through plain plumbing only, never through another control.
+  function reaches(from, to, outlet) {
+    const seen = new Set();
+    const queue = into(keyOf(from), outlet);
+    while (queue.length > 0) {
+      const box = queue.shift();
+      if (box.key === keyOf(to)) return true;
+      if (seen.has(box.key) || !/^(prepend set|sel |t )/.test(box.text || "")) continue;
+      seen.add(box.key);
+      queue.push(...into(box.key));
+    }
+    return false;
+  }
+  return { top, panelBox, strip, panel, into: (box, outlet) => into(keyOf(box), outlet), reaches };
+}
+
+const CONTROLS = ["mode", "mod", "range", "chance", "lowest", "highest", "output", "reset"];
+
+test("the strip is 360 by 169, with every control inside it", () => {
+  const { top, strip } = loadPatch();
+  assert.equal(top.devicewidth, 360); // Live's strip width; openrect sizes the editor window
+  assert.deepEqual(top.openrect, [0, 0, 360, 169]);
+  for (const box of strip.filter((b) => b.presentation)) {
+    const [x, y, w, h] = box.presentation_rect;
+    assert.ok(x >= 0 && y >= 0 && x + w <= 360 && y + h <= 169, `${box.varname || box.text} is outside the strip`);
+  }
+});
+
+test("Open replaces Drift view and opens the panel window through pcontrol", () => {
+  const { strip, panelBox, into } = loadPatch();
+  assert.equal(strip.find((box) => box.varname === "view"), undefined);
+  assert.equal(strip.find((box) => box.text === "p Drift"), undefined);
+  const open = strip.find((box) => box.varname === "open");
+  assert.equal(open.maxclass, "live.text");
+  assert.equal(open.parameter_enable, 0);
+  assert.equal(open.presentation, 1);
+  const message = into(open).find((box) => box.text === "open");
+  const pcontrol = into(message).find((box) => box.text === "pcontrol");
+  assert.ok(into(pcontrol).includes(panelBox), "pcontrol does not reach p Panel");
+});
+
+test("the panel window is about 920 by 320 and opens in presentation mode", () => {
+  const { panelBox } = loadPatch();
+  assert.deepEqual(panelBox.patcher.rect.slice(2), [920, 320]);
+  assert.equal(panelBox.patcher.openinpresentation, 1);
+  assert.equal(panelBox.patcher.boxes.find((b) => b.box.maxclass === "jsui"), undefined); // filled in ticket 15
+});
+
+test("each window copy is the same object as its strip control, with its parameter off", () => {
+  const { strip, panel } = loadPatch();
+  for (const name of CONTROLS) {
+    const control = strip.find((box) => box.varname === name);
+    const copy = panel.find((box) => box.varname === `window-${name}`);
+    assert.ok(copy, `no window copy of ${name}`);
+    assert.equal(copy.maxclass, control.maxclass, name);
+    assert.equal(control.parameter_enable, 1, `${name} on the strip is a parameter`);
+    assert.equal(copy.parameter_enable, 0, `${name} in the window is not a parameter`);
+    assert.equal(copy.presentation, 1, name);
+  }
+});
+
+test("each window copy sets its strip control, and the strip control sets the copy with set", () => {
+  const { strip, panel, reaches, into } = loadPatch();
+  for (const name of CONTROLS) {
+    const control = strip.find((box) => box.varname === name);
+    const copy = panel.find((box) => box.varname === `window-${name}`);
+    assert.ok(reaches(copy, control), `the window's ${name} does not reach the strip`);
+    if (name === "reset") continue; // a button: nothing to show
+    assert.ok(reaches(control, copy, 0), `the strip's ${name} does not reach the window`);
+    // The strip's value reaches the copy only as a set, so the copy does not send it back.
+    const sets = into(control, 0).filter((box) => box.text === "prepend set");
+    assert.equal(sets.length, 1, `${name} has no prepend set`);
+    assert.ok(!into(copy).some((box) => box.text === `prepend ${name}`), `the window's ${name} skips the strip`);
+  }
+});
+
+test("the strip controls are banged on load, so the window copies start in step", () => {
+  const { strip, into } = loadPatch();
+  const device = strip.find((box) => box.text === "live.thisdevice");
+  const loaded = into(device, 0);
+  for (const name of CONTROLS.filter((n) => n !== "reset")) {
+    assert.ok(loaded.some((box) => box.varname === name), `${name} is not banged on load`);
+  }
+  assert.ok(!loaded.some((box) => box.varname === "reset"));
+});
+
+test("the js sends the Mod label and How it works to comments in the window", () => {
+  const { strip, panel, into } = loadPatch();
+  const js = strip.find((box) => box.text === "js tap.js");
+  assert.equal(js.numoutlets, 4);
+  const label = into(js, 2);
+  assert.ok(label.some((box) => box.maxclass === "comment" && box.varname === "window-label" && box.presentation === 1));
+  const route = into(js, 3).find((box) => box.text === "route name text");
+  assert.ok(route, "How it works is not routed into name and text");
+  const [name, text] = [into(route, 0), into(route, 1)];
+  assert.ok(name.some((box) => box.maxclass === "comment" && box.varname === "window-name"));
+  assert.ok(text.some((box) => box.maxclass === "comment" && box.varname === "window-how"));
+  assert.ok(panel.includes(name[0]) && panel.includes(text[0]));
+});
+
+test("the Debug toggle resizes the window, and Gravity tuning reaches the js", () => {
+  const { strip, panel, into } = loadPatch();
+  const debug = panel.find((box) => box.varname === "window-debug");
+  assert.equal(debug.maxclass, "live.text");
+  assert.equal(debug.mode, 1); // a toggle
+  assert.equal(debug.parameter_enable, 0);
+  const sel = into(debug).find((box) => box.text === "sel 0 1");
+  const sizes = [into(sel, 0), into(sel, 1)].map((boxes) => boxes.find((b) => b.maxclass === "message"));
+  assert.match(sizes[0].text, /^window size \d+ \d+ \d+ \d+, window exec$/);
+  assert.match(sizes[1].text, /^window size \d+ \d+ \d+ \d+, window exec$/);
+  const height = (text) => {
+    const [, , top, , bottom] = /size (\d+) (\d+) (\d+) (\d+)/.exec(text).map(Number);
+    return bottom - top;
+  };
+  assert.equal(height(sizes[0].text), 320);
+  assert.equal(height(sizes[1].text), 430);
+  assert.ok(into(sizes[0]).some((box) => box.text === "thispatcher"));
+  const js = strip.find((box) => box.text === "js tap.js");
+  for (const [name, message] of [
+    ["window-pull", "gravityAtOne"],
+    ["window-doubling", "gravityPerDoubling"],
+  ]) {
+    const control = panel.find((box) => box.varname === name);
+    assert.equal(control.parameter_enable, 0, name);
+    const prepend = into(control).find((box) => box.text === `prepend ${message}`);
+    assert.ok(prepend && into(prepend).includes(js), `${name} does not reach the js`);
+  }
+  for (const name of ["window-size", "window-summary"]) {
+    const control = panel.find((box) => box.varname === name);
+    assert.equal(control.parameter_enable, 0, name);
+  }
+});
+
+test("the debug controls sit below the window's normal height, so closing Debug hides them", () => {
+  const { panel } = loadPatch();
+  for (const name of ["window-pull", "window-doubling", "window-size", "window-summary"]) {
+    const box = panel.find((b) => b.varname === name);
+    assert.ok(box.presentation_rect[1] >= 320, `${name} shows with Debug closed`);
+    assert.ok(box.presentation_rect[1] + box.presentation_rect[3] <= 430, `${name} is cut off with Debug open`);
+  }
 });
 
 // ---- Drift: what the view is sent ----

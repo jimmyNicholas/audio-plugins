@@ -1,6 +1,6 @@
 # 14: Panel window
 
-**Status:** grilled 2026-10-26. Build after tickets 11 to 13. Ticket 15 then fills the visualiser slot.
+**Status:** built 2026-10-27. `npm test` passes. Not yet tested in Live. Ticket 15 then fills the visualiser slot.
 
 **Goal:** a pop-out panel window showing the selected mode, how it works, every control and (from ticket 15) the visualiser, like the web app's options panel. The strip keeps every control, so the device plays fully without the window.
 

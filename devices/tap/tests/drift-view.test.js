@@ -63,7 +63,9 @@ const RED = [1, 0, 0];
 const BLUE = [0, 0, 1];
 
 // The fills in a colour, as [x, y, width, height].
-const filled = (drawn, colour) => drawn.fills.filter((f) => f.colour.join() === colour.join()).map((f) => f.rect);
+function filled(drawn, colour) {
+  return drawn.fills.filter((f) => f.colour.join() === colour.join()).map((f) => f.rect);
+}
 
 test("concert pitch draws 128 white pixels on the diagonal and no stems", () => {
   const { view, drawn, paint } = loadView();

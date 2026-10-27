@@ -27,16 +27,15 @@ var SHARP = [1, 0, 0];
 var FLAT = [0, 0, 1];
 var TEXT = [0.85, 0.85, 0.85];
 
-// Where the square sits: pixels per note and its top left corner, under the header when
-// it is shown.
+// Where the square sits: pixels per note and its top, under the header when it is shown.
 function squareLayout(size, header) {
-  return { perNote: size / NUM_NOTES, x: 0, y: header ? HEADER_HEIGHT : 0, size: size };
+  return { perNote: size / NUM_NOTES, y: header ? HEADER_HEIGHT : 0, size: size };
 }
 
 // The key's pixel on the diagonal: { x, y, width, height }.
-function keyRect(note, cents, layout) {
+function keyRect(note, layout) {
   return {
-    x: layout.x + note * layout.perNote,
+    x: note * layout.perNote,
     y: layout.y + (NUM_NOTES - 1 - note) * layout.perNote,
     width: layout.perNote,
     height: layout.perNote,
@@ -47,7 +46,7 @@ function keyRect(note, cents, layout) {
 // pixel's top when sharp, down from its bottom when flat, stopping at the square's edge.
 // Null when shorter than a pixel.
 function stemRect(note, cents, layout) {
-  var pixel = keyRect(note, cents, layout);
+  var pixel = keyRect(note, layout);
   var length = (Math.abs(cents) / 100) * layout.perNote;
   if (!(length >= 1)) return null;
   var top = cents > 0 ? Math.max(layout.y, pixel.y - length) : pixel.y + pixel.height;
@@ -56,9 +55,13 @@ function stemRect(note, cents, layout) {
   return { x: pixel.x, y: top, width: pixel.width, height: bottom - top };
 }
 
+function isDrifted(cents) {
+  return Math.abs(cents) >= MIN_CENTS;
+}
+
 // White at concert pitch, else full red when sharp or full blue when flat.
 function keyColour(cents) {
-  if (!(Math.abs(cents) >= MIN_CENTS)) return CONCERT;
+  if (!isDrifted(cents)) return CONCERT;
   return cents > 0 ? SHARP : FLAT;
 }
 
@@ -66,7 +69,7 @@ function keyColour(cents) {
 function describe(drift) {
   var count = 0;
   for (var note = 0; note < drift.length; note++) {
-    if (keyColour(drift[note]) !== CONCERT) count++;
+    if (isDrifted(drift[note])) count++;
   }
   if (count === 0) return "Every key at concert pitch";
   return count + (count === 1 ? " key" : " keys") + " drifted";
@@ -110,7 +113,7 @@ function paint() {
   }
   for (var note = 0; note < NUM_NOTES; note++) {
     var colour = keyColour(drift[note]);
-    fillRect(keyRect(note, drift[note], layout), colour);
+    fillRect(keyRect(note, layout), colour);
     var stem = stemRect(note, drift[note], layout);
     if (stem) fillRect(stem, colour);
   }

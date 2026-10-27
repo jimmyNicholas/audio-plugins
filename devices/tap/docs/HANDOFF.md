@@ -240,7 +240,7 @@ The patch changed, so drag the device in again. Steps 1 to 8 of the prototype in
 
 - `drift-view.js`, rewritten: the Keys and Picture views, hover and their constants are gone. Now a square pitch map on black: across is the key, up is the pitch it plays, both note 0 at the bottom left.
   - `squareLayout(size, header)`: pixels per note (`size / 128`) and the square's top left, 18 pixels down when the header is shown.
-  - `keyRect(note, cents, layout)`: the key's pixel on the diagonal. `stemRect` runs from it to the exact pitch played (`note + cents / 100`): up from the pixel's top when sharp, down from its bottom when flat, so Move +3 at 256 is a 6 pixel stem. None when under a pixel. A stem stops at the square's edge, so a key pushed past note 127 does not draw over the header.
+  - `keyRect(note, layout)`: the key's pixel on the diagonal. The ticket's `cents` argument was dropped, since the pixel never moves. `stemRect` runs from it to the exact pitch played (`note + cents / 100`): up from the pixel's top when sharp, down from its bottom when flat, so Move +3 at 256 is a 6 pixel stem. None when under a pixel. A stem stops at the square's edge, so a key pushed past note 127 does not draw over the header.
   - `keyColour(cents)`: white under 0.1 cent, else full red or full blue.
   - Max handlers `size` (snaps to the nearest of 128, 256, 384 or 512, and takes the tab's text as a symbol) and `summary` (0 or 1). Each resizes the `jsui` from its top left corner, in the window (`presentation_rect`) and in the patcher, and redraws. The header line reads "Every key at concert pitch", "1 key drifted" or "12 keys drifted". `list` is unchanged.
 - `TAP.maxpat` and `TAP.amxd`: the black `panel` in the window is now the `jsui` (`varname` `window-view`), 256 square at the same place. `r ---drift` and `r ---visualiser` feed it. View size now sends its tab's text (the middle outlet) instead of its index, so `size 256` arrives, not `size 1`.
@@ -249,6 +249,8 @@ The patch changed, so drag the device in again. Steps 1 to 8 of the prototype in
   - Resizing uses `box.setattr("presentation_rect", ...)` and `box.rect`; not yet seen working in Max 8.1.
   - At 384 and 512 the square runs past the bottom of the window (320, or 430 with Debug open) and over the debug controls. Debug only; resize the window by hand to see it all.
   - At 128 the header line may be cut off at its right.
+  - Saving `drift-view.js` while the device is open reloads it (`autowatch`), which puts it back at 256 with no header, but the box and the Debug tabs keep their last setting. Pick the setting again after a reload.
+  - A stem starts at the pixel's edge, so the pixel and stem together reach one note past the drift. Say if it should start from the pixel's centre.
 
 ## Testing ticket 15 in Live
 

@@ -1823,23 +1823,54 @@
               },
               {
                 "box": {
+                  "id": "obj-view-drift",
+                  "maxclass": "newobj",
+                  "numinlets": 0,
+                  "numoutlets": 1,
+                  "patching_rect": [
+                    960,
+                    32,
+                    72,
+                    20
+                  ],
+                  "text": "r ---drift",
+                  "outlettype": [
+                    ""
+                  ]
+                }
+              },
+              {
+                "box": {
+                  "id": "obj-view-r",
+                  "maxclass": "newobj",
+                  "numinlets": 0,
+                  "numoutlets": 1,
+                  "patching_rect": [
+                    1048,
+                    32,
+                    88,
+                    20
+                  ],
+                  "text": "r ---visualiser",
+                  "outlettype": [
+                    ""
+                  ]
+                }
+              },
+              {
+                "box": {
                   "id": "obj-18",
-                  "maxclass": "panel",
+                  "maxclass": "jsui",
+                  "filename": "drift-view.js",
+                  "parameter_enable": 0,
                   "numinlets": 1,
                   "numoutlets": 0,
-                  "mode": 0,
-                  "bgcolor": [
-                    0.0,
-                    0.0,
-                    0.0,
-                    1.0
-                  ],
-                  "border": 0,
+                  "varname": "window-view",
                   "patching_rect": [
-                    640,
+                    960,
                     64,
-                    128,
-                    128
+                    256,
+                    256
                   ],
                   "presentation": 1,
                   "presentation_rect": [
@@ -2339,6 +2370,30 @@
               {
                 "patchline": {
                   "source": [
+                    "obj-view-drift",
+                    0
+                  ],
+                  "destination": [
+                    "obj-18",
+                    0
+                  ]
+                }
+              },
+              {
+                "patchline": {
+                  "source": [
+                    "obj-view-r",
+                    0
+                  ],
+                  "destination": [
+                    "obj-18",
+                    0
+                  ]
+                }
+              },
+              {
+                "patchline": {
+                  "source": [
                     "obj-15",
                     0
                   ],
@@ -2712,7 +2767,7 @@
                 "patchline": {
                   "source": [
                     "obj-size",
-                    0
+                    1
                   ],
                   "destination": [
                     "obj-28",

@@ -1,6 +1,6 @@
 # 15: Square visualiser
 
-**Status:** grilled 2026-10-26. Build after ticket 14, which makes the panel window, its debug section and an empty slot for this view.
+**Status:** built 2026-10-27, not yet tested in Live. Grilled 2026-10-26. Ticket 14 made the panel window, its debug section and the slot for this view.
 
 **Goal:** a square pitch map of all 128 keys in the panel window, replacing the Keys and Picture views. The user's idea was a square version of the drift view, 128 by 128, where drift makes a key's line longer.
 

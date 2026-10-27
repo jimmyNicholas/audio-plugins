@@ -7,7 +7,7 @@ const vm = require("node:vm");
 const source = fs.readFileSync(path.join(__dirname, "../drift-view.js"), "utf8");
 
 // Loads drift-view.js as a jsui would, with a fake mgraphics that records what is drawn.
-function loadView(width = 960, height = 200) {
+function loadView() {
   const drawn = { text: [], fills: [], redraws: 0 };
   const mgraphics = {
     init() {},
@@ -32,7 +32,17 @@ function loadView(width = 960, height = 200) {
       drawn.text.push(text);
     },
   };
-  const view = { mgraphics, box: { rect: [0, 0, width, height] } };
+  const box = {
+    rect: [640, 64, 896, 320], // left, top, right, bottom in the patcher
+    attributes: { presentation_rect: [648, 12, 256, 256] }, // left, top, width, height in the window
+    getattr(name) {
+      return this.attributes[name];
+    },
+    setattr(name, value) {
+      this.attributes[name] = value;
+    },
+  };
+  const view = { mgraphics, box };
   vm.runInNewContext(source, view);
   const paint = () => {
     drawn.text.length = 0;
@@ -48,70 +58,120 @@ function table(changes) {
   return cents;
 }
 
-test("notes are named as Live names them, middle C is C3", () => {
-  const { view } = loadView();
-  assert.equal(view.noteName(60), "C3");
-  assert.equal(view.noteName(0), "C-2");
-  assert.equal(view.noteName(61), "C#3");
-  assert.equal(view.noteName(127), "G8");
-});
+const WHITE = [1, 1, 1];
+const RED = [1, 0, 0];
+const BLUE = [0, 0, 1];
 
-test("the keyboard spans the width with 75 white keys and black keys between them", () => {
-  const { view } = loadView();
-  const keys = view.keyLayout(750);
-  assert.equal(keys.length, 128);
-  assert.equal(keys.filter((key) => !key.black).length, 75);
-  assert.equal(keys[0].x, 0);
-  assert.equal(keys[127].x + keys[127].width, 750);
-  assert.ok(keys[61].black);
-  assert.equal(keys[61].x + keys[61].width / 2, keys[62].x); // C# sits on the C to D line
-});
+// The fills in a colour, as [x, y, width, height].
+const filled = (drawn, colour) => drawn.fills.filter((f) => f.colour.join() === colour.join()).map((f) => f.rect);
 
-test("hovering finds black keys over white ones, and white keys below the black ones", () => {
-  const { view } = loadView();
-  const keys = view.keyLayout(750);
-  const line = keys[62].x; // between C3 and D3, under C#3
-  assert.equal(view.keyAt(keys, line, 5, 50), 61);
-  assert.equal(view.keyAt(keys, line + 1, 70, 50), 62);
-  assert.equal(view.keyAt(keys, -5, 70, 50), -1);
-  assert.equal(view.nearestKey(keys, line), 61);
-});
-
-test("colour deepens with drift, red for sharp and blue for flat", () => {
-  const { view } = loadView();
-  assert.equal(view.amount(0), 0);
-  assert.equal(view.amount(0.2), 0);
-  assert.ok(view.amount(5) > 0);
-  assert.ok(view.amount(50) < view.amount(100));
-  assert.equal(view.amount(1200), 1);
-  assert.equal(view.amount(-5000), 1);
-  const sharp = view.keyColour(60, 100);
-  const flat = view.keyColour(60, -100);
-  assert.ok(sharp[0] > sharp[2]);
-  assert.ok(flat[2] > flat[0]);
-  assert.deepEqual(Array.from(view.keyColour(60, 0)), [0.92, 0.92, 0.9]);
-});
-
-test("the top line counts drifted keys, or describes the hovered one", () => {
-  const { view } = loadView();
-  assert.equal(view.describe(table({}), -1), "Every key at concert pitch");
-  assert.match(view.describe(table({ 60: 12 }), -1), /^1 key has drifted/);
-  assert.match(view.describe(table({ 60: 12, 64: -3 }), -1), /^2 keys have drifted/);
-  assert.equal(view.describe(table({ 60: 12.5 }), 60), "C3   +12.5 cents");
-  assert.equal(view.describe(table({ 60: -200 }), 60), "C3   -200.0 cents   (plays near A#2)");
-});
-
-test("a new table redraws the view and paints each drifted key", () => {
+test("concert pitch draws 128 white pixels on the diagonal and no stems", () => {
   const { view, drawn, paint } = loadView();
-  view.list(...table({ 60: 100, 64: -50 }));
-  assert.equal(drawn.redraws, 1);
+  view.list(...table({}));
   paint();
-  assert.match(drawn.text[0], /^2 keys have drifted/);
-  assert.ok(drawn.text.includes("C3")); // octave labels
-  const red = drawn.fills.filter((f) => f.colour[0] === 0.9 && f.colour[1] === 0.25);
-  const blue = drawn.fills.filter((f) => f.colour[2] === 0.95 && f.colour[1] === 0.45);
-  assert.equal(red.length, 1); // C3's bar
-  assert.equal(blue.length, 1); // E3's bar
+  const white = filled(drawn, WHITE);
+  assert.equal(white.length, 128);
+  // At 256 each note is 2 pixels: note 0 at the bottom left, note 127 at the top right.
+  assert.deepEqual(white[0], [0, 254, 2, 2]);
+  assert.deepEqual(white[60], [120, 134, 2, 2]);
+  assert.deepEqual(white[127], [254, 0, 2, 2]);
+  assert.equal(filled(drawn, RED).length + filled(drawn, BLUE).length, 0);
+});
+
+test("Move +3 on note 60 at size 256 draws a red pixel and a red stem 6 pixels up", () => {
+  const { view, drawn, paint } = loadView();
+  view.list(...table({ 60: 300 }));
+  paint();
+  assert.equal(filled(drawn, WHITE).length, 127);
+  assert.deepEqual(filled(drawn, RED), [
+    [120, 134, 2, 2], // the pixel, where note 60 sits on the diagonal
+    [120, 128, 2, 6], // the stem, up to the pitch it plays: note 63's row
+  ]);
+});
+
+test("a Swap pair draws one red stem up and one blue stem down, of equal length", () => {
+  const { view, drawn, paint } = loadView();
+  view.list(...table({ 69: 200, 71: -200 })); // A and B swapped
+  paint();
+  const [, redStem] = filled(drawn, RED);
+  const [, blueStem] = filled(drawn, BLUE);
+  assert.deepEqual(redStem, [138, 112, 2, 4]); // up from A's pixel to B's row
+  assert.deepEqual(blueStem, [142, 114, 2, 4]); // down from B's pixel to A's row
+});
+
+test("0.1 cent sharp turns the pixel red with no stem; 0.05 cents stays white", () => {
+  const { view, drawn, paint } = loadView();
+  view.list(...table({ 60: 0.1, 62: 0.05, 64: -0.05 }));
+  paint();
+  assert.deepEqual(filled(drawn, RED), [[120, 134, 2, 2]]);
+  assert.equal(filled(drawn, BLUE).length, 0);
+  assert.equal(filled(drawn, WHITE).length, 127);
+});
+
+test("each size gives 1 to 4 pixels per note, and other sizes snap to the nearest", () => {
+  const { view, drawn, paint } = loadView();
+  for (const [sent, perNote] of [
+    [128, 1],
+    [256, 2],
+    ["384", 3], // the Debug tab sends its text
+    [512, 4],
+    [300, 2],
+    [330, 3],
+    [10, 1],
+    [2000, 4],
+  ]) {
+    view.size(sent);
+    paint();
+    assert.deepEqual(filled(drawn, WHITE)[127], [127 * perNote, 0, perNote, perNote], `size ${sent}`);
+    assert.deepEqual(drawn.fills[0].rect, [0, 0, 128 * perNote, 128 * perNote], `size ${sent}: background`);
+  }
+});
+
+test("a new size redraws the view and resizes its box from the same corner", () => {
+  const { view, drawn } = loadView();
+  view.size(384);
+  assert.equal(drawn.redraws, 1);
+  assert.deepEqual(Array.from(view.box.attributes.presentation_rect), [648, 12, 384, 384]);
+  assert.deepEqual(Array.from(view.box.rect), [640, 64, 1024, 448]);
+  view.size(400); // snaps to 384 again: nothing to do
+  assert.equal(drawn.redraws, 1);
+  view.size("big");
+  assert.equal(drawn.redraws, 1);
+});
+
+test("the header is hidden by default and shows the summary when turned on", () => {
+  const { view, drawn, paint } = loadView();
+  paint();
+  assert.deepEqual(drawn.text, []);
+  assert.deepEqual(filled(drawn, WHITE)[127], [254, 0, 2, 2]);
+
+  view.summary(1);
+  assert.equal(drawn.redraws, 1);
+  assert.deepEqual(Array.from(view.box.attributes.presentation_rect), [648, 12, 256, 274]); // room for the header
+  paint();
+  assert.deepEqual(drawn.text, ["Every key at concert pitch"]);
+  assert.deepEqual(filled(drawn, WHITE)[127], [254, 18, 2, 2]); // the square sits under it
+
+  view.list(...table({ 60: 300 }));
+  paint();
+  assert.deepEqual(drawn.text, ["1 key drifted"]);
+  view.list(...table({ 60: 300, 62: -0.1, 64: 0.05 }));
+  paint();
+  assert.deepEqual(drawn.text, ["2 keys drifted"]);
+
+  view.summary(0);
+  paint();
+  assert.deepEqual(drawn.text, []);
+  assert.deepEqual(Array.from(view.box.attributes.presentation_rect), [648, 12, 256, 256]);
+});
+
+test("a stem stops at the edge of the square, clear of the header", () => {
+  const { view, drawn, paint } = loadView();
+  view.summary(1);
+  view.list(...table({ 125: 1200, 2: -1200 }));
+  paint();
+  assert.deepEqual(filled(drawn, RED)[1], [250, 18, 2, 4]); // up to the top, not 12 notes
+  assert.deepEqual(filled(drawn, BLUE)[1], [4, 270, 2, 4]); // down to the bottom
 });
 
 test("a list that is not 128 values is ignored", () => {
@@ -119,141 +179,7 @@ test("a list that is not 128 values is ignored", () => {
   view.list(1, 2, 3);
   assert.equal(drawn.redraws, 0);
   paint();
-  assert.equal(drawn.text[0], "Every key at concert pitch");
-});
-
-test("hovering a key shows its drift until the mouse leaves", () => {
-  const { view, drawn, paint } = loadView(750, 200);
-  view.list(...table({ 60: 100 }));
-  const keys = view.keyLayout(750);
-  view.onidle(keys[60].x + 2, 190);
-  paint();
-  assert.equal(drawn.text[0], "C3   +100.0 cents   (plays near C#3)");
-  view.onidle(keys[60].x + 2, 190); // same key, no extra redraw
-  assert.equal(drawn.redraws, 2);
-  view.onidleout();
-  paint();
-  assert.match(drawn.text[0], /^1 key has drifted/);
-});
-
-// ---- Picture mode ----
-
-const same = (a, b) => a.every((v, i) => Math.abs(v - b[i]) < 1e-9);
-
-test("the landscape has a colour for every square", () => {
-  const { view } = loadView();
-  for (let square = 0; square < 128; square++) {
-    const colour = view.squareColour(square);
-    assert.ok(Array.isArray(colour) && colour.length === 3, `square ${square}`);
-  }
-  assert.deepEqual(Array.from(view.squareColour(0)), [0.24, 0.44, 0.78]); // sky, top left
-  assert.deepEqual(Array.from(view.squareColour(127)), [0.42, 0.28, 0.15]); // tree trunk, bottom right
-});
-
-test("at concert pitch every slot shows its own square", () => {
-  const { view } = loadView();
-  for (let slot = 0; slot < 128; slot++) {
-    assert.deepEqual({ ...view.slotSquares(slot, 0) }, { from: slot, to: slot, t: 0 });
-  }
-  assert.deepEqual({ ...view.slotSquares(40, 0.3) }, { from: 40, to: 40, t: 0 }); // too small to show
-});
-
-test("whole note drift shows another square: Swap trades, Move shifts", () => {
-  const { view } = loadView();
-  // Swap 69 and 71: each slot shows the other's square.
-  assert.deepEqual({ ...view.slotSquares(69, 200) }, { from: 71, to: 71, t: 0 });
-  assert.deepEqual({ ...view.slotSquares(71, -200) }, { from: 69, to: 69, t: 0 });
-  // Move by one, and by one more after floating point drift.
-  assert.deepEqual({ ...view.slotSquares(60, 100) }, { from: 61, to: 61, t: 0 });
-  assert.deepEqual({ ...view.slotSquares(60, 199.99) }, { from: 62, to: 62, t: 0 });
-});
-
-test("drift between notes blends the two nearest squares", () => {
-  const { view } = loadView();
-  const squares = view.slotSquares(16, 25);
-  assert.equal(squares.from, 16);
-  assert.equal(squares.to, 17);
-  assert.ok(Math.abs(squares.t - 0.25) < 1e-9);
-  const flat = view.slotSquares(16, -30);
-  assert.equal(flat.from, 15);
-  assert.equal(flat.to, 16);
-  assert.ok(Math.abs(flat.t - 0.7) < 1e-9);
-  // Square 35 is low sky and 36 is cloud, so half a semitone sharp is halfway between.
-  const half = view.slotColour(35, 50);
-  assert.ok(same(half, view.mix(view.squareColour(35), view.squareColour(36), 0.5)));
-  assert.ok(!same(half, view.squareColour(35)) && !same(half, view.squareColour(36)));
-});
-
-test("pitches past either end show the end square", () => {
-  const { view } = loadView();
-  assert.deepEqual({ ...view.slotSquares(2, -5000) }, { from: 0, to: 0, t: 0 });
-  assert.deepEqual({ ...view.slotSquares(125, 1200) }, { from: 127, to: 127, t: 0 });
-});
-
-test("the picture is centred under the header and slots are found by position", () => {
-  const { view } = loadView();
-  const layout = view.pictureLayout(960, 200);
-  assert.equal(layout.square, 21);
-  assert.equal(layout.x, (960 - 21 * 16) / 2);
-  assert.ok(layout.y >= 22 && layout.y + 21 * 8 <= 200);
-  assert.equal(view.slotAt(layout, layout.x, layout.y), 0);
-  assert.equal(view.slotAt(layout, layout.x + 21 * 15 + 1, layout.y + 21 * 7 + 1), 127);
-  assert.equal(view.slotAt(layout, layout.x + 21 * 3 + 5, layout.y + 21 + 5), 19);
-  assert.equal(view.slotAt(layout, layout.x - 1, layout.y), -1);
-  assert.equal(view.slotAt(layout, layout.x, layout.y + 21 * 8), -1);
-});
-
-function clickButton(view, name) {
-  const button = view.buttonLayout(960).find((b) => b.name === name);
-  view.onclick(button.x + 5, 10);
-}
-
-test("the switch toggles between keys and picture", () => {
-  const { view, drawn, paint } = loadView();
-  paint();
-  assert.ok(drawn.text.includes("Keys") && drawn.text.includes("Picture"));
-  assert.ok(drawn.text.includes("C3")); // keyboard labels
-
-  clickButton(view, "picture");
-  assert.equal(drawn.redraws, 1);
-  paint();
-  assert.ok(!drawn.text.includes("C3"));
-  const layout = view.pictureLayout(960, 200);
-  const squares = drawn.fills.filter((f) => f.rect[2] === layout.square && f.rect[3] === layout.square);
-  assert.equal(squares.length, 128);
-  assert.deepEqual(squares[0].colour, Array.from(view.squareColour(0)));
-
-  clickButton(view, "picture"); // already on, nothing to do
-  assert.equal(drawn.redraws, 1);
-  clickButton(view, "keys");
-  paint();
-  assert.ok(drawn.text.includes("C3"));
-});
-
-test("a swap trades two squares in the drawn picture", () => {
-  const { view, drawn, paint } = loadView();
-  clickButton(view, "picture");
-  view.list(...table({ 29: 200, 31: -200 })); // a sun square and a sky square trade places
-  paint();
-  const layout = view.pictureLayout(960, 200);
-  const squares = drawn.fills.filter((f) => f.rect[2] === layout.square && f.rect[3] === layout.square);
-  assert.deepEqual(squares[29].colour, Array.from(view.squareColour(31)));
-  assert.deepEqual(squares[31].colour, Array.from(view.squareColour(29)));
-  assert.notDeepEqual(squares[29].colour, Array.from(view.squareColour(29)));
-  assert.deepEqual(squares[30].colour, Array.from(view.squareColour(30)));
-});
-
-test("hovering a square in picture mode describes its key", () => {
-  const { view, drawn, paint } = loadView();
-  clickButton(view, "picture");
-  view.list(...table({ 60: 100 }));
-  const layout = view.pictureLayout(960, 200);
-  view.onidle(layout.x + (60 % 16) * layout.square + 2, layout.y + Math.floor(60 / 16) * layout.square + 2);
-  paint();
-  assert.equal(drawn.text[0], "C3   +100.0 cents   (plays near C#3)");
-  view.onidle(layout.x - 10, layout.y);
-  paint();
-  assert.match(drawn.text[0], /^1 key has drifted/);
+  assert.equal(filled(drawn, WHITE).length, 128);
 });
 
 // Max 8's js and jsui run ES5, so later syntax would only fail inside Live.

@@ -703,7 +703,13 @@ function sync() {
   sendHowItWorks();
 }
 
-if (this.patcher) sync();
+// Max makes the outlets only after this script has run, so inside Max the sync waits for
+// the scheduler; sending now logs "bad outlet index". The tests have no Task, so they sync
+// straight away.
+if (this.patcher) {
+  if (typeof Task === "undefined") sync();
+  else new Task(sync, this).schedule(0);
+}
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {

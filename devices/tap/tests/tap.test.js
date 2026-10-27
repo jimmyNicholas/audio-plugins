@@ -1415,6 +1415,23 @@ test("a panel reset clears the drift view", () => {
   assert.equal(drift.at(-1)[60], 0);
 });
 
+test("inside Max the load-time sync waits for the scheduler, once the outlets exist", () => {
+  const tasks = [];
+  const sent = [];
+  const max = {
+    Task: function (fn, owner) {
+      this.schedule = () => tasks.push(() => fn.call(owner));
+    },
+    outlet: (index) => sent.push(index),
+    patcher: { getnamed: () => null },
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../tap.js"), "utf8"), max);
+  assert.deepEqual(sent, []); // nothing while the script loads
+  assert.equal(tasks.length, 1);
+  tasks[0]();
+  assert.deepEqual([...new Set(sent)].sort(), [1, 2, 3]);
+});
+
 test("on load the device sends the Mod label and How it works", () => {
   const { labels, how } = loadInMax({ mode: MOVE, mod: 2 });
   assert.deepEqual(labels.at(-1), ["set", "+2.00 semitones each release"]);
@@ -1569,16 +1586,33 @@ test("the panel window is about 920 by 320 and opens in presentation mode", () =
   assert.equal(panelBox.patcher.boxes.find((b) => b.box.maxclass === "jsui"), undefined); // filled in ticket 15
 });
 
-test("each window copy is the same object as its strip control, with its parameter off", () => {
+// A live.* object with its parameter off showed blank and passed nothing on in Live 11's
+// Max 8.1, so the window uses plain Max objects, which are never Live parameters.
+test("the window has no live.* objects", () => {
+  const { panel } = loadPatch();
+  for (const box of panel) assert.ok(!box.maxclass.startsWith("live."), `${box.varname || box.id} is a ${box.maxclass}`);
+});
+
+test("each window copy is a plain Max control with its strip control's range and names", () => {
   const { strip, panel } = loadPatch();
+  const expected = {
+    mode: { maxclass: "tab", tabs: ["Swap", "Gravity", "Move"] },
+    output: { maxclass: "tab", tabs: ["MPE", "Semitone"] },
+    mod: { maxclass: "flonum", minimum: -12, maximum: 12, numdecimalplaces: 2 },
+    range: { maxclass: "flonum", minimum: 0, maximum: 24, numdecimalplaces: 2 },
+    chance: { maxclass: "number", minimum: 0, maximum: 100 },
+    lowest: { maxclass: "number", minimum: 0, maximum: 127, format: 4 }, // note names, middle C is C3
+    highest: { maxclass: "number", minimum: 0, maximum: 127, format: 4 },
+    reset: { maxclass: "button" },
+  };
   for (const name of CONTROLS) {
-    const control = strip.find((box) => box.varname === name);
+    assert.equal(strip.find((box) => box.varname === name).parameter_enable, 1, `${name} on the strip is a parameter`);
     const copy = panel.find((box) => box.varname === `window-${name}`);
     assert.ok(copy, `no window copy of ${name}`);
-    assert.equal(copy.maxclass, control.maxclass, name);
-    assert.equal(control.parameter_enable, 1, `${name} on the strip is a parameter`);
-    assert.equal(copy.parameter_enable, 0, `${name} in the window is not a parameter`);
     assert.equal(copy.presentation, 1, name);
+    for (const [attribute, value] of Object.entries(expected[name])) {
+      assert.deepEqual(copy[attribute], value, `${name}: ${attribute}`);
+    }
   }
 });
 
@@ -1624,9 +1658,7 @@ test("the js sends the Mod label and How it works to comments in the window", ()
 test("the Debug toggle resizes the window, and Gravity tuning reaches the js", () => {
   const { strip, panel, into } = loadPatch();
   const debug = panel.find((box) => box.varname === "window-debug");
-  assert.equal(debug.maxclass, "live.text");
-  assert.equal(debug.mode, 1); // a toggle
-  assert.equal(debug.parameter_enable, 0);
+  assert.equal(debug.maxclass, "toggle");
   const sel = into(debug).find((box) => box.text === "sel 0 1");
   const sizes = [into(sel, 0), into(sel, 1)].map((boxes) => boxes.find((b) => b.maxclass === "message"));
   assert.match(sizes[0].text, /^window size \d+ \d+ \d+ \d+, window exec$/);
@@ -1644,14 +1676,12 @@ test("the Debug toggle resizes the window, and Gravity tuning reaches the js", (
     ["window-doubling", "gravityPerDoubling"],
   ]) {
     const control = panel.find((box) => box.varname === name);
-    assert.equal(control.parameter_enable, 0, name);
+    assert.equal(control.maxclass, "flonum", name);
     const prepend = into(control).find((box) => box.text === `prepend ${message}`);
     assert.ok(prepend && into(prepend).includes(js), `${name} does not reach the js`);
   }
-  for (const name of ["window-size", "window-summary"]) {
-    const control = panel.find((box) => box.varname === name);
-    assert.equal(control.parameter_enable, 0, name);
-  }
+  assert.deepEqual(panel.find((box) => box.varname === "window-size").tabs, ["128", "256", "384", "512"]);
+  assert.deepEqual(panel.find((box) => box.varname === "window-summary").tabs, ["Off", "On"]);
 });
 
 test("the debug controls sit below the window's normal height, so closing Debug hides them", () => {

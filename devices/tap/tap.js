@@ -76,7 +76,8 @@ function dataLength(status) {
 // The pitch table and the modes. Each key's pitch is stored in semitones from MIDI
 // note 0, so concert pitch is the note number itself. onChange, if given, is called once
 // after each change to the table: a release, a pedal lift with releases waiting, a reset.
-// random, if given, stands in for Math.random, so the tests can fix Effect Range's picks.
+// random, if given, stands in for Math.random, so the tests can fix Chance's rolls and
+// Effect Range's picks.
 function createEngine(onChange, random) {
   random = random || Math.random;
   var pitches = [];
@@ -86,6 +87,7 @@ function createEngine(onChange, random) {
   var mode = SWAP;
   var mod = 1;
   var range = 0; // Effect Range: the width of the span each release's Mod is picked from
+  var chance = 100; // the percentage of releases that fire
   var lowest = 0;
   var highest = NUM_NOTES - 1;
 
@@ -153,6 +155,17 @@ function createEngine(onChange, random) {
     return clamp(mod + (random() - 0.5) * range, -MAX_MOD, MAX_MOD);
   }
 
+  // Whether this release fires. At 100% and 0% there is nothing to roll, so random is not
+  // called.
+  function fires() {
+    if (chance === 100) return true;
+    if (chance === 0) return false;
+    return random() < chance / 100;
+  }
+
+  // A release that misses still joins Swap's list and becomes Gravity's last key; only
+  // the mode's rule is skipped. It is rolled before Effect Range picks, so a miss picks
+  // nothing.
   function apply(current) {
     // As in useKeyboard.ts: on the very first release the last key is the current key.
     var last = releases.length > 0 ? releases[releases.length - 1] : current;
@@ -160,6 +173,7 @@ function createEngine(onChange, random) {
       releases.push(current);
       if (releases.length > MAX_RELEASES) releases.shift();
     }
+    if (!fires()) return;
     var amount = releaseMod();
     if (mode === MOVE) pitches[current] = bound(pitches[current] + amount);
     else if (last !== current && mode === GRAVITY) gravity(last, current, amount);
@@ -206,6 +220,9 @@ function createEngine(onChange, random) {
     setRange: function (value) {
       if (isNumber(value)) range = clamp(value, 0, 2 * MAX_MOD);
     },
+    setChance: function (value) {
+      if (isNumber(value)) chance = clamp(Math.round(value), 0, 100);
+    },
     setLowest: function (value) {
       if (isNumber(value)) lowest = clamp(Math.round(value), 0, NUM_NOTES - 1);
     },
@@ -220,6 +237,9 @@ function createEngine(onChange, random) {
     },
     range: function () {
       return range;
+    },
+    chance: function () {
+      return chance;
     },
     lowest: function () {
       return lowest;
@@ -520,6 +540,7 @@ function createTap(send, onDrift) {
     setMode: engine.setMode,
     setMod: engine.setMod,
     setRange: engine.setRange,
+    setChance: engine.setChance,
     setLowest: engine.setLowest,
     setHighest: engine.setHighest,
     reset: engine.reset,
@@ -554,6 +575,10 @@ function range(value) {
   tap.setRange(value);
 }
 
+function chance(value) {
+  tap.setChance(value);
+}
+
 function lowest(value) {
   tap.setLowest(value);
 }
@@ -579,6 +604,7 @@ function sync() {
     ["mode", mode],
     ["mod", mod],
     ["range", range],
+    ["chance", chance],
     ["lowest", lowest],
     ["highest", highest],
     ["output", output],

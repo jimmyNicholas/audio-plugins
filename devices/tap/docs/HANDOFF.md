@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-26 (tickets 11 and 12 built, not yet tested in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
+Last updated 2026-10-27 (tickets 11 to 13 built, not yet tested in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
 
 ## Goal
 
@@ -21,7 +21,7 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 | 08 to 10 Rotate, Wander, Harmony | **Paused** (2026-10-25). Rotate becomes part of Swap in ticket 11. |
 | 11 Back to the core three | **Built, not yet tested in Live.** `npm test` passes. Replaces 06 and 07 in Live testing. |
 | 12 Random range | **Built, not yet tested in Live.** `npm test` passes. Replaces 09. Test after 11. |
-| 13 Chance | **Grilled.** Rewritten as a build ticket. Build after 12. |
+| 13 Chance | **Built, not yet tested in Live.** `npm test` passes. Test after 12. |
 | 14 Panel window | **Grilled.** Rewritten as a build ticket. Build after 13. [Mock-up](https://claude.ai/artifact/EopL6dHcj3qczfJ9DH9Azs). |
 | 15 Square visualiser | **Grilled.** Rewritten as a build ticket: a pitch map that replaces Keys and Picture. Build after 14. |
 | 16 to 18 | **Parked.** Double slider for the bounds; floor at the same note name; other views. |
@@ -200,6 +200,19 @@ The patch changed, so drag the device in again. Steps 1 to 8 of the prototype in
 
 The patch changed, so drag the device in again. Steps 1 to 8 of the prototype in [`tickets/12-grill-move-random-range.md`](tickets/12-grill-move-random-range.md). Also check the dial reads **Range** and fits beside Mod, with Lowest and Highest still readable to its right; the layout has not been seen in Max yet.
 
+## Ticket 13: what was built
+
+- `tap.js`:
+  - `chance`: 0 to 100, rounded, default 100, with `setChance`, `chance()`, a Max handler `chance` and a `sync` entry. Setting it changes no pitch and does not update the drift view.
+  - `fires()`: once per release, `random() < chance / 100`. At 100 and 0 it does not call `random`, so the device works as before at 100.
+  - In `apply`, the release is recorded first (Swap's list, Gravity's last key), then Chance is rolled. A miss skips the mode's rule and picks no Effect Range number; the drift view is still sent. Queued pedal releases each roll when the pedal lifts, in order.
+- `TAP.maxpat` and `TAP.amxd`: a `live.dial` **Chance** beside Effect Range, 0 to 100, initial 100, 101 steps, Percent unit style, through `prepend chance` into the `js`. Lowest and Highest moved right again to make room; ticket 14 lays the strip out properly.
+- Tests: Chance 100 matches the old pitches in all three modes and Chance 0 changes nothing, neither calling `random`; 0.29 fires and 0.3 misses at 30; a miss joins Swap's list and becomes Gravity's last key; a miss picks no Effect Range number; the pedal; the view after a miss; the setting's limits; the Max glue; the patch wiring.
+
+## Testing ticket 13 in Live
+
+The patch changed, so drag the device in again. Steps 1 to 9 of the prototype in [`tickets/13-grill-chance.md`](tickets/13-grill-chance.md). Also check the dial reads **Chance** and fits beside Effect Range, with Lowest and Highest still readable to its right; the layout has not been seen in Max yet.
+
 ## Why not the VST
 
 Ableton merges all MIDI channels into one when MIDI goes from track to track, so the VST's per-note bends never reached Wavetable (VST ticket 02). The VST in `plugin/` is parked; ask the user before deleting it. History: [`../vst/HANDOFF.md`](../vst/HANDOFF.md).
@@ -241,7 +254,7 @@ Once a ticket is grilled, rewrite it as a build ticket with Tasks, Prototype and
 
 ## Next steps
 
-1. Build tickets 11, 12, 13, 14 and 15, in that order, each tested in Live before the next.
+1. Test tickets 11, 12 and 13 in Live, then build 14 and 15, in that order.
 2. Whether tickets 06 and 07 still need testing in Live depends on ticket 11.
 3. Later: save the pitch table with the set.
 

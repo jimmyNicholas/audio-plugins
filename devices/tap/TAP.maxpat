@@ -279,6 +279,48 @@
       },
       {
         "box": {
+          "id": "obj-35",
+          "maxclass": "live.dial",
+          "varname": "chance",
+          "numinlets": 1,
+          "numoutlets": 2,
+          "outlettype": [
+            "",
+            "float"
+          ],
+          "parameter_enable": 1,
+          "patching_rect": [
+            736,
+            64,
+            44,
+            48
+          ],
+          "presentation": 1,
+          "presentation_rect": [
+            108,
+            48,
+            44,
+            48
+          ],
+          "saved_attribute_attributes": {
+            "valueof": {
+              "parameter_longname": "Chance",
+              "parameter_shortname": "Chance",
+              "parameter_type": 0,
+              "parameter_mmin": 0.0,
+              "parameter_mmax": 100.0,
+              "parameter_initial": [
+                100.0
+              ],
+              "parameter_initial_enable": 1,
+              "parameter_steps": 101,
+              "parameter_unitstyle": 5
+            }
+          }
+        }
+      },
+      {
+        "box": {
           "id": "obj-32",
           "maxclass": "comment",
           "numinlets": 1,
@@ -292,7 +334,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            108,
+            160,
             46,
             44,
             18
@@ -320,7 +362,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            108,
+            160,
             62,
             44,
             15
@@ -356,7 +398,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            108,
+            160,
             78,
             44,
             18
@@ -384,7 +426,7 @@
           ],
           "presentation": 1,
           "presentation_rect": [
-            108,
+            160,
             94,
             44,
             15
@@ -439,6 +481,24 @@
             20
           ],
           "text": "prepend range"
+        }
+      },
+      {
+        "box": {
+          "id": "obj-49",
+          "maxclass": "newobj",
+          "numinlets": 1,
+          "numoutlets": 1,
+          "outlettype": [
+            ""
+          ],
+          "patching_rect": [
+            736,
+            184,
+            88,
+            20
+          ],
+          "text": "prepend chance"
         }
       },
       {
@@ -1130,6 +1190,30 @@
             0
           ]
         }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-49",
+            0
+          ],
+          "source": [
+            "obj-35",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "destination": [
+            "obj-2",
+            0
+          ],
+          "source": [
+            "obj-49",
+            0
+          ]
+        }
       }
     ],
     "parameters": {
@@ -1166,6 +1250,11 @@
       "obj-34": [
         "Effect Range",
         "Range",
+        0
+      ],
+      "obj-35": [
+        "Chance",
+        "Chance",
         0
       ],
       "inherited_shortname": 1

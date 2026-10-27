@@ -1,6 +1,6 @@
 # 13: Chance
 
-**Status:** grilled 2026-10-26. Build after ticket 12, once tickets 14 and 15 are grilled.
+**Status:** built 2026-10-27. `npm test` passes. Not yet tested in Live.
 
 **Goal:** a Chance knob that sets how likely each release is to fire. At 30%, about three releases in ten change pitch fully and the rest change nothing. The user's idea was a dry / wet "chance to fire" for a mode.
 

@@ -670,6 +670,111 @@ test("setting Effect Range changes no pitch and does not tell the view", () => {
   assert.equal(changes, 0);
 });
 
+// ---- Engine: Chance (ticket 13) ----
+
+function chanced(mode, mod, chance, random, keys) {
+  return released(mode, mod, keys, (engine) => engine.setChance(chance), random);
+}
+
+test("Chance defaults to 100", () => {
+  assert.equal(createEngine().chance(), 100);
+});
+
+test("Chance 100 gives the same pitches as before and never calls the random function", () => {
+  const keys = [60, 64, 67, 60, 72, 64];
+  for (const mode of [SWAP, GRAVITY, MOVE]) {
+    for (const mod of [-3, 1, 2.5]) {
+      const before = released(mode, mod, keys);
+      const after = chanced(mode, mod, 100, NEVER, keys);
+      assert.deepEqual(pitchesOf(after, keys), pitchesOf(before, keys), `mode ${mode}, Mod ${mod}`);
+    }
+  }
+});
+
+test("Chance 0 changes no pitch and never calls the random function", () => {
+  const keys = [60, 64, 67, 60, 72, 64];
+  for (const mode of [SWAP, GRAVITY, MOVE]) {
+    assert.deepEqual(pitchesOf(chanced(mode, 2, 0, NEVER, keys), keys), keys, `mode ${mode}`);
+  }
+});
+
+test("at Chance 30 a roll of 0.29 fires and 0.3 misses", () => {
+  assert.equal(chanced(MOVE, 1, 30, sequence(0.29), [60]).pitchForNote(60), 61);
+  assert.equal(chanced(MOVE, 1, 30, sequence(0.3), [60]).pitchForNote(60), 60);
+});
+
+test("a miss still joins Swap's list: C, E missed, then G swaps with E", () => {
+  const engine = chanced(SWAP, 1, 50, sequence(0, 0.9, 0), [C, E, G]);
+  assert.deepEqual(pitchesOf(engine, [C, E, G]), [C, G, E]);
+});
+
+test("a miss still becomes Gravity's last key, so the next release pulls it", () => {
+  // 57, then 69 (miss), then 81 pulls 69 toward 81.
+  const engine = chanced(GRAVITY, 4, 50, sequence(0, 0.9, 0), [57, 69, 81]);
+  assert.equal(engine.pitchForNote(57), 57);
+  near(hertzForPitch(engine.pitchForNote(69)), 440 + 440 * gravityShare(4), 1e-6);
+});
+
+test("Chance is rolled first, and a miss picks no Effect Range number", () => {
+  const setup = (engine) => {
+    engine.setChance(50);
+    engine.setRange(2);
+  };
+  const miss = sequence(0.9, 0.9);
+  assert.equal(released(MOVE, 0, [60], setup, miss).pitchForNote(60), 60);
+  assert.equal(miss.calls, 1);
+  // A hit rolls, then picks: 0.1 fires, 0 moves by -1.
+  const hit = sequence(0.1, 0);
+  assert.equal(released(MOVE, 0, [60], setup, hit).pitchForNote(60), 59);
+  assert.equal(hit.calls, 2);
+});
+
+test("the pedal rolls once per queued release, in order, when it lifts", () => {
+  const random = sequence(0, 0.9, 0);
+  const engine = chanced(MOVE, 1, 50, random, []);
+  engine.setPedal(true);
+  [60, 62, 64].forEach((key) => engine.noteReleased(key));
+  assert.equal(random.calls, 0);
+  engine.setPedal(false);
+  assert.equal(random.calls, 3);
+  assert.deepEqual(pitchesOf(engine, [60, 62, 64]), [61, 62, 65]);
+});
+
+test("the view is told after a miss", () => {
+  let changes = 0;
+  const engine = createEngine(() => changes++, sequence(0.9));
+  engine.setMode(MOVE);
+  engine.setChance(50);
+  changes = 0;
+  engine.noteReleased(60);
+  assert.equal(engine.pitchForNote(60), 60);
+  assert.equal(changes, 1);
+});
+
+test("Chance is kept from 0 to 100 in whole steps, and anything but a number is ignored", () => {
+  const engine = createEngine();
+  engine.setChance(-1);
+  assert.equal(engine.chance(), 0);
+  engine.setChance(130);
+  assert.equal(engine.chance(), 100);
+  engine.setChance(29.6);
+  assert.equal(engine.chance(), 30);
+  engine.setChance("bang");
+  engine.setChance(NaN);
+  assert.equal(engine.chance(), 30);
+});
+
+test("setting Chance changes no pitch and does not tell the view", () => {
+  let changes = 0;
+  const engine = createEngine(() => changes++);
+  engine.setMode(MOVE);
+  engine.noteReleased(60);
+  changes = 0;
+  engine.setChance(30);
+  assert.equal(engine.pitchForNote(60), 61);
+  assert.equal(changes, 0);
+});
+
 // ---- Router: MPE channels (from plugin/tests/MpeRouterTests.cpp and the spike tests) ----
 
 function routerSetup() {
@@ -1161,6 +1266,15 @@ test("on load the device reads Effect Range from the panel, and panel messages c
   assert.equal(drift.at(-1)[62], 0);
 });
 
+test("on load the device reads Chance from the panel, and panel messages change it", () => {
+  const { max, play, drift } = loadInMax({ mode: MOVE, chance: 0 });
+  play([0x90, 60, 100, 0x80, 60, 0]);
+  assert.equal(drift.at(-1)[60], 0);
+  max.chance(100);
+  play([0x90, 62, 100, 0x80, 62, 0]);
+  assert.equal(drift.at(-1)[62], 100);
+});
+
 test("on load the device reads Output from the panel, and panel messages change it", () => {
   const { max, play } = loadInMax({ output: SEMITONE });
   assert.deepEqual(play([0x90, 60, 100]), [[60, 100]]); // plain note on, no bend
@@ -1196,7 +1310,7 @@ test("each panel control is wired through its prepend into the js", () => {
   const boxes = patcher.boxes.map((b) => b.box);
   const byId = Object.fromEntries(boxes.map((box) => [box.id, box]));
   const into = (id) => patcher.lines.filter((l) => l.patchline.source[0] === id).map((l) => byId[l.patchline.destination[0]]);
-  for (const name of ["mode", "mod", "range", "lowest", "highest", "reset", "output"]) {
+  for (const name of ["mode", "mod", "range", "chance", "lowest", "highest", "reset", "output"]) {
     const control = boxes.find((box) => box.varname === name);
     assert.ok(control, `no control named ${name}`);
     const prepend = into(control.id).find((box) => box.text === `prepend ${name}`);
@@ -1276,6 +1390,7 @@ test("reset and a mode change tell the view; other settings do not", () => {
   tap.setMode(GRAVITY); // same mode again
   tap.setMod(2);
   tap.setRange(4);
+  tap.setChance(30);
   tap.setLowest(30);
   tap.setHighest(90);
   tap.setOutput(SEMITONE);

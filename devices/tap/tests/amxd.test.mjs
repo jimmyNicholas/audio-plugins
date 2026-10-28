@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { pack, unpack, readChunks } from "../tools/amxd.mjs";
+import { pack, unpack, readChunks } from "../../../tools/amxd.mjs";
 
 const patcher = JSON.stringify({ patcher: { fileversion: 1, boxes: [], lines: [] } }, null, 2) + "\n";
 

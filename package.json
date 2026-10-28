@@ -1,0 +1,9 @@
+{
+  "name": "audio-plugins",
+  "private": true,
+  "description": "Max for Live devices. No dependencies: `npm test` runs every device's tests and the tools' tests.",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test"
+  }
+}

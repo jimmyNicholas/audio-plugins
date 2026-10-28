@@ -1,6 +1,6 @@
 # Handoff: TAP as a Max for Live device
 
-Last updated 2026-10-27 (tickets 11 to 15 built, not yet tested in Live). The work is merged to `main` ([#58](https://github.com/jimmyNicholas/next-annoying-piano/pull/58)). Tickets 01 to 05.2 were built on `claude/codebase-vst-ableton-puxbqz`. Tickets 06 to 10 are on `claude/gifted-goldberg-1g5nfb`, branched from `main`.
+Last updated 2026-10-28 (moved to this repo; tickets 11 to 15 built, not yet tested in Live). Until 2026-10-28 TAP was built in [next-annoying-piano](https://github.com/jimmyNicholas/next-annoying-piano), where tickets 01 to 15 were merged to `main` (last: [#67](https://github.com/jimmyNicholas/next-annoying-piano/pull/67)). PR links in this file point there. Old paths in the tickets map as: `m4l/` is now `devices/tap/`, `m4l/tools/` is `tools/` and `docs/m4l/` is `devices/tap/docs/`.
 
 ## Goal
 
@@ -28,7 +28,7 @@ Turn The Annoying Piano web app into a Max for Live MIDI effect that retunes not
 
 ## Ticket 01 results (2026-10-11)
 
-Tested by the user with Cursor's help ([`m4l/spike/CURSOR.md`](../../m4l/spike/CURSOR.md)). Live 11.0.10, bundled Max 8.1.11, Node 20.12.2.
+Tested by the user with Cursor's help ([`spike/CURSOR.md`](../spike/CURSOR.md)). Live 11.0.10, bundled Max 8.1.11, Node 20.12.2.
 
 | Check | Result |
 | --- | --- |
@@ -258,12 +258,12 @@ The patch changed, so drag the device in again. Steps 1 to 9 of the prototype in
 
 ## Why not the VST
 
-Ableton merges all MIDI channels into one when MIDI goes from track to track, so the VST's per-note bends never reached Wavetable (VST ticket 02). The VST in `plugin/` is parked; ask the user before deleting it. History: [`../vst/HANDOFF.md`](../vst/HANDOFF.md).
+Ableton merges all MIDI channels into one when MIDI goes from track to track, so the VST's per-note bends never reached Wavetable (VST ticket 02). The VST was left behind in next-annoying-piano when TAP moved to this repo. History: [`docs/vst/HANDOFF.md`](https://github.com/jimmyNicholas/next-annoying-piano/blob/0a32ae3c66791c799293ea429a45cd05134a4cf1/docs/vst/HANDOFF.md) in next-annoying-piano.
 
 ## The user's setup
 
 - Ableton Live 11 Suite on an Intel Mac, macOS 13.7.8. Live 11 bundles Max 8.
-- Uses Cursor locally. Loads the device straight from `m4l/` in the local checkout (added to Live's Places), and runs `npm test --prefix m4l`.
+- Uses Cursor locally. Loads the device straight from `devices/tap/` in the local checkout (added to Live's Places), and runs `npm test`.
 - Tests with Wavetable. Operator does not support MPE.
 
 ## Decisions (do not reopen without the user)

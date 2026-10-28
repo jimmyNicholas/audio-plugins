@@ -3,10 +3,10 @@
 // An .amxd is a series of chunks: a 4-byte ASCII tag, a 4-byte little-endian length, then
 // the data. "ampf" holds the device type, "meta" four bytes we keep at zero, and "ptch" the
 // patcher JSON followed by a NUL byte. Format read from Ableton's maxdevtools
-// (maxdiff/amxd_textconv.py); see docs/m4l/RESEARCH.md.
+// (maxdiff/amxd_textconv.py); see devices/tap/docs/RESEARCH.md.
 //
-//   node m4l/tools/amxd.mjs pack <in.maxpat> <out.amxd>
-//   node m4l/tools/amxd.mjs unpack <in.amxd> <out.maxpat>
+//   node tools/amxd.mjs pack <in.maxpat> <out.amxd>
+//   node tools/amxd.mjs unpack <in.amxd> <out.maxpat>
 
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";

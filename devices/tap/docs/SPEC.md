@@ -1,6 +1,6 @@
 # Spec: The Annoying Piano as a Max for Live device
 
-Replaces the VST plan in [`../vst/SPEC.md`](../vst/SPEC.md). Research behind this plan: [`RESEARCH.md`](RESEARCH.md).
+Replaces the VST plan in [`docs/vst/SPEC.md`](https://github.com/jimmyNicholas/next-annoying-piano/blob/0a32ae3c66791c799293ea429a45cd05134a4cf1/docs/vst/SPEC.md) in next-annoying-piano. Research behind this plan: [`RESEARCH.md`](RESEARCH.md).
 
 ## Goal
 
@@ -74,24 +74,26 @@ For Gravity and Repel, Mod is the web app's strength: from 1 to 10 the share of 
 ## Folder layout
 
 ```
-m4l/
+devices/tap/
   TAP.amxd           generated device, loaded in Live from here
   TAP.maxpat         patch source
   tap.js             engine plus Max glue, ES5
   drift-view.js      jsui for the drift view window, ES5
   package.json       `npm test` and `npm run build`, no dependencies
   tests/             node --test files
-  tools/amxd.mjs     pack .maxpat into .amxd, and unpack
   spike/             ticket 01's throwaway device
-docs/m4l/            spec, tickets, research, handoff
+  docs/              spec, tickets, research, handoff
+tools/amxd.mjs       pack .maxpat into .amxd, and unpack (shared by every device)
 ```
+
+Until 2026-10-28 TAP lived in next-annoying-piano, so the tickets name the old paths: `m4l/` is now `devices/tap/`, `m4l/tools/` is `tools/` and `docs/m4l/` is `devices/tap/docs/`.
 
 ## Development loop
 
-1. Once: in Live's browser, Places > Add Folder, and choose `m4l/` in your local checkout. ("Patch supports MPE" is already set inside the device.)
+1. Once: in Live's browser, Places > Add Folder, and choose `devices/tap/` in your local checkout. ("Patch supports MPE" is already set inside the device.)
 2. Drag the device from Places onto a MIDI track before Wavetable.
 3. After each ticket, `git pull` in Cursor. Because `tap.js` uses `autowatch`, a running device reloads its logic on its own. If the ticket changes the patch, it says so, and you drag the device in again.
-4. `npm test --prefix m4l` (from the repo root) runs the engine tests in a second. It installs nothing; Node 18 or later is enough.
+4. `npm test` (from the repo root) runs the engine tests in a second. It installs nothing; Node 18 or later is enough.
 
 ## Prototype rule
 
@@ -107,7 +109,7 @@ Every ticket ends in something you can try in Live. Each ticket is reviewed befo
 6. Engine in hand-written ES5, tested in Node.
 7. Note path in `js` unless ticket 01 shows the delay is noticeable.
 8. `.amxd` generated from the repo, with hand-built as the fallback.
-9. The VST in `plugin/` stays parked. Its macOS workflow runs only when started by hand.
+9. The VST stays parked, and was left behind in next-annoying-piano.
 
 ## Tickets
 

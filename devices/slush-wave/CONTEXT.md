@@ -1,6 +1,16 @@
 # Slush Wave
 
-A Max for Live audio effect that gives a track the slushwave sound. This glossary covers the words the spec, the panel and the tickets share.
+A family of Max for Live stage devices and an Audio Effect Rack preset that give a track the slushwave sound. This glossary covers the words the spec, the panels and the tickets share.
+
+## The family
+
+**Slush Wave**:
+The whole family: the Slush devices plus the `Slush Wave` rack preset that builds the default paths from them and stock Live devices.
+_Avoid_: The plugin, the device (there is no single device)
+
+**Slush device**:
+One of the family's own Max for Live stage devices, named with the `Slush` prefix, such as Slush Phaser. Built only for stages Live's stock devices cannot do.
+_Avoid_: Plugin, module
 
 ## Slowing
 
@@ -23,6 +33,13 @@ _Avoid_: Bass channel, mid
 **Sides path**:
 The copy of the input that carries the wet sound, its left and right sides run through the same stages, except the phaser, which sweeps the opposite way on each side.
 _Avoid_: Wet chain, side (as in mid/side)
+
+**Mix**:
+A path's output setting where its sound goes into the track's own output.
+
+**Send**:
+A path's output setting where its sound is silent in the track and picked up by another track, which processes or mixes it separately.
+_Avoid_: Return, aux (those are Live's send/return tracks)
 
 ## Stages
 

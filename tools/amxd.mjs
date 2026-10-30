@@ -74,8 +74,8 @@ export function unpack(buffer) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   let type = "midi";
-  const flag = args.indexOf("--type");
-  if (flag !== -1) type = args.splice(flag, 2)[1];
+  const typeAt = args.indexOf("--type");
+  if (typeAt !== -1) type = args.splice(typeAt, 2)[1];
   const [command, input, output] = args;
   if (command === "pack" && input && output && TYPES[type]) {
     fs.writeFileSync(output, pack(fs.readFileSync(input, "utf8"), TYPES[type]));

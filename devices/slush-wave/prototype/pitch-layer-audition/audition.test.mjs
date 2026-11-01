@@ -220,19 +220,31 @@ test("measured latencies are printed to the Max Console in the spec's format", (
       .filter((b) => b.maxclass === "message" && linesFrom(p, b.id, 0).some((l) => box(p, l.destination[0]).text === "print audition"))
       .map((b) => b.text);
   };
-  assert.ok(prints("doubles-pitchshift").includes("pitchshift doubles good latency $1 samples"));
+  assert.ok(prints("doubles-pitchshift").includes("pitchshift doubles $2 latency $1 samples"));
   assert.ok(prints("interval-pitchshift").includes("pitchshift interval $2 latency $1 samples"));
 });
 
-test("Quality reaches both interval pitchshift~ objects and remeasures", () => {
-  const { patcher: p } = subpatcher("interval-pitchshift");
-  for (const q of ["basic", "good", "better", "best"]) {
-    const msg = boxesOf(p).find((b) => b.text === `quality ${q}`);
-    assert.ok(msg, q);
-    const targets = linesFrom(p, msg.id, 0).map((l) => box(p, l.destination[0]).text);
-    assert.equal(targets.filter((t) => t.startsWith("pitchshift~")).length, 2, q);
+for (const name of ["doubles-pitchshift", "interval-pitchshift"]) {
+  test(`Quality reaches both ${name} pitchshift~ objects and remeasures`, () => {
+    const { patcher: p } = subpatcher(name);
+    one(p, "r ---i_quality");
+    for (const q of ["basic", "good", "better", "best"]) {
+      const msg = boxesOf(p).find((b) => b.text === `quality ${q}`);
+      assert.ok(msg, q);
+      const targets = linesFrom(p, msg.id, 0).map((l) => box(p, l.destination[0]).text);
+      assert.equal(targets.filter((t) => t.startsWith("pitchshift~")).length, 2, q);
+    }
+    assert.ok(boxesOf(p).filter((b) => b.text === "getlatency").length >= 2);
+  });
+}
+
+test("switching a version on measures latency again, once its fade-in starts", () => {
+  const delays = find(patcher, "delay 250");
+  assert.equal(delays.length, 4, "one fade-in delay per version");
+  for (const d of delays) {
+    const targets = linesFrom(patcher, d.id, 0).map((l) => box(patcher, l.destination[0]).text);
+    assert.ok(targets.includes("s ---measure"), "fade-in does not remeasure");
   }
-  assert.ok(boxesOf(p).filter((b) => b.text === "getlatency").length >= 2);
 });
 
 // ---- the delay line shifter ---------------------------------------------------------------

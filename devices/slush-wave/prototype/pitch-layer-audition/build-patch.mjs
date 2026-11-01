@@ -17,6 +17,8 @@ const DELAY_MAX = 16384; // delay~ buffer, samples
 const DELAY_LMAX = `delay~ ${DELAY_MAX} ${L_MAX}`;
 const LEVEL_MIN = -70; // the Level dials' minimum, treated as -inf (the layer is muted)
 const MUTE_BELOW = -69.9;
+// Control defaults that the logic also needs as starting values.
+const DEFAULT = { doublesLevel: -9, intervalLevel: -12, cents: 12, driftDepth: 3 };
 const DEVICE_WIDTH = 612;
 const DEVICE_HEIGHT = 169;
 
@@ -283,8 +285,8 @@ function monoSum(p, left, right) {
 function chooser(p, control, first, second) {
   const choose = p.obj("selector~ 2 1");
   p.connect(control, 0, choose, 0);
-  if (first) p.connect(first, 0, choose, 1);
-  if (second) p.connect(second, 0, choose, 2);
+  p.connect(first, 0, choose, 1);
+  p.connect(second, 0, choose, 2);
   return choose;
 }
 
@@ -370,9 +372,9 @@ function doublesDelayline(p) {
   const upShift = p.sub("dlshift", dlshift);
   p.at(520, 450);
   const downShift = p.sub("dlshift", dlshift);
-  for (const [shift, input, centsSig2] of [[upShift, upIn, upCents], [downShift, downIn, downCents]]) {
+  for (const [shift, input, shiftCents] of [[upShift, upIn, upCents], [downShift, downIn, downCents]]) {
     p.connect(input, 0, shift, 0);
-    p.connect(centsSig2, 0, shift, 1);
+    p.connect(shiftCents, 0, shift, 1);
     p.connect(windowMs, 0, shift, 2);
   }
 
@@ -387,11 +389,64 @@ function doublesDelayline(p) {
   p.connect(downDelay, 0, p.outlet(2, "right: down double", 640), 0);
 }
 
+const QUALITIES = ["basic", "good", "better", "best"];
+
+// The Quality menu, latency measuring, the Max Console line and the panel readout for a pair of
+// compensated pitchshift~ objects (from compensatedPitchshift with "t i i i" for the first and
+// "t i i" for the second). Quality sets both and measures now and again 250 ms later; so does
+// the ---measure send (on load, and whenever a version is switched on).
+function qualityAndLatency(p, x, layer, first, second, readoutName) {
+  const both = [first.ps, second.ps];
+  p.at(x, 60);
+  p.comment("Quality: set both pitchshift~ objects, then measure now and again 250 ms later.");
+  const quality = p.obj("r ---i_quality");
+  const order = p.obj("t b i");
+  const pick = p.obj("sel 0 1 2 3");
+  p.connect(quality, 0, order, 0);
+  p.connect(order, 1, pick, 0);
+  const name = p.obj("pack 0 s");
+  QUALITIES.forEach((q, i) => {
+    p.at(x + i * 90, 210);
+    const setQuality = p.msg(`quality ${q}`);
+    const remember = p.msg(`symbol ${q}`);
+    p.connect(pick, i, setQuality, 0);
+    p.connect(pick, i, remember, 0);
+    for (const ps of both) p.connect(setQuality, 0, ps, 0);
+    p.connect(remember, 0, name, 1);
+  });
+
+  p.at(x + 360, 60);
+  const measure = p.obj("r ---measure");
+  const now = p.obj("t b b");
+  const getlatency = p.msg("getlatency");
+  const later = p.obj("delay 250");
+  const getlatencyAgain = p.msg("getlatency");
+  p.connect(order, 0, now, 0);
+  p.connect(measure, 0, now, 0);
+  p.connect(now, 1, getlatency, 0);
+  p.connect(now, 0, later, 0);
+  p.connect(later, 0, getlatencyAgain, 0);
+  for (const ps of both) {
+    p.connect(getlatency, 0, ps, 0);
+    p.connect(getlatencyAgain, 0, ps, 0);
+  }
+
+  p.at(x + 180, 520);
+  const line = p.msg(`pitchshift ${layer} $2 latency $1 samples`);
+  const print = p.obj("print audition");
+  const readout = p.obj(`s ${readoutName}`);
+  p.connect(first.trigger, 1, name, 0);
+  p.connect(second.trigger, 0, name, 0);
+  p.connect(name, 0, line, 0);
+  p.connect(line, 0, print, 0);
+  p.connect(first.trigger, 0, readout, 0);
+}
+
 function doublesPitchshift(p) {
   const { upIn, downIn } = doublesInputs(p);
 
   p.at(260, 60);
-  p.comment("Doubles run pitchshift~ at a fixed quality: good. Drift steps the factor every 20 ms.");
+  p.comment("Drift steps the pitch factor every 20 ms.");
   const cents = p.obj("r ---d_cents");
   const rate = p.obj("r ---drift_rate");
   const amount = p.obj("r ---drift_amt");
@@ -401,7 +456,7 @@ function doublesPitchshift(p) {
     const drift = p.obj("*~ 0.");
     const snapshot = p.obj("snapshot~ 20");
     const changed = p.obj("change -999.");
-    const both = p.obj("pak 12. 0.");
+    const both = p.obj(`pak ${DEFAULT.cents}. 0.`);
     const ratio = p.obj(expr);
     const set = p.msg("pitchshift $1");
     p.connect(rate, 0, random, 0);
@@ -427,22 +482,7 @@ function doublesPitchshift(p) {
   p.connect(upFactor, 0, up.ps, 0);
   p.connect(downFactor, 0, down.ps, 0);
 
-  p.at(700, 420);
-  p.comment("Measure on load (after live.thisdevice).");
-  const measure = p.obj("r ---measure");
-  const getlatency = p.msg("getlatency");
-  p.connect(measure, 0, getlatency, 0);
-  p.connect(getlatency, 0, up.ps, 0);
-  p.connect(getlatency, 0, down.ps, 0);
-
-  const print = p.obj("print audition");
-  const readout = p.obj("s ---d_ps_lat");
-  for (const [shifter, outlet] of [[up, 1], [down, 0]]) {
-    const line = p.msg("pitchshift doubles good latency $1 samples");
-    p.connect(shifter.trigger, outlet, line, 0);
-    p.connect(line, 0, print, 0);
-  }
-  p.connect(up.trigger, 0, readout, 0);
+  qualityAndLatency(p, 800, "doubles", up, down, "---d_ps_lat");
 
   p.connect(up.delay, 0, p.outlet(1, "left: up double", 760), 0);
   p.connect(down.delay, 0, p.outlet(2, "right: down double", 760), 0);
@@ -464,7 +504,6 @@ function intervalOutputs(p, stereo, leftOut, rightOut, y) {
   p.connect(rightChoice, 0, p.outlet(2, "right", y), 0);
 }
 
-const QUALITIES = ["basic", "good", "better", "best"];
 
 function intervalPitchshift(p) {
   const { leftIn, right, stereo } = intervalInputs(p);
@@ -478,58 +517,15 @@ function intervalPitchshift(p) {
   p.connect(ratio, 0, set, 0);
 
   p.at(20, 420);
-  const left = compensatedPitchshift(p, leftIn, "t i i i");
+  const leftPs = compensatedPitchshift(p, leftIn, "t i i i");
   p.at(400, 420);
   const rightPs = compensatedPitchshift(p, right, "t i i");
-  for (const ps of [left.ps, rightPs.ps]) p.connect(set, 0, ps, 0);
+  for (const ps of [leftPs.ps, rightPs.ps]) p.connect(set, 0, ps, 0);
 
-  p.at(520, 60);
-  p.comment("Quality: set both pitchshift~ objects, then measure now and again 250 ms later.");
-  const quality = p.obj("r ---i_quality");
-  const order = p.obj("t b i");
-  const pick = p.obj("sel 0 1 2 3");
-  p.connect(quality, 0, order, 0);
-  p.connect(order, 1, pick, 0);
-  const name = p.obj("pack 0 s");
-  QUALITIES.forEach((q, i) => {
-    p.at(520 + i * 90, 210);
-    const setQuality = p.msg(`quality ${q}`);
-    const remember = p.msg(`symbol ${q}`);
-    p.connect(pick, i, setQuality, 0);
-    p.connect(pick, i, remember, 0);
-    p.connect(setQuality, 0, left.ps, 0);
-    p.connect(setQuality, 0, rightPs.ps, 0);
-    p.connect(remember, 0, name, 1);
-  });
-
-  p.at(880, 60);
-  const measure = p.obj("r ---measure");
-  const now = p.obj("t b b");
-  const getlatency = p.msg("getlatency");
-  const later = p.obj("delay 250");
-  const getlatencyAgain = p.msg("getlatency");
-  p.connect(order, 0, now, 0);
-  p.connect(measure, 0, getlatency, 0);
-  p.connect(now, 1, getlatency, 0);
-  p.connect(now, 0, later, 0);
-  p.connect(later, 0, getlatencyAgain, 0);
-  for (const ps of [left.ps, rightPs.ps]) {
-    p.connect(getlatency, 0, ps, 0);
-    p.connect(getlatencyAgain, 0, ps, 0);
-  }
-
-  p.at(700, 520);
-  const line = p.msg("pitchshift interval $2 latency $1 samples");
-  const print = p.obj("print audition");
-  const readout = p.obj("s ---i_ps_lat");
-  p.connect(left.trigger, 1, name, 0);
-  p.connect(rightPs.trigger, 0, name, 0);
-  p.connect(name, 0, line, 0);
-  p.connect(line, 0, print, 0);
-  p.connect(left.trigger, 0, readout, 0);
+  qualityAndLatency(p, 520, "interval", leftPs, rightPs, "---i_ps_lat");
 
   p.at(20, 700);
-  intervalOutputs(p, stereo, left.delay, rightPs.delay, 760);
+  intervalOutputs(p, stereo, leftPs.delay, rightPs.delay, 760);
 }
 
 function intervalDelayline(p) {
@@ -661,7 +657,7 @@ function readout(p, varname, text, rect) {
   });
 }
 
-const DB = 4;
+const UNIT_DB = 4; // parameter_unitstyle for dB
 
 // Builds every control, each sending its value to a device-local name. Returns the boxes
 // so the load bang can make each one output its value.
@@ -691,11 +687,11 @@ function panel(p) {
   send(tab(p, "D Source", "Source", [dx + 42, 36, 120, 15], ["Per channel", "Mono sum"], 0), "d_source");
   send(toggle(p, "D Drift", [dx + 184, 36, 90, 15], "Drift Off", "Drift On", 0), "drift_on");
   const dials = [
-    ["D Cents", "Cents", { min: 0, max: 30, initial: 12, unitstyle: 0, type: 1 }, "d_cents"],
-    ["D Level", "Level", { min: LEVEL_MIN, max: 0, initial: -9, unitstyle: DB }, "d_level"],
-    ["D Trim DL", "Trim DL", { min: -12, max: 12, initial: 0, unitstyle: DB }, "d_trim_dl"],
-    ["D Trim PS", "Trim PS", { min: -12, max: 12, initial: 0, unitstyle: DB }, "d_trim_ps"],
-    ["D Drift Depth", "Depth", { min: 0, max: 10, initial: 3, unitstyle: 1 }, "drift_depth"],
+    ["D Cents", "Cents", { min: 0, max: 30, initial: DEFAULT.cents, unitstyle: 0, type: 1 }, "d_cents"],
+    ["D Level", "Level", { min: LEVEL_MIN, max: 0, initial: DEFAULT.doublesLevel, unitstyle: UNIT_DB }, "d_level"],
+    ["D Trim DL", "Trim DL", { min: -12, max: 12, initial: 0, unitstyle: UNIT_DB }, "d_trim_dl"],
+    ["D Trim PS", "Trim PS", { min: -12, max: 12, initial: 0, unitstyle: UNIT_DB }, "d_trim_ps"],
+    ["D Drift Depth", "Depth", { min: 0, max: 10, initial: DEFAULT.driftDepth, unitstyle: 1 }, "drift_depth"],
     ["D Drift Rate", "Rate", { min: 0.05, max: 1, initial: 0.2, unitstyle: 3 }, "drift_rate"],
   ];
   dials.forEach(([longname, shortname, range, name], i) => {
@@ -712,9 +708,9 @@ function panel(p) {
   send(choice(p, "live.menu", "I Quality", "Quality", [ix + 46, 36, 80, 15], QUALITIES, 1), "i_quality");
   const intervalDials = [
     ["I Window", "Window", { min: 20, max: 150, initial: 60, unitstyle: 2 }, "i_window"],
-    ["I Level", "Level", { min: LEVEL_MIN, max: 0, initial: -12, unitstyle: DB }, "i_level"],
-    ["I Trim PS", "Trim PS", { min: -12, max: 12, initial: 0, unitstyle: DB }, "i_trim_ps"],
-    ["I Trim DL", "Trim DL", { min: -12, max: 12, initial: 0, unitstyle: DB }, "i_trim_dl"],
+    ["I Level", "Level", { min: LEVEL_MIN, max: 0, initial: DEFAULT.intervalLevel, unitstyle: UNIT_DB }, "i_level"],
+    ["I Trim PS", "Trim PS", { min: -12, max: 12, initial: 0, unitstyle: UNIT_DB }, "i_trim_ps"],
+    ["I Trim DL", "Trim DL", { min: -12, max: 12, initial: 0, unitstyle: UNIT_DB }, "i_trim_dl"],
   ];
   intervalDials.forEach(([longname, shortname, range, name], i) => {
     send(dial(p, longname, shortname, ix + i * 46, 58, range), name);
@@ -813,6 +809,7 @@ function versionGain(p, x, { onExpr, layerPak, level, levelInitial, trim, mute, 
   p.connect(stopMute, 0, muteLater, 0);
   p.connect(unmute, 0, mute, 0);
   p.connect(fadeInLater, 0, gainOn, 0);
+  p.connect(fadeInLater, 0, p.obj("s ---measure"), 0); // a pitchshift~ muted at load may not have reported yet
   p.connect(gainOn, 0, gainPak, 0);
   p.connect(toTurnOff, 2, stopFade, 0);
   p.connect(toTurnOff, 1, gainOff, 0);
@@ -933,32 +930,32 @@ export function buildPatcher() {
     p.connect(engine, 0, pak, 3);
     return pak;
   };
-  const doublesPak = layerPak(200, "d_level", -9, "d_engine");
-  const intervalPak = layerPak(680, "i_level", -12, "i_engine");
+  const doubles = { layerPak: layerPak(200, "d_level", DEFAULT.doublesLevel, "d_engine"), level: "d_level", levelInitial: DEFAULT.doublesLevel };
+  const interval = { layerPak: layerPak(680, "i_level", DEFAULT.intervalLevel, "i_engine"), level: "i_level", levelInitial: DEFAULT.intervalLevel };
 
   const doublesOn = (engine) => `expr $i1 && $i2 != 2 && $f3 > ${MUTE_BELOW} && $i4 == ${engine}`;
   const intervalOn = (engine) => `expr $i1 && $i2 != 1 && $f3 > ${MUTE_BELOW} && $i4 == ${engine}`;
-  const [ddl, dps, ips, idl] = versions;
-  versionGain(p, 200, { onExpr: doublesOn(0), layerPak: doublesPak, level: "d_level", levelInitial: -9, trim: "d_trim_dl", ...ddl });
-  versionGain(p, 440, { onExpr: doublesOn(1), layerPak: doublesPak, level: "d_level", levelInitial: -9, trim: "d_trim_ps", ...dps });
-  versionGain(p, 680, { onExpr: intervalOn(0), layerPak: intervalPak, level: "i_level", levelInitial: -12, trim: "i_trim_ps", ...ips });
-  versionGain(p, 920, { onExpr: intervalOn(1), layerPak: intervalPak, level: "i_level", levelInitial: -12, trim: "i_trim_dl", ...idl });
+  const [doublesDelay, doublesPs, intervalPs, intervalDelay] = versions;
+  versionGain(p, 200, { onExpr: doublesOn(0), ...doubles, trim: "d_trim_dl", ...doublesDelay });
+  versionGain(p, 440, { onExpr: doublesOn(1), ...doubles, trim: "d_trim_ps", ...doublesPs });
+  versionGain(p, 680, { onExpr: intervalOn(0), ...interval, trim: "i_trim_ps", ...intervalPs });
+  versionGain(p, 920, { onExpr: intervalOn(1), ...interval, trim: "i_trim_dl", ...intervalDelay });
 
   // Derived values for the subpatchers.
   p.at(1240, 400);
   const driftOn = p.obj("r ---drift_on");
   const driftDepth = p.obj("r ---drift_depth");
-  const driftPak = p.obj("pak 0 3.");
+  const driftPak = p.obj(`pak 0 ${DEFAULT.driftDepth}.`);
   const driftAmount = p.obj("expr $i1 * $f2");
   const driftSend = p.obj("s ---drift_amt");
   p.connect(driftOn, 0, driftPak, 0);
   p.connect(driftDepth, 0, driftPak, 1);
   p.connect(driftPak, 0, driftAmount, 0);
   p.connect(driftAmount, 0, driftSend, 0);
-  const interval = p.obj("r ---i_interval");
+  const intervalTab = p.obj("r ---i_interval");
   const intervalCents = p.obj("expr -1200 + 500 * $i1");
   const centsSend = p.obj("s ---i_cents");
-  p.connect(interval, 0, intervalCents, 0);
+  p.connect(intervalTab, 0, intervalCents, 0);
   p.connect(intervalCents, 0, centsSend, 0);
 
   const parameters = { inherited_shortname: 1 };

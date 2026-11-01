@@ -5,6 +5,6 @@
   "type": "commonjs",
   "scripts": {
     "test": "node --test",
-    "build": "node build-patch.mjs && node ../../../../tools/amxd.mjs pack --type audio \"Slush Pitch Layer Audition.maxpat\" \"Slush Pitch Layer Audition.amxd\""
+    "build": "node build-patch.mjs"
   }
 }

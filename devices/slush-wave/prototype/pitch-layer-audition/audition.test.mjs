@@ -40,6 +40,16 @@ const targets = (p, id, outlet) => linesFrom(p, id, outlet).map((l) => box(p, l.
 const parameters = (p) => boxesOf(p).filter((b) => b.saved_attribute_attributes);
 const longname = (b) => b.saved_attribute_attributes.valueof.parameter_longname;
 
+// Every object box the devices may use. Each is a standard Max 8 or MSP object; anything new
+// must be checked against the Max reference before it goes on this list. (expr~ was not: it is
+// Pure Data, and Max reported "expr~: No such object".)
+const MAX_OBJECTS = new Set([
+  "plugin~", "plugout~", "live.thisdevice", "delay~", "mute~", "p", "*~", "+~", "%~", "line~",
+  "phasor~", "cos~", "tapin~", "tapout~", "selector~", "rand~", "snapshot~", "pitchshift~",
+  "dspstate~", "expr", "route", "pak", "pack", "change", "sel", "t", "delay", "s", "r", "print",
+  "deferlow", "loadmess", "sprintf", "+",
+]);
+
 // ---- what each device should have ---------------------------------------------------------
 
 const DB = 4;
@@ -152,10 +162,10 @@ for (const device of DEVICES) {
     assert.equal(patcher.openrect[2], patcher.devicewidth);
   });
 
-  test(`${name}: plain MSP and live.* only, no em dashes or US spelling`, () => {
-    for (const b of allBoxes(patcher)) {
-      const word = (b.text || "").split(" ")[0];
-      assert.ok(!["gen~", "js", "jsui", "pfft~", "mc.gen~", "bpatcher"].includes(word), `found ${word}`);
+  test(`${name}: only objects known to exist in Max 8 (no gen~, js, or Pure Data names like expr~)`, () => {
+    for (const b of allBoxes(patcher).filter((x) => x.maxclass === "newobj")) {
+      const word = b.text.split(" ")[0];
+      assert.ok(MAX_OBJECTS.has(word), `${word} is not on the list of known Max 8 objects`);
     }
     assert.ok(!maxpatText.includes("—"));
     assert.ok(!/\b(color|center|behavior|normalize)/i.test(maxpatText));
@@ -310,8 +320,15 @@ for (const device of DEVICES) {
     for (const { name: where, patcher: p } of allPatchers(patcher).filter((x) => x.name === "p dlshift")) {
       one(p, "tapin~ 200");
       one(p, "tapout~ 3 3");
-      const rate = one(p, "expr~ (1. - pow(2.\\, $v1 / 1200.)) * 1000. / max($f2\\, 1.)");
-      assert.equal(targets(p, rate.id, 0)[0].text, "phasor~", where);
+      // Ramp frequency at control rate, smoothed into the phasor~.
+      const rate = one(p, "expr (1. - pow(2.\\, $f1 / 1200.)) * 1000. / max($f2\\, 1.)");
+      const [both] = linesTo(p, rate.id, 0).map((l) => box(p, l.source[0]));
+      assert.equal(both.text, "pak 0. 30.");
+      const [ramp] = targets(p, rate.id, 0);
+      assert.equal(ramp.text, "$1 20");
+      const [line] = targets(p, ramp.id, 0);
+      assert.equal(line.text, "line~");
+      assert.ok(targets(p, line.id, 0).some((b) => b.text === "phasor~"), where);
       one(p, "%~ 1.");
       assert.equal(find(p, "cos~").length, 2);
       assert.equal(find(p, "+~ 3.").length, 2);

@@ -1,0 +1,10 @@
+{
+  "name": "band-spread-shift-audition",
+  "private": true,
+  "description": "PROTOTYPE, throwaway A/B device for Band Spread ticket #24. No dependencies: run the tests with `npm test` here or from the repo root.",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test",
+    "build": "node build-patch.mjs"
+  }
+}

@@ -43,12 +43,12 @@ Just the dry path: the input, delayed by 8192 samples. Checks that Live lines it
 
 **Setup:** the **Loop** track with the device on it. Duplicate the track (**Cmd+D**), delete the device from the copy, and add **Utility** to the copy with both **Phz-L** and **Phz-R** on (phase invert). Both tracks at the same volume.
 
-| # | Do | Expect | Pass |
-|---|---|---|---|
-| 1.1 | Play both tracks | Near silence: the copy cancels the original | [ ] |
-| 1.2 | Turn the device off (round button at the left of its title bar), then on | Near silence either way | [ ] |
-| 1.3 | Turn Utility's phase buttons off on the copy | The loop, louder, with no flam or echo | [ ] |
-| 1.4 | Remove the device and Utility from the tracks, or mute the copy | Done | [ ] |
+| #   | Do                                                                       | Expect                                      | Pass  |
+| --- | ------------------------------------------------------------------------ | ------------------------------------------- | ----- |
+| 1.1 | Play both tracks                                                         | Near silence: the copy cancels the original | [ y ] |
+| 1.2 | Turn the device off (round button at the left of its title bar), then on | Near silence either way                     | [ y ] |
+| 1.3 | Turn Utility's phase buttons off on the copy                             | The loop, louder, with no flam or echo      | [ y ] |
+| 1.4 | Remove the device and Utility from the tracks, or mute the copy          | Done                                        | [ y ] |
 
 If 1.1 or 1.2 is not silent, stop and tell me what you hear (a thin, phasey sound means the timing is off).
 
@@ -56,16 +56,16 @@ If 1.1 or 1.2 is not silent, stop and tell me what you hear (a thin, phasey soun
 
 The detuned doubles from a delay line, in two flavours. **Delay line** holds a steady detune (up on the left, down on the right). **Vibrato** is the alternative from the other chat: a sine LFO sweeps a short delay, so the pitch wobbles either side, up to Cents at its peak, at **Vib Rate**. Answers Q1 (in part) and Q5.
 
-| # | Do | Expect | Pass |
-|---|---|---|---|
-| 2.1 | **Sine** with the tuner chain. **Solo Doubles**, **Engine Delay line**, **Cents 12**. Utility on Left | Tuner reads A, about **+12** cents, steady (it may flicker a little) | [ ] |
-| 2.2 | Utility on Right | About **-12** cents | [ ] |
-| 2.3 | **Engine Vibrato**, **Vib Rate 0.67**, Utility on Left | The reading swings between about -12 and +12, about two-thirds of a cycle a second | [ ] |
-| 2.4 | **Loop**, **Solo Doubles**. Flip **Engine** a few times; match loudness with **Trim DL** and **Trim VB** | Both work. Note which you prefer, and the trims | [ ] |
-| 2.5 | Try **Cents 5** and **Cents 25** on both engines | Note how each sounds | [ ] |
-| 2.6 | **Solo Off** (doubles under the dry loop) | Thicker and wider. Note any hollow or phasey tone | [ ] |
-| 2.7 | **Wide loop**, **Solo Off**. Flip **Source** between **Per channel** and **Mono sum** | Per channel keeps the sides apart; Mono sum puts both sides in each double. Note which you prefer | [ ] |
-| 2.8 | **Layers Off**, then **On** | Off gives the plain loop, no pop | [ ] |
+| #   | Do                                                                                                       | Expect                                                                                            | Pass                          |
+| --- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------- |
+| 2.1 | **Sine** with the tuner chain. **Solo Doubles**, **Engine Delay line**, **Cents 12**. Utility on Left    | Tuner reads A, about **+12** cents, steady (it may flicker a little)                              | [ no ]                        |
+| 2.2 | Utility on Right                                                                                         | About **-12** cents                                                                               | [ no ]                        |
+| 2.3 | **Engine Vibrato**, **Vib Rate 0.67**, Utility on Left                                                   | The reading swings between about -12 and +12, about two-thirds of a cycle a second                | [y ]                          |
+| 2.4 | **Loop**, **Solo Doubles**. Flip **Engine** a few times; match loudness with **Trim DL** and **Trim VB** | Both work. Note which you prefer, and the trims                                                   | [y ]                          |
+| 2.5 | Try **Cents 5** and **Cents 25** on both engines                                                         | Note how each sounds                                                                              | [only vibrato works ]         |
+| 2.6 | **Solo Off** (doubles under the dry loop)                                                                | Thicker and wider. Note any hollow or phasey tone                                                 | [ y ]                         |
+| 2.7 | **Wide loop**, **Solo Off**. Flip **Source** between **Per channel** and **Mono sum**                    | Per channel keeps the sides apart; Mono sum puts both sides in each double. Note which you prefer | [ can't hear any difference ] |
+| 2.8 | **Layers Off**, then **On**                                                                              | Off gives the plain loop, no pop                                                                  | [ y ]                         |
 
 **Report:** pass or fail for each, which engine you prefer and at what Cents (and Vib Rate for Vibrato), and Per channel or Mono sum.
 
@@ -73,13 +73,13 @@ The detuned doubles from a delay line, in two flavours. **Delay line** holds a s
 
 The same steady doubles, made with Max's `pitchshift~` instead. Adds the **Quality** menu and a latency readout. Answers Q1 (the other half) and Q8.
 
-| # | Do | Expect | Pass |
-|---|---|---|---|
-| 3.1 | Load it and play anything | Within a second, **Doubles PS** on the left changes from "not measured yet" to a number of samples and ms. Write it down | [ ] |
-| 3.2 | **Sine** with the tuner chain, **Solo Doubles**, **Cents 12**, Utility on Left, then Right | About **+12** cents, then about **-12**, both steady | [ ] |
-| 3.3 | Step **Quality** through basic, good, better, best | The readout updates each time. Write down each number | [ ] |
-| 3.4 | **Loop**, **Solo Off**, Quality **good** | Doubles in time with the dry loop: no flam | [ ] |
-| 3.5 | Put stage 2's device on a copy of the track and A/B with this one | Note which you prefer, and whether you can tell them apart under the dry loop | [ ] |
+| #   | Do                                                                                         | Expect                                                                                                                   | Pass                       |
+| --- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ | -------------------------- |
+| 3.1 | Load it and play anything                                                                  | Within a second, **Doubles PS** on the left changes from "not measured yet" to a number of samples and ms. Write it down | [ 4096 smp 92.9 ms ]       |
+| 3.2 | **Sine** with the tuner chain, **Solo Doubles**, **Cents 12**, Utility on Left, then Right | About **+12** cents, then about **-12**, both steady                                                                     | [ y ]                      |
+| 3.3 | Step **Quality** through basic, good, better, best                                         | The readout updates each time. Write down each number                                                                    | [ readout isn't updating ] |
+| 3.4 | **Loop**, **Solo Off**, Quality **good**                                                   | Doubles in time with the dry loop: no flam                                                                               | [ I don't understand]      |
+| 3.5 | Put stage 2's device on a copy of the track and A/B with this one                          | Note which you prefer, and whether you can tell them apart under the dry loop                                            | [ no sure ]                |
 
 **Report:** the readout for each Quality, the tuner readings, and your preference against stage 2.
 
@@ -87,13 +87,13 @@ The same steady doubles, made with Max's `pitchshift~` instead. Adds the **Quali
 
 Slow random wander on the doubles' pitch, for both steady engines. Each double wanders on its own. Answers Q7.
 
-| # | Do | Expect | Pass |
-|---|---|---|---|
-| 4.1 | **Sine** with the tuner chain, **Solo Doubles**, **Engine Delay line**, **Cents 12**, **Drift On**, **Depth 3**, **Rate 0.2**, Utility on Left | The reading wanders slowly around +12, by up to about 3 cents either way | [ ] |
-| 4.2 | Utility on Right | Wanders around -12, not in step with the left | [ ] |
-| 4.3 | **Engine Pitchshift** | Same, but in small steps (it updates every 20 ms) | [ ] |
-| 4.4 | **Drift Off** | Steady again on both engines | [ ] |
-| 4.5 | **Loop**, **Solo Off**. Try Drift with Depth 1.5 to 6 and Rate 0.1 to 0.5 on both engines | Note whether it helps, and the settings you liked | [ ] |
+| #   | Do                                                                                                                                             | Expect                                                                   | Pass         |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------ |
+| 4.1 | **Sine** with the tuner chain, **Solo Doubles**, **Engine Delay line**, **Cents 12**, **Drift On**, **Depth 3**, **Rate 0.2**, Utility on Left | The reading wanders slowly around +12, by up to about 3 cents either way | [ n ]        |
+| 4.2 | Utility on Right                                                                                                                               | Wanders around -12, not in step with the left                            | [ n ]        |
+| 4.3 | **Engine Pitchshift**                                                                                                                          | Same, but in small steps (it updates every 20 ms)                        | [ y ]        |
+| 4.4 | **Drift Off**                                                                                                                                  | Steady again on both engines                                             | [ just ps ]  |
+| 4.5 | **Loop**, **Solo Off**. Try Drift with Depth 1.5 to 6 and Rate 0.1 to 0.5 on both engines                                                      | Note whether it helps, and the settings you liked                        | [ not sure ] |
 
 **Report:** Drift Off or On, the settings you liked, and on which engine.
 
@@ -101,15 +101,15 @@ Slow random wander on the doubles' pitch, for both steady engines. Each double w
 
 The interval layer (an octave or a fifth down) with `pitchshift~`. Answers Q2 (quality and latency) and Q6.
 
-| # | Do | Expect | Pass |
-|---|---|---|---|
-| 5.1 | Load it and play anything | **Interval PS** on the left shows a number. Write it down | [ ] |
-| 5.2 | **Sine** with the tuner chain, **Solo Interval**, **Octave down** | Tuner reads **A3** (220 Hz), close to 0 cents | [ ] |
-| 5.3 | **Fifth down** | Tuner reads **D4** (293.7 Hz), close to 0 cents | [ ] |
-| 5.4 | **Loop**, **Solo Interval**, **Octave down**. Step **Quality** through basic to best | The readout updates each time. Write down each number and how each sounds | [ ] |
-| 5.5 | **Solo Off**, **Level -12**. Judge each Quality under the dry loop | Note the lowest Quality that sounds fine | [ ] |
-| 5.6 | Repeat 5.4 and 5.5 with **Fifth down** | As above | [ ] |
-| 5.7 | **Wide loop**, **Solo Off**. Flip **Stereo** between **Mono centre** and **Per channel** | Note whether you can hear a difference, and which you prefer | [ ] |
+| #   | Do                                                                                       | Expect                                                                    | Pass                                    |
+| --- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------- |
+| 5.1 | Load it and play anything                                                                | **Interval PS** on the left shows a number. Write it down                 | [ same as 3.1 ]                         |
+| 5.2 | **Sine** with the tuner chain, **Solo Interval**, **Octave down**                        | Tuner reads **A3** (220 Hz), close to 0 cents                             | [ -5cts ]                               |
+| 5.3 | **Fifth down**                                                                           | Tuner reads **D4** (293.7 Hz), close to 0 cents                           | [ -2cts ]                               |
+| 5.4 | **Loop**, **Solo Interval**, **Octave down**. Step **Quality** through basic to best     | The readout updates each time. Write down each number and how each sounds | [ no change like before]                |
+| 5.5 | **Solo Off**, **Level -12**. Judge each Quality under the dry loop                       | Note the lowest Quality that sounds fine                                  | [ seem fine but can't hear any change ] |
+| 5.6 | Repeat 5.4 and 5.5 with **Fifth down**                                                   | As above                                                                  | [ seem fine but can't hear any change]  |
+| 5.7 | **Wide loop**, **Solo Off**. Flip **Stereo** between **Mono centre** and **Per channel** | Note whether you can hear a difference, and which you prefer              | [ wide loop?]                           |
 
 **Report:** the readout per Quality, the lowest Quality that's fine (octave and fifth), and Mono centre or Per channel.
 
@@ -117,12 +117,12 @@ The interval layer (an octave or a fifth down) with `pitchshift~`. Answers Q2 (q
 
 The interval layer from the delay line shifter: cheaper, with a grain you may or may not want. Answers Q2 (engine).
 
-| # | Do | Expect | Pass |
-|---|---|---|---|
-| 6.1 | **Sine** with the tuner chain, **Solo Interval**, **Octave down**, then **Fifth down** | **A3**, then **D4**, as in stage 5. The reading may flicker more | [ ] |
-| 6.2 | **Loop**, **Solo Interval**. Try **Window** 30, 60 and 120 | Shorter is tighter but buzzier, longer is smoother but more smeared | [ ] |
-| 6.3 | **Solo Off**, **Level -12**, under the dry loop | Note whether the grain is usable, or even wanted | [ ] |
-| 6.4 | A/B with stage 5 on a copy of the track | Note which you prefer | [ ] |
+| #   | Do                                                                                     | Expect                                                              | Pass                                   |
+| --- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------- |
+| 6.1 | **Sine** with the tuner chain, **Solo Interval**, **Octave down**, then **Fifth down** | **A3**, then **D4**, as in stage 5. The reading may flicker more    | [ no difference in sound, no pitching] |
+| 6.2 | **Loop**, **Solo Interval**. Try **Window** 30, 60 and 120                             | Shorter is tighter but buzzier, longer is smoother but more smeared | [ same ]                               |
+| 6.3 | **Solo Off**, **Level -12**, under the dry loop                                        | Note whether the grain is usable, or even wanted                    | [ same ]                               |
+| 6.4 | A/B with stage 5 on a copy of the track                                                | Note which you prefer                                               | [ n/A ]                                |
 
 **Report:** the Window you liked, and this against stage 5.
 
@@ -130,13 +130,13 @@ The interval layer from the delay line shifter: cheaper, with a grain you may or
 
 Everything together, with the same controls as the stages before. Use it for the final balance, the CPU check and your favourite settings.
 
-| # | Do | Expect | Pass |
-|---|---|---|---|
-| 7.1 | **Loop**. **Solo Doubles**, then **Solo Interval**, then **Solo Off**, then **Layers Off** | Only the doubles, only the interval, everything, then only the plain loop | [ ] |
-| 7.2 | **Solo Off**. Set your favourites from stages 2 to 6. Flip **D Engine** and **I Engine** under the full sound | Note whether your favourites still win | [ ] |
-| 7.3 | Note your buffer size (**Live > Preferences > Audio**). Read Live's CPU meter (top right) with the device off, then on with each **D Engine** and each **I Engine**, and with the interval on Pitchshift at each **Quality** | Write down the readings | [ ] |
-| 7.4 | Optional: duplicate the track (with the device) until the CPU meter reaches about 50%, with your favourite settings | Write down how many copies | [ ] |
-| 7.5 | Set up your favourite combination | Write down every setting on the panel | [ ] |
+| #   | Do                                                                                                                                                                                                                           | Expect                                                                    | Pass                  |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------- |
+| 7.1 | **Loop**. **Solo Doubles**, then **Solo Interval**, then **Solo Off**, then **Layers Off**                                                                                                                                   | Only the doubles, only the interval, everything, then only the plain loop | [ y ]                 |
+| 7.2 | **Solo Off**. Set your favourites from stages 2 to 6. Flip **D Engine** and **I Engine** under the full sound                                                                                                                | Note whether your favourites still win                                    | [ hard to say]        |
+| 7.3 | Note your buffer size (**Live > Preferences > Audio**). Read Live's CPU meter (top right) with the device off, then on with each **D Engine** and each **I Engine**, and with the interval on Pitchshift at each **Quality** | Write down the readings                                                   | [ 512 samples, 6-7% ] |
+| 7.4 | Optional: duplicate the track (with the device) until the CPU meter reaches about 50%, with your favourite settings                                                                                                          | Write down how many copies                                                | [ 20 tracks and 15%]  |
+| 7.5 | Set up your favourite combination                                                                                                                                                                                            | Write down every setting on the panel                                     | [ still unsure ]      |
 
 ## What to send back
 
@@ -153,12 +153,12 @@ Everything together, with the same controls as the stages before. Use it for the
 
 The builder could not run Max, and the `pitchshift~` reference page was not reachable, so a few names were taken from search extracts. These are the first places to look.
 
-- **`pitchshift~` attribute or message names** (stages 3, 4, 5, 7). The patch uses the `pitchshift` attribute (a pitch factor), `quality` (`basic`, `good`, `better`, `best`), `reportlatency 1`, and the `getlatency` message. It expects the latency as `latency <samples>` from the right-hand outlet. A red line like `pitchshift~: doesn't understand ...` names the one that is wrong.
+- `pitchshift~` **attribute or message names** (stages 3, 4, 5, 7). The patch uses the `pitchshift` attribute (a pitch factor), `quality` (`basic`, `good`, `better`, `best`), `reportlatency 1`, and the `getlatency` message. It expects the latency as `latency <samples>` from the right-hand outlet. A red line like `pitchshift~: doesn't understand ...` names the one that is wrong.
 - **A latency readout stays at "not measured yet".** `pitchshift~` may only report its latency while audio is running. Play something, then change **Quality** and back, or switch the **Engine** away and back; either measures again. If it still doesn't change, the latency message isn't reaching the patch.
 - **The Quality menu** affects every `pitchshift~` in the device, doubles and interval alike.
 - **Readouts show odd text.** They are built with `sprintf`. Copy what the panel shows.
 - **A warning line appears.** A measured latency is over 8192 samples, so that version can't be lined up with the dry signal. The Max Console has a matching `audition: warning ...` line. Report the number.
-- **`mute~`.** Each engine sits behind a `mute~`. If an engine you're not using still costs CPU, say so.
+- `mute~`**.** Each engine sits behind a `mute~`. If an engine you're not using still costs CPU, say so.
 - **CPU and Stereo.** The interval always runs two shifters, even in Mono centre (the right one is just not heard), so Stereo doesn't change the CPU reading.
 - **Clicks.** Switching Source, Stereo or Interval can click; that's expected.
 - **Utility's Channel menu** (for the tuner chain). If your Utility has no Left or Right mode, say so and skip the tuner rows; I'll add a channel switch to the devices.

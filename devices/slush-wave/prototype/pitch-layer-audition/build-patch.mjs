@@ -47,11 +47,10 @@ function shape(text) {
     case "mute~": return [1, any(1)];
     case "*~": case "+~": case "%~": return [2, sig(1)];
     case "line~": return [2, ["signal", "bang"]];
-    case "sig~": case "cos~": case "rand~": return [1, sig(1)];
+    case "cos~": case "rand~": return [1, sig(1)];
     case "phasor~": return [2, sig(1)];
     case "tapin~": return [1, ["tapconnect"]];
     case "tapout~": return [args.length, sig(args.length)];
-    case "expr~": return [maxIndex(text), sig(1)];
     case "expr": return [maxIndex(text), any(1)];
     case "selector~": return [Number(args[0]) + 1, sig(1)];
     case "snapshot~": return [2, ["float"]];
@@ -196,23 +195,29 @@ class Patch {
 // ---- the delay line shifter ---------------------------------------------------------------
 // One pitch shifter made of a tapin~/tapout~ pair with two taps, each swept by a phasor~ and
 // faded in and out by a Hann window. The two windows are half a cycle apart and sum to 1.
-//   inlet 1: audio   inlet 2: shift in cents (signal)   inlet 3: window in ms (float)
+//   inlet 1: audio   inlet 2: shift in cents (float)   inlet 3: window in ms (float)
 
 function dlshift(p) {
   const audio = p.inlet(1, "audio", true);
-  const cents = p.inlet(2, "shift in cents (signal)", true);
+  const cents = p.inlet(2, "shift in cents (float)", false);
   const windowMs = p.inlet(3, "window in ms (float)", false);
 
   p.at(20, 60);
-  p.comment("Ramp frequency f = (1 - 2^(cents/1200)) * 1000 / window. Negative for upward shifts, so the phasor~ runs backwards.");
-  const rate = p.obj("expr~ (1. - pow(2.\\, $v1 / 1200.)) * 1000. / max($f2\\, 1.)");
+  p.comment("Ramp frequency f = (1 - 2^(cents/1200)) * 1000 / window, at control rate, smoothed over 20 ms. Negative for upward shifts, so the phasor~ runs backwards.");
+  const both = p.obj("pak 0. 30.");
+  const rate = p.obj("expr (1. - pow(2.\\, $f1 / 1200.)) * 1000. / max($f2\\, 1.)");
+  const ramp = p.msg("$1 20");
+  const rateSig = p.obj("line~");
   const phase1 = p.obj("phasor~");
   p.comment("Second tap: the same ramp, half a cycle on.");
   const half = p.obj("+~ 0.5");
   const phase2 = p.obj("%~ 1.");
-  p.connect(cents, 0, rate, 0);
-  p.connect(windowMs, 0, rate, 1);
-  p.connect(rate, 0, phase1, 0);
+  p.connect(cents, 0, both, 0);
+  p.connect(windowMs, 0, both, 1);
+  p.connect(both, 0, rate, 0);
+  p.connect(rate, 0, ramp, 0);
+  p.connect(ramp, 0, rateSig, 0);
+  p.connect(rateSig, 0, phase1, 0);
   p.connect(phase1, 0, half, 0);
   p.connect(half, 0, phase2, 0);
 
@@ -340,40 +345,35 @@ function doublesDelayline({ drift }) {
     const { upIn, downIn } = doublesInputs(p);
 
     p.at(260, 60);
-    p.comment(drift ? "Cents, smoothed. Drift: a rand~ per double times the depth (0 when Drift is off)." : "Cents, smoothed.");
+    p.comment(drift ? "Cents plus drift, at control rate. Drift: a rand~ per double times the depth (0 when Drift is off), read every 20 ms." : "Cents, at control rate.");
     const cents = p.obj("r ---d_cents");
-    const centsRamp = p.msg("$1 20");
-    const centsSig = p.obj("line~");
-    p.connect(cents, 0, centsRamp, 0);
-    p.connect(centsRamp, 0, centsSig, 0);
+    const rate = drift && p.obj("r ---drift_rate");
+    const amount = drift && p.obj("r ---drift_amt");
 
-    let withDrift = () => centsSig;
-    if (drift) {
-      const amount = p.obj("r ---drift_amt");
-      const amountRamp = p.msg("$1 50");
-      const amountSig = p.obj("line~");
-      p.connect(amount, 0, amountRamp, 0);
-      p.connect(amountRamp, 0, amountSig, 0);
-      const rate = p.obj("r ---drift_rate");
-      withDrift = () => {
+    // Up double: +(cents + drift). Down double: -(cents + drift).
+    const shiftCents = (expr) => {
+      const both = p.obj(`pak ${DEFAULT.cents}. 0.`);
+      const total = p.obj(expr);
+      p.connect(cents, 0, both, 0);
+      p.connect(both, 0, total, 0);
+      if (drift) {
         const random = p.obj("rand~ 0.2");
-        const scaled = p.obj("*~");
-        const total = p.obj("+~");
+        const scaled = p.obj("*~ 0.");
+        const snapshot = p.obj("snapshot~ 20");
+        const changed = p.obj("change -999.");
         p.connect(rate, 0, random, 0);
         p.connect(random, 0, scaled, 0);
-        p.connect(amountSig, 0, scaled, 1);
-        p.connect(centsSig, 0, total, 0);
-        p.connect(scaled, 0, total, 1);
-        return total;
-      };
-    }
-
+        p.connect(amount, 0, scaled, 1);
+        p.connect(scaled, 0, snapshot, 0);
+        p.connect(snapshot, 0, changed, 0);
+        p.connect(changed, 0, both, 1);
+      }
+      return total;
+    };
     p.at(520, 60);
-    p.comment("Up double: +(cents + drift). Down double: -(cents + drift).");
-    const upCents = withDrift();
-    p.at(700, 90);
-    const negate = p.obj("*~ -1.");
-    p.connect(withDrift(), 0, negate, 0);
+    const upCents = shiftCents("expr $f1 + $f2");
+    p.at(700, 60);
+    const negate = shiftCents("expr 0. - $f1 - $f2");
 
     p.at(260, 420);
     p.comment("Doubles window: fixed 30 ms.");
@@ -597,9 +597,7 @@ function intervalDelayline(p) {
   p.at(260, 60);
   p.comment("Interval in cents (-1200 or -700), and the Window dial.");
   const cents = p.obj("r ---i_cents");
-  const centsSig = p.obj("sig~");
   const windowMs = p.obj("r ---i_window");
-  p.connect(cents, 0, centsSig, 0);
 
   p.at(260, 300);
   const leftShift = p.sub("dlshift", dlshift);
@@ -607,7 +605,7 @@ function intervalDelayline(p) {
   const rightShift = p.sub("dlshift", dlshift);
   for (const [shift, input] of [[leftShift, leftIn], [rightShift, right]]) {
     p.connect(input, 0, shift, 0);
-    p.connect(centsSig, 0, shift, 1);
+    p.connect(cents, 0, shift, 1);
     p.connect(windowMs, 0, shift, 2);
   }
 

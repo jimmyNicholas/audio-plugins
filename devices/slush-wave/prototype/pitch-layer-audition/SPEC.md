@@ -99,7 +99,7 @@ One shifter = a `tapin~`/`tapout~` pair with two taps. Per channel per voice:
 - Tap gain = Hann window `0.5 - 0.5 * cos~(φ)` (`cos~` takes its input in cycles). The two offset windows sum to 1.
 - Out = tap1 * w1 + tap2 * w2.
 - `tapin~` max delay: 200 ms.
-- Compute `f` at signal rate with `expr~ (1. - pow(2., $v1 / 1200.)) * 1000. / $f2`, so drift (a signal added to cents) works smoothly. `$v1` is the cents signal and `$f2` is the window in ms.
+- Compute `f` at control rate with `expr (1. - pow(2., $f1 / 1200.)) * 1000. / max($f2, 1.)` (`$f1` cents, `$f2` window in ms) and smooth it into the `phasor~` with a 20 ms `line~`. Drift reaches it as a float every 20 ms (`snapshot~`), as on the `pitchshift~` version. (The first build used `expr~`, which is Pure Data, not Max: Max reported `expr~: No such object`.)
 
 Doubles window: fixed 30 ms. Interval window: the **Window** dial.
 

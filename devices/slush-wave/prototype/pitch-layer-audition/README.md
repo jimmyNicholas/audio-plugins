@@ -36,6 +36,7 @@ It is never released. The build spec is [SPEC.md](./SPEC.md).
 - When you switch an engine, the old one fades out at once and the new one fades in about a quarter of a second later. That gap is on purpose: it lets old audio left in the new version's buffers play out silently. Judge the sound a moment after a switch, not during it.
 - A **Level** dial at its minimum (-70 dB) counts as off: that layer's versions are switched off entirely.
 - **Layers Off** always gives the plain, delayed input, whatever Solo says. **Solo Doubles** or **Solo Interval** (with Layers On) mutes the dry signal and the other layer.
+- Each `pitchshift~` measures its latency on load, whenever **Quality** changes, and whenever a version is switched on.
 - **Trim DL** and **Trim PS** adjust only that engine's level, so you can match the two engines' loudness before comparing them.
 
 ## Setup
@@ -60,7 +61,7 @@ Number your answers to match.
 
 ### Check 2: doubles engine (Q1)
 
-1. Set **Solo** to **Doubles** and **Cents** to **12**.
+1. Set **Solo** to **Doubles**, **Cents** to **12**, and **Quality** (in the INTERVAL group) to **good**.
 2. Flip **Engine** between **Delay line** and **Pitchshift** a few times. If one is louder, adjust **Trim DL** or **Trim PS** until they match.
 3. Repeat at **Cents 5** and **Cents 25**.
 4. Set **Solo** to **Off** and flip the engine again under the full sound.
@@ -119,8 +120,8 @@ Number your answers to match.
 The builder could not run Max, and the `pitchshift~` reference page was not reachable, so a few names were taken from search extracts. These are the first places to look.
 
 - **`pitchshift~` attribute or message names.** The patch uses the `pitchshift` attribute (a pitch factor), `quality` (`basic`, `good`, `better`, `best`), `reportlatency 1`, and the `getlatency` message. It expects the latency as `latency <samples>` from the right-hand outlet. A red line like `pitchshift~: doesn't understand ...` names the one that is wrong. Copy it back.
-- **Latency readouts stay at "not measured yet".** `pitchshift~` may only report its latency while audio is running. Make sure audio is on and the loop is playing, then change **I Quality** and back; that measures again. If it still says "not measured yet", the latency message is not reaching the patch: open `p doubles-pitchshift` in the Max editor and check what comes out of the right outlet of `pitchshift~`.
-- **The doubles pitchshift quality is fixed at good.** Only the interval has a Quality menu. The doubles' readout is at good.
+- **Latency readouts stay at "not measured yet".** `pitchshift~` may only report its latency while audio is running. Make sure audio is on and the loop is playing, then change **Quality** and back, or switch that layer's **Engine** away and back; either measures again. If it still says "not measured yet", the latency message is not reaching the patch: open `p doubles-pitchshift` in the Max editor and check what comes out of the right outlet of `pitchshift~`.
+- **Quality affects both pitchshift versions.** The menu sits in the INTERVAL group, but the doubles' Pitchshift engine follows it too. Leave it at **good** for checks 2 to 4.
 - **Readouts show odd text.** They are built with `sprintf`. If the text looks wrong, copy what the panel shows.
 - **`mute~`.** Each version sits behind a `mute~`. If a version keeps using CPU while another is selected, say so.
 - **A warning line appears.** It means a measured `pitchshift~` latency is over 8192 samples, so that version can't be lined up with the dry signal. The Max Console has a matching `audition: warning ...` line. Report the number.

@@ -1,0 +1,10 @@
+{
+  "name": "slush-pitch-layer-audition",
+  "private": true,
+  "description": "Throwaway A/B device for the Slush Pitch Layer. No dependencies: run the tests with `npm test` here or from the repo root.",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test",
+    "build": "node build-patch.mjs"
+  }
+}

@@ -17,7 +17,7 @@ One shifted instance of the band, with its own on/off, level, shift, pan and mon
 _Avoid_: Voice, layer (Slush Wave's word), harmonic, partial
 
 **Shift**:
-How far one copy moves from the band's own position. Whether it is a pitch shift (keeps harmonic ratios) or a frequency shift (adds a fixed number of Hz) is still open.
+How far one copy moves from the band's own position. Each copy chooses its own kind: a **pitch shift** in semitones (keeps harmonic ratios, -36 to +36) or a **frequency shift** in Hz (adds a fixed number of Hz, -3000 to +3000, and can cross 0 Hz and fold back). Settled by ear in [#24](https://github.com/jimmyNicholas/audio-plugins/issues/24).
 _Avoid_: Transpose, offset, detune
 
 **Spread**:

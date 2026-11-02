@@ -39,13 +39,13 @@ Both engines are delayed to the same total (8192 samples), so switching never ju
 
 ## Stage 1: does it load and make sound?
 
-| # | Do | Expect | Pass |
-|---|---|---|---|
-| 1.1 | Drop the device on the **pad** track. Open the Max Console (right-click the device title, **Open in Max**, then **Window > Max Console**) | No red errors. Note any you see, word for word | [ ] |
-| 1.2 | Read the panel | **PS latency: 4096 smp** after a second or so. Three "freq shift" lines with numbers | [ ] |
-| 1.3 | Play the pad with **Band On**, all three Copy **Levels** at minimum | Only a thin slice of the pad, around 800 Hz | [ ] |
-| 1.4 | Turn **Centre** slowly from low to high | The slice moves smoothly, no clicks or zipper noise | [ ] |
-| 1.5 | Try **Width** and **Stages** | Wider is fuller; 3 stages is steeper than 1. Note which pair sounds like "one narrow band" to you | [ ] |
+| #   | Do                                                                                                                                        | Expect                                                                                            | Pass  |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----- |
+| 1.1 | Drop the device on the **pad** track. Open the Max Console (right-click the device title, **Open in Max**, then **Window > Max Console**) | No red errors. Note any you see, word for word                                                    | [ n ] |
+| 1.2 | Read the panel                                                                                                                            | **PS latency: 4096 smp** after a second or so. Three "freq shift" lines with numbers              | [ y ] |
+| 1.3 | Play the pad with **Band On**, all three Copy **Levels** at minimum                                                                       | Only a thin slice of the pad, around 800 Hz                                                       | [ y ] |
+| 1.4 | Turn **Centre** slowly from low to high                                                                                                   | The slice moves smoothly, no clicks or zipper noise                                               | [ y ] |
+| 1.5 | Try **Width** and **Stages**                                                                                                              | Wider is fuller; 3 stages is steeper than 1. Note which pair sounds like "one narrow band" to you | [ y ] |
 
 If 1.1 shows errors or there is no sound at all, stop there and send me the Console text.
 
@@ -55,24 +55,24 @@ Same Band, same target positions, two kinds of shift. This is the heart of the q
 
 Set **Band Off**, all three Copies at -6 dB, **Engine: Pitch**. Then switch to **Freq match** and back, a few times per source.
 
-| # | Source | Listen for | Pitch or Freq match? Why? |
-|---|---|---|---|
-| 2.1 | Pad | Which sounds more musical, which more interesting | |
-| 2.2 | Drum loop | Transients: does one smear or flam more? (Pitch has a 93 ms internal window) | |
-| 2.3 | Voice | Does the voice stay a voice? Which is more usable? | |
-| 2.4 | Pad, **Width 2** or wider | With a wide Band, Freq match goes inharmonic (bell-like) because every partial moves by the same Hz. Do you like it? | |
-| 2.5 | Any, **Centre** low (eg 150 Hz) and a Copy at -12 | Freq match: a Copy may cross 0 Hz and fold back up. Pitch never crosses 0 Hz | |
+| #   | Source                                            | Listen for                                                                                                           | Pitch or Freq match? Why?                                                       |
+| --- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 2.1 | Pad                                               | Which sounds more musical, which more interesting                                                                    | Freq just slightly more interesting but both are good. I like having the choice |
+| 2.2 | Drum loop                                         | Transients: does one smear or flam more? (Pitch has a 93 ms internal window)                                         | Seems fine                                                                      |
+| 2.3 | Voice                                             | Does the voice stay a voice? Which is more usable?                                                                   | Out of scope                                                                    |
+| 2.4 | Pad, **Width 2** or wider                         | With a wide Band, Freq match goes inharmonic (bell-like) because every partial moves by the same Hz. Do you like it? | seems fine                                                                      |
+| 2.5 | Any, **Centre** low (eg 150 Hz) and a Copy at -12 | Freq match: a Copy may cross 0 Hz and fold back up. Pitch never crosses 0 Hz                                         | It crosses to negative                                                          |
 
 ## Stage 3: Freq Hz on its own
 
 The frequency shift with its own unit: a fixed number of Hz, the same whatever the **Centre**.
 
-| # | Do | Listen for | Notes |
-|---|---|---|---|
-| 3.1 | **Engine: Freq Hz**, then move **Centre** | The Copies keep a fixed distance in Hz from the Band, so their musical interval changes as the Band moves | |
-| 3.2 | Turn one Copy's **Hz** slowly through 0 | The Copy passes through the Band and out the other side. Below 0 Hz it folds back | |
-| 3.3 | Small shifts (eg +5 to +30 Hz) | Beating and phasing against the Band (turn **Band On**). Useful, or not? | |
-| 3.4 | Large shifts (eg +2000 Hz) with **Centre** high | Near the top, a Copy past half the sample rate may alias back down | |
+| #   | Do                                              | Listen for                                                                                                | Notes                                                       |
+| --- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| 3.1 | **Engine: Freq Hz**, then move **Centre**       | The Copies keep a fixed distance in Hz from the Band, so their musical interval changes as the Band moves | correct                                                     |
+| 3.2 | Turn one Copy's **Hz** slowly through 0         | The Copy passes through the Band and out the other side. Below 0 Hz it folds back                         | correct                                                     |
+| 3.3 | Small shifts (eg +5 to +30 Hz)                  | Beating and phasing against the Band (turn **Band On**). Useful, or not?                                  | I like this effect. Beating without band on, better when on |
+| 3.4 | Large shifts (eg +2000 Hz) with **Centre** high | Near the top, a Copy past half the sample rate may alias back down                                        | it's fine                                                   |
 
 ## Stage 4: the answer
 
@@ -84,6 +84,10 @@ Please reply on #24 with:
 4. **Edges:** did folding below 0 Hz or aliasing near the top bother you, or was it a feature?
 5. **Band:** a good default **Width** and **Stages**, if you found one (helps the panel ticket, #25).
 6. Anything that sounded broken, with the Console text if there was any.
+
+User Notes
+
+I like the sound. I wish I could have more copies and that pitch could go +/-36 st. The artifacting was very unique. I liked the almost broken sound to it 
 
 ## Troubleshooting
 

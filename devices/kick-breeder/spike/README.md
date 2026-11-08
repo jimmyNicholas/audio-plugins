@@ -12,8 +12,9 @@ Every sound is synthesised: a swept sine body, a noise click, a filtered noise l
 | --- | --- |
 | `Kick Breeder Spike.amxd` | The device. Generated; load this one. |
 | `Kick Breeder Spike.maxpat` | The same patch as readable JSON. Generated. |
-| `kick-breeder.js` | Breeding engine, kick envelope maths and Max glue (ES5). Must sit next to the `.amxd`. |
-| `build-patch.mjs` | Writes the two device files: `npm run build`. |
+| `kick-breeder.js` | What the device loads. Generated from `kick-voice.js` and [`shared/breeder/`](../../../shared/breeder/README.md) (the breeding engine and Max glue, shared with Snare Breeder). Must sit next to the `.amxd`. |
+| `kick-voice.js` | The kick's settings, envelopes and loudness simulation (ES5). Edit this one. |
+| `build-patch.mjs` | Writes the three generated files, with the kick's MSP voice: `npm run build`. |
 | `tests/` | Node tests for the engine and the patch: `npm test`. |
 
 ## How the device works
@@ -105,6 +106,7 @@ Also worth a line each:
 
 ## Known limits
 
+- **Not for a Drum Rack yet.** A Drum Rack sends C3 to every pad's instrument by default, and C3 plays slot A here. Put the device on its own MIDI track for now.
 - The breeding rounds are not saved with the set. Saved kicks are.
 - Loudness matching is based on a simulation of the patch, so levels are close, not exact.
 - One voice: a new hit restarts the kick, which can click if the last one is still sounding.

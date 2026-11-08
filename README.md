@@ -8,6 +8,7 @@ Max for Live devices for Ableton Live 11 and Max 8.
 | --- | --- | --- |
 | [TAP](devices/tap/) | The Annoying Piano: a MIDI effect that retunes each key as you play and sends per-note pitch (MPE) to the instrument after it. | [Spec](devices/tap/docs/SPEC.md), [handoff](devices/tap/docs/HANDOFF.md), [tickets](devices/tap/docs/tickets/) |
 | [Kick Breeder](devices/kick-breeder/) | Spike. A kick drum instrument with no samples: choose between candidate kicks round after round, and new ones are bred from your choice until you keep one. | [Spec](devices/kick-breeder/docs/SPEC.md), [spike](devices/kick-breeder/spike/README.md) |
+| [Snare Breeder](devices/snare-breeder/) | Spike. The snare version of Kick Breeder: skin, snare wires and claps, bred the same way, on the same shared code. | [Spec](devices/snare-breeder/docs/SPEC.md), [spike](devices/snare-breeder/spike/README.md) |
 | [Slush Wave](devices/slush-wave/) | Paused. A planned family of audio effects for the slushwave sound; so far research and a pitch layer audition prototype. | [Handoff](devices/slush-wave/HANDOFF.md), [context](devices/slush-wave/CONTEXT.md) |
 
 TAP started as part of the web app [next-annoying-piano](https://github.com/jimmyNicholas/next-annoying-piano) and moved here with its history on 2026-10-28.
@@ -16,10 +17,11 @@ TAP started as part of the web app [next-annoying-piano](https://github.com/jimm
 
 ```
 devices/<name>/      one folder per device: patch, scripts, tests, docs
+shared/breeder/      the breeding loop, panel and keys shared by Kick and Snare Breeder
 tools/amxd.mjs       packs a .maxpat into an .amxd, and back; shared by every device
 ```
 
-Code moves into a shared folder once a second device needs it, not before.
+Code moves into a shared folder once a second device needs it, not before. A device still loads one js file next to its `.amxd`, so a device that uses `shared/` joins it into that file when it builds; see [`shared/breeder/`](shared/breeder/README.md).
 
 ## Using a device
 
@@ -28,7 +30,7 @@ Code moves into a shared folder once a second device needs it, not before.
 
 ## Tests
 
-`npm test` from the repo root runs every test. No dependencies; Node 18 or later is enough. CI also checks that device scripts are ES5, since that is all Max 8's `js` object understands.
+`npm test` from the repo root runs every test. No dependencies; Node 18 or later is enough. CI also checks that device and shared scripts are ES5, since that is all Max 8's `js` object understands.
 
 ## Research
 

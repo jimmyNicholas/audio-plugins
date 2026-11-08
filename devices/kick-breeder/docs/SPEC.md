@@ -4,7 +4,7 @@ Working name. A Max for Live instrument for Ableton Live 11 that synthesises a k
 
 Background: [Composing from nothing, without samples](../../../docs/research/sample-free-composition-tools.md), section 5 ("Breeder drum"). The idea is interactive evolution, as in Synplant's seeds and Microtonic's Patternarium, narrowed to one kick and run locally inside Live.
 
-Status: idea. A throwaway Max for Live spike is in [`spike/`](../spike/README.md): an instrument that runs the choosing loop, plays and chooses from the keyboard (C3 to E3 play, C2 to E2 choose), saves up to four kicks (F3 to B3 play, F2 to B2 save), and adds a noise layer and envelope compression to the kick. Its README has a checklist to fill in. The engine in `spike/kick-breeder.js` is ES5 and meant to lift into the real device. Decisions marked **(proposed)** are the builder's recommendation and still need the user's yes.
+Status: idea. A throwaway Max for Live spike is in [`spike/`](../spike/README.md): an instrument that runs the choosing loop, plays and chooses from the keyboard (C3 to E3 play, C2 to E2 choose), saves up to four kicks (F3 to B3 play, F2 to B2 save), and adds a noise layer and envelope compression to the kick. Its README has a checklist to fill in. The breeding engine is ES5, now shared with Snare Breeder in [`shared/breeder/`](../../../shared/breeder/README.md), and meant to lift into the real device. Decisions marked **(proposed)** are the builder's recommendation and still need the user's yes.
 
 ## The loop
 
@@ -89,6 +89,6 @@ Follows TAP's pattern ([TAP spec](../../tap/docs/SPEC.md), "Technical approach")
 
 ## Later, not now
 
-- The same loop for snares, hats and toms, then a whole kit: the "kit from one seed" idea in the research note.
+- The same loop for snares, hats and toms, then a whole kit: the "kit from one seed" idea in the research note. Snares have started: [Snare Breeder](../../snare-breeder/docs/SPEC.md), one device per drum on shared code. Hats would come next.
 - Export the kept kick as a WAV, for use outside Live.
 - Feed it from TAP so a tuned kick drifts as you play.

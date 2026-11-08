@@ -17,6 +17,6 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      # Max 8's js object only understands ES5, so reject newer syntax in device scripts.
+      # Max 8's js object only understands ES5, so reject newer syntax in device and shared scripts.
       - name: ES5 check
-        run: find devices -name "*.js" -not -path "*/tests/*" -print0 | xargs -0 -n1 npx --yes acorn@8.14.0 --ecma5 --silent
+        run: find devices shared -name "*.js" -not -path "*/tests/*" -print0 | xargs -0 -n1 npx --yes acorn@8.14.0 --ecma5 --silent

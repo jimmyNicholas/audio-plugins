@@ -29,6 +29,10 @@ Code moves into a shared folder once a second device needs it, not before.
 
 `npm test` from the repo root runs every test. No dependencies; Node 18 or later is enough. CI also checks that device scripts are ES5, since that is all Max 8's `js` object understands.
 
+## Business plan
+
+[`docs/business/plugin-business-plan.md`](docs/business/plugin-business-plan.md): how the plugins could make money, with the decisions made so far, the paths and trade-offs still open, costs, and the planned release pipeline.
+
 ## Research
 
 Research that is not tied to one device lives in [`docs/research/`](docs/research/):

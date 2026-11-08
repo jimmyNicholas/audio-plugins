@@ -36,3 +36,4 @@ Research that is not tied to one device lives in [`docs/research/`](docs/researc
 - [Boundary-pushing plugins](docs/research/boundary-pushing-plugins.md): audio and MIDI tools that change how music is made, and gaps for devices like TAP.
 - [Boundary-pushing music philosophy, 2016 to 2026](docs/research/boundary-pushing-music-philosophy.md): ideas from the last ten years, turned into design prompts.
 - [Recent ambient, dark ambient and slushwave practice](docs/research/recent-ambient-practice.md): pitched-down and AI-free generative moves since 2016, with device ideas.
+- [Composing with a sample library you already own](docs/research/sample-library-composition-tools.md): timbre maps, corpus tools, generators and stems for reviving an old drive of samples and beats.

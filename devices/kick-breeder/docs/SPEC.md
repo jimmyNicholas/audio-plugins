@@ -4,7 +4,7 @@ Working name. A Max for Live instrument for Ableton Live 11 that synthesises a k
 
 Background: [Composing from nothing, without samples](../../../docs/research/sample-free-composition-tools.md), section 5 ("Breeder drum"). The idea is interactive evolution, as in Synplant's seeds and Microtonic's Patternarium, narrowed to one kick and run locally inside Live.
 
-Status: idea, not built. Decisions marked **(proposed)** are the builder's recommendation and still need the user's yes.
+Status: idea, not built. A browser spike of the choosing loop is in [`prototype/kick-breeder-spike.html`](../prototype/kick-breeder-spike.html) (throwaway; the engine script inside it is ES5 and meant to lift into the device). Decisions marked **(proposed)** are the builder's recommendation and still need the user's yes.
 
 ## The loop
 

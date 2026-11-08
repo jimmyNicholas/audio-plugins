@@ -1,0 +1,665 @@
+<title>Kick Breeder Spike</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working column, like a drum machine's front panel. Slots across the top, controls under them, state underneath. */
+:root {
+  --bg: #eef0f4;
+  --panel: #ffffff;
+  --ink: #14161c;
+  --muted: #5a6072;
+  --line: #d6dae3;
+  --accent: #2b47d4;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3e8ff;
+  --fav: #a8520a;
+  --wave: #14161c;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1116; --panel: #171a22; --ink: #e7e9f0; --muted: #9aa0b2; --line: #2a2f3b;
+    --accent: #8394ff; --accent-ink: #0b0d13; --accent-soft: #232a4d; --fav: #f2a33a; --wave: #e7e9f0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1116; --panel: #171a22; --ink: #e7e9f0; --muted: #9aa0b2; --line: #2a2f3b;
+  --accent: #8394ff; --accent-ink: #0b0d13; --accent-soft: #232a4d; --fav: #f2a33a; --wave: #e7e9f0;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 20px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 5vw, 40px); line-height: 1.05; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 19px; margin: 0; text-wrap: balance; }
+p { margin: 0; max-width: 68ch; }
+.muted { color: var(--muted); }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+header { display: grid; gap: 8px; }
+.question { border-left: 3px solid var(--accent); padding-left: 12px; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.spread { justify-content: space-between; }
+
+button, select {
+  font: inherit; font-size: 14px; color: var(--ink); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+button.on { background: var(--accent-soft); border-color: var(--accent); }
+label.check { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; cursor: pointer; }
+kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--muted); }
+
+.slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.slot { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.slot.listening { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.slot-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.slot-name { font-family: var(--display); font-weight: 800; font-size: 32px; line-height: 1; }
+.badge { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fav); border: 1px solid var(--fav); border-radius: 999px; padding: 1px 8px; }
+canvas.wave { width: 100%; height: 72px; display: block; border-radius: 6px; background: var(--bg); }
+.slot .row button { flex: 1 1 auto; }
+
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td.changed { color: var(--accent); }
+.scroll { overflow-x: auto; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stat .value { font-family: var(--mono); font-size: 22px; font-variant-numeric: tabular-nums; }
+.history { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; }
+.chip.same { border-color: var(--fav); color: var(--fav); }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab-body { display: grid; gap: 10px; }
+.tab-body ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; max-width: 68ch; }
+.kept { border-color: var(--accent); }
+textarea { width: 100%; min-height: 120px; font-family: var(--mono); font-size: 12px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="label">Prototype · throwaway · devices/kick-breeder</div>
+    <h1>Kick Breeder spike</h1>
+    <p class="question"><strong>The question:</strong> if you choose between kicks round after round, with new ones bred from each choice, do you land on a kick you like within about ten rounds? Every sound here is synthesised; there are no samples.</p>
+    <p class="muted">Press <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> to hear a slot, <kbd>Enter</kbd> to choose the slot you are listening to, <kbd>Space</kbd> to start or stop the drum loop.</p>
+  </header>
+
+  <section class="panel">
+    <div class="row spread">
+      <div class="row">
+        <button id="loopBtn" type="button">Start loop</button>
+        <select id="pattern" aria-label="Loop pattern">
+          <option value="four">Four to the floor</option>
+          <option value="broken">Broken beat</option>
+          <option value="half">Half time</option>
+        </select>
+        <label class="check">BPM <input id="bpm" type="number" min="60" max="180" value="122" style="width:70px" class="mono"></label>
+      </div>
+      <div class="row">
+        <label class="check"><input id="match" type="checkbox" checked> Match loudness</label>
+        <label class="check"><input id="shuffle" type="checkbox" checked> Shuffle slots</label>
+        <label class="check"><input id="showFav" type="checkbox"> Show favourite</label>
+      </div>
+    </div>
+    <p class="muted" id="loopNote">The loop plays hats and claps with the kick from the slot you are listening to, so you can judge it in a beat.</p>
+  </section>
+
+  <section class="slots" id="slots" aria-label="Candidate kicks"></section>
+
+  <section class="panel">
+    <div class="row spread">
+      <div class="row">
+        <button id="wider" type="button" title="Make the two variations more different from the favourite">Wider</button>
+        <button id="closer" type="button" title="Make the two variations closer to the favourite">Closer</button>
+        <button id="back" type="button">Back a round</button>
+        <button id="fresh" type="button">Start fresh</button>
+      </div>
+      <button id="keep" type="button" class="primary">Keep the kick I'm hearing</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="label">Round</div><div class="value" id="statRound">1</div></div>
+      <div class="stat"><div class="label">Choices made</div><div class="value" id="statChoices">0</div></div>
+      <div class="stat"><div class="label">Variation size</div><div class="value" id="statStep">0.25</div></div>
+      <div class="stat"><div class="label">Listening to</div><div class="value" id="statListen">A</div></div>
+    </div>
+    <p class="muted">Variation size shrinks when you choose the favourite again (you are close), and stays the same when you choose a new variation (still searching).</p>
+    <div>
+      <div class="label" style="margin-bottom:6px">Choices so far</div>
+      <div class="history" id="history"><span class="muted">None yet.</span></div>
+    </div>
+  </section>
+
+  <section class="panel kept" id="keptPanel" hidden>
+    <div class="row spread">
+      <h2 id="keptTitle">Kept</h2>
+      <div class="row">
+        <button id="playKept" type="button" class="primary">Play kept kick</button>
+        <button id="breedFromKept" type="button">Breed from here</button>
+      </div>
+    </div>
+    <p id="keptSummary"></p>
+    <p class="muted">Copy the result and paste it back in the chat, with a word on how it felt. That is the spike's answer.</p>
+    <div class="row"><button id="copyResult" type="button">Copy result</button><span id="copyNote" class="muted"></span></div>
+    <textarea id="resultText" readonly aria-label="Result to copy"></textarea>
+  </section>
+
+  <section class="panel">
+    <div class="row spread"><h2>Settings in each slot</h2><span class="muted">Lock a setting to stop it changing in new variations.</span></div>
+    <div class="scroll"><table id="settings"></table></div>
+  </section>
+
+  <section class="panel">
+    <h2>Things to try</h2>
+    <div class="tabs" id="tabs"></div>
+    <div class="tab-body" id="tabBody"></div>
+  </section>
+</div>
+
+<script id="engine">
+// Kick Breeder engine. Pure, ES5 only, no DOM: the page calls in, nothing calls out.
+// Meant to lift into the Max 8 js object later, so: no let/const, arrows, Math.imul or other ES6.
+var KickBreeder = (function () {
+  var PARAMS = [
+    { id: "pitch", name: "Pitch", min: 30, max: 120, scale: "exp", unit: "Hz" },
+    { id: "sweep", name: "Sweep", min: 0, max: 48, scale: "lin", unit: "st" },
+    { id: "sweepTime", name: "Sweep time", min: 5, max: 200, scale: "exp", unit: "ms" },
+    { id: "sweepCurve", name: "Sweep curve", min: 0, max: 1, scale: "lin", unit: "" },
+    { id: "decay", name: "Decay", min: 50, max: 1500, scale: "exp", unit: "ms" },
+    { id: "clickLevel", name: "Click level", min: 0, max: 1, scale: "lin", unit: "" },
+    { id: "clickTone", name: "Click tone", min: 500, max: 12000, scale: "exp", unit: "Hz" },
+    { id: "drive", name: "Drive", min: 0, max: 1, scale: "lin", unit: "" },
+    { id: "tone", name: "Tone", min: 200, max: 20000, scale: "exp", unit: "Hz" }
+  ];
+  var START_STEP = 0.25, MIN_STEP = 0.02, MAX_STEP = 0.5, SHRINK = 0.6, GROW = 1.6;
+  var MODULUS = 2147483647;
+
+  function clone(x) { return JSON.parse(JSON.stringify(x)); }
+
+  // Park-Miller generator: the product stays below 2^53, so plain doubles are exact.
+  function rand(s) { s.seed = (s.seed * 16807) % MODULUS; return (s.seed - 1) / (MODULUS - 1); }
+  function gauss(s) {
+    var u1 = Math.max(rand(s), 1e-9), u2 = rand(s);
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
+  function fold(v) {
+    if (v < 0) v = -v;
+    if (v > 1) v = 2 - v;
+    return Math.min(1, Math.max(0, v));
+  }
+
+  function randomValues(s) {
+    var out = [], i;
+    for (i = 0; i < PARAMS.length; i++) out.push(s.locks[PARAMS[i].id] && s.lockedValues ? s.lockedValues[i] : rand(s));
+    return out;
+  }
+  function mutate(s, values) {
+    var out = [], i;
+    for (i = 0; i < PARAMS.length; i++) {
+      out.push(s.locks[PARAMS[i].id] ? values[i] : fold(values[i] + gauss(s) * s.step));
+    }
+    return out;
+  }
+  function candidate(s, values, favourite) {
+    var c = { id: s.nextId, values: values, favourite: favourite };
+    s.nextId += 1;
+    return c;
+  }
+  function shuffle(s, list) {
+    var i, j, t;
+    for (i = list.length - 1; i > 0; i--) {
+      j = Math.floor(rand(s) * (i + 1));
+      t = list[i]; list[i] = list[j]; list[j] = t;
+    }
+    return list;
+  }
+  function breed(s, favValues) {
+    var list = [candidate(s, favValues, true), candidate(s, mutate(s, favValues), false), candidate(s, mutate(s, favValues), false)];
+    return s.shuffle ? shuffle(s, list) : list;
+  }
+  function snapshot(state) { var c = clone(state); c.past = []; return c; }
+  function favourite(state) {
+    var i;
+    for (i = 0; i < state.candidates.length; i++) if (state.candidates[i].favourite) return state.candidates[i];
+    return null;
+  }
+
+  function create(seed, options) {
+    var o = options || {};
+    var s = {
+      seed: (Math.abs(Math.floor(seed)) % (MODULUS - 1)) + 1,
+      round: 1, step: START_STEP, locks: {}, shuffle: o.shuffle !== false,
+      nextId: 1, candidates: [], past: [], picks: [], kept: null
+    };
+    s.candidates = [candidate(s, randomValues(s), false), candidate(s, randomValues(s), false)];
+    return s;
+  }
+
+  // The user prefers slot `index`. It becomes the favourite and two variations are bred from it.
+  function choose(state, index) {
+    var picked = state.candidates[index], s;
+    if (!picked) return state;
+    s = clone(state);
+    s.past.push(snapshot(state));
+    if (picked.favourite) s.step = Math.max(MIN_STEP, s.step * SHRINK);
+    s.picks.push({ round: s.round, slot: index, favourite: picked.favourite, step: s.step });
+    s.round += 1;
+    s.candidates = breed(s, picked.values.slice());
+    return s;
+  }
+  function resize(state, factor) {
+    var fav = favourite(state), s;
+    if (!fav) return state;
+    s = clone(state);
+    s.past.push(snapshot(state));
+    s.step = Math.min(MAX_STEP, Math.max(MIN_STEP, s.step * factor));
+    s.candidates = breed(s, fav.values.slice());
+    return s;
+  }
+  function wider(state) { return resize(state, GROW); }
+  function closer(state) { return resize(state, SHRINK); }
+  function back(state) {
+    var s;
+    if (!state.past.length) return state;
+    s = clone(state.past[state.past.length - 1]);
+    s.past = clone(state.past.slice(0, -1));
+    return s;
+  }
+  function fresh(state) {
+    var r = { seed: state.seed };
+    rand(r);
+    var s = create(r.seed, { shuffle: state.shuffle });
+    return s;
+  }
+  function toggleLock(state, id) {
+    var s = clone(state);
+    s.locks[id] = !s.locks[id];
+    return s;
+  }
+  function setShuffle(state, on) { var s = clone(state); s.shuffle = !!on; return s; }
+  function keep(state, index) {
+    var c = state.candidates[index], s;
+    if (!c) return state;
+    s = clone(state);
+    s.kept = { values: c.values.slice(), round: s.round, choices: s.picks.length, step: s.step };
+    return s;
+  }
+  // Start a new search with `values` as the favourite (the kept kick, for later tweaks).
+  function breedFrom(state, values) {
+    var s = clone(state);
+    s.past.push(snapshot(state));
+    s.kept = null;
+    s.step = START_STEP / 2;
+    s.round += 1;
+    s.candidates = breed(s, values.slice());
+    return s;
+  }
+
+  function toReal(param, v) {
+    if (param.scale === "exp") return param.min * Math.pow(param.max / param.min, v);
+    return param.min + (param.max - param.min) * v;
+  }
+  function realValues(values) {
+    var out = {}, i;
+    for (i = 0; i < PARAMS.length; i++) out[PARAMS[i].id] = toReal(PARAMS[i], values[i]);
+    return out;
+  }
+
+  return {
+    PARAMS: PARAMS, create: create, choose: choose, wider: wider, closer: closer, back: back,
+    fresh: fresh, toggleLock: toggleLock, setShuffle: setShuffle, keep: keep, breedFrom: breedFrom,
+    favourite: favourite, realValues: realValues, toReal: toReal
+  };
+})();
+if (typeof module !== "undefined" && module.exports) module.exports = KickBreeder;
+</script>
+
+<script>
+// Page shell: synthesis, playback and drawing. Throwaway.
+(function () {
+  var KB = KickBreeder;
+  var SR = 44100;
+  var TARGET_RMS = 0.25;
+  var RAW_GAIN = 0.5;
+  var state = KB.create(Date.now() % 100000);
+  var listening = 0;
+  var showFav = false;
+  var cache = {};       // candidate id -> { buffer, rawDb, matchGain }
+  var keptRender = null;
+  var ctx = null, loopTimer = null, nextNoteTime = 0, step16 = 0;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var LETTERS = ["A", "B", "C"];
+
+  // ---------- Synthesis (offline render, so every replay is identical) ----------
+  var noise = (function () {
+    var n = Math.ceil(SR * 0.3), data = new Float32Array(n), seed = 12345, i;
+    for (i = 0; i < n; i++) { seed = (seed * 16807) % 2147483647; data[i] = (seed / 2147483647) * 2 - 1; }
+    return data;
+  })();
+
+  function renderKick(values) {
+    var p = KB.realValues(values);
+    var dur = p.decay / 1000 + 0.12;
+    var off = new OfflineAudioContext(1, Math.ceil(SR * dur), SR);
+    var startF = Math.min(p.pitch * Math.pow(2, p.sweep / 12), 18000);
+    var T = p.sweepTime / 1000;
+    var power = 1 + p.sweepCurve * 6;
+    var n = 256, curve = new Float32Array(n), i;
+    for (i = 0; i < n; i++) curve[i] = p.pitch + (startF - p.pitch) * Math.pow(1 - i / (n - 1), power);
+
+    var osc = off.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueCurveAtTime(curve, 0, T);
+    var amp = off.createGain();
+    amp.gain.setValueAtTime(0, 0);
+    amp.gain.linearRampToValueAtTime(1, 0.0015);
+    amp.gain.setTargetAtTime(0, 0.0015, (p.decay / 1000) / 6.9);
+    osc.connect(amp);
+
+    var nb = off.createBuffer(1, noise.length, SR);
+    nb.copyToChannel(noise, 0);
+    var ns = off.createBufferSource(); ns.buffer = nb;
+    var bp = off.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = p.clickTone; bp.Q.value = 0.8;
+    var cg = off.createGain();
+    cg.gain.setValueAtTime(p.clickLevel * 2, 0);
+    cg.gain.setTargetAtTime(0, 0, 0.004);
+    ns.connect(bp); bp.connect(cg);
+
+    var shaper = off.createWaveShaper();
+    var k = 1 + p.drive * 12, sc = new Float32Array(2048), norm = Math.tanh(k);
+    for (i = 0; i < sc.length; i++) { var x = i / (sc.length - 1) * 2 - 1; sc[i] = Math.tanh(k * x) / norm; }
+    shaper.curve = sc;
+    var lp = off.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = Math.min(p.tone, SR / 2 - 100); lp.Q.value = 0.707;
+
+    amp.connect(shaper); cg.connect(shaper); shaper.connect(lp); lp.connect(off.destination);
+    osc.start(0); ns.start(0);
+    return off.startRendering();
+  }
+
+  // Loudness: the loudest 50 ms window of RMS in the first 400 ms, which is roughly what you hear as a kick's level.
+  function measure(buffer) {
+    var d = buffer.getChannelData(0), win = Math.floor(SR * 0.05), end = Math.min(d.length, Math.floor(SR * 0.4));
+    var best = 0, peak = 0, i, j, sum;
+    for (i = 0; i < d.length; i++) peak = Math.max(peak, Math.abs(d[i]));
+    for (i = 0; i + win <= end; i += Math.floor(win / 4)) {
+      sum = 0;
+      for (j = i; j < i + win; j++) sum += d[j] * d[j];
+      best = Math.max(best, Math.sqrt(sum / win));
+    }
+    var g = best > 0 ? TARGET_RMS / best : 1;
+    if (peak * g > 0.95) g = 0.95 / peak;
+    return { rawDb: 20 * Math.log(Math.max(best * RAW_GAIN, 1e-6)) / Math.LN10, matchGain: g };
+  }
+
+  function ensure(values, id) {
+    if (cache[id]) return Promise.resolve(cache[id]);
+    return renderKick(values).then(function (buffer) {
+      var m = measure(buffer);
+      cache[id] = { buffer: buffer, rawDb: m.rawDb, matchGain: m.matchGain };
+      return cache[id];
+    });
+  }
+
+  // ---------- Playback ----------
+  function audio() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+  function gainFor(r) { return $("match").checked ? r.matchGain : RAW_GAIN; }
+  function playRender(r, when) {
+    var a = audio();
+    var src = a.createBufferSource(); src.buffer = r.buffer;
+    var g = a.createGain(); g.gain.value = gainFor(r);
+    src.connect(g); g.connect(a.destination);
+    src.start(when || a.currentTime);
+  }
+  function playSlot(i) {
+    var c = state.candidates[i];
+    if (!c) return;
+    listening = i;
+    render();
+    ensure(c.values, c.id).then(function (r) { playRender(r); });
+  }
+  function noiseHit(when, type) {
+    var a = audio();
+    var b = a.createBuffer(1, noise.length, SR); b.copyToChannel(noise, 0);
+    var src = a.createBufferSource(); src.buffer = b;
+    var f = a.createBiquadFilter(), g = a.createGain();
+    if (type === "hat") {
+      f.type = "highpass"; f.frequency.value = 7500;
+      g.gain.setValueAtTime(0.12, when); g.gain.setTargetAtTime(0, when, 0.012);
+    } else {
+      f.type = "bandpass"; f.frequency.value = 1400; f.Q.value = 1.2;
+      g.gain.setValueAtTime(0, when);
+      [0, 0.01, 0.02].forEach(function (t) { g.gain.setValueAtTime(0.5, when + t); g.gain.setTargetAtTime(0.05, when + t, 0.003); });
+      g.gain.setTargetAtTime(0, when + 0.03, 0.04);
+    }
+    src.connect(f); f.connect(g); g.connect(a.destination);
+    src.start(when, Math.random() * 0.1, 0.2);
+  }
+  var PATTERNS = {
+    four:   { kick: [0, 4, 8, 12], clap: [4, 12], hat: [2, 6, 10, 14] },
+    broken: { kick: [0, 3, 10], clap: [4, 12], hat: [2, 6, 7, 10, 14] },
+    half:   { kick: [0, 11], clap: [8], hat: [0, 2, 4, 6, 8, 10, 12, 14] }
+  };
+  function currentLoopRender() {
+    if (state.kept && keptRender) return keptRender;
+    var c = state.candidates[listening];
+    return c && cache[c.id] ? cache[c.id] : null;
+  }
+  function scheduler() {
+    var a = audio();
+    var sixteenth = 60 / Math.max(60, Math.min(180, +$("bpm").value || 122)) / 4;
+    var pat = PATTERNS[$("pattern").value];
+    while (nextNoteTime < a.currentTime + 0.12) {
+      if (pat.kick.indexOf(step16) !== -1) { var r = currentLoopRender(); if (r) playRender(r, nextNoteTime); }
+      if (pat.clap.indexOf(step16) !== -1) noiseHit(nextNoteTime, "clap");
+      if (pat.hat.indexOf(step16) !== -1) noiseHit(nextNoteTime, "hat");
+      nextNoteTime += sixteenth;
+      step16 = (step16 + 1) % 16;
+    }
+  }
+  function toggleLoop() {
+    if (loopTimer) { clearInterval(loopTimer); loopTimer = null; }
+    else { var a = audio(); nextNoteTime = a.currentTime + 0.05; step16 = 0; loopTimer = setInterval(scheduler, 25); }
+    $("loopBtn").textContent = loopTimer ? "Stop loop" : "Start loop";
+    $("loopBtn").classList.toggle("on", !!loopTimer);
+  }
+
+  // ---------- Drawing ----------
+  function drawWave(canvas, buffer) {
+    var dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    var g = canvas.getContext("2d"); g.scale(dpr, dpr);
+    g.clearRect(0, 0, w, h);
+    if (!buffer) return;
+    var d = buffer.getChannelData(0), span = Math.floor(SR * 1.6), per = Math.max(1, Math.floor(span / w));
+    var col = getComputedStyle(document.documentElement).getPropertyValue("--wave").trim();
+    g.fillStyle = col;
+    for (var x = 0; x < w; x++) {
+      var lo = 0, hi = 0, s = x * per;
+      for (var j = s; j < s + per && j < d.length; j++) { if (d[j] < lo) lo = d[j]; if (d[j] > hi) hi = d[j]; }
+      g.fillRect(x, h / 2 - hi * h / 2 * 0.95, 1, Math.max(1, (hi - lo) * h / 2 * 0.95));
+    }
+  }
+
+  // ---------- Rendering the page from state ----------
+  function fmt(param, v) {
+    var r = KB.toReal(param, v);
+    if (param.unit === "Hz") return (r >= 1000 ? (r / 1000).toFixed(1) + " kHz" : r.toFixed(0) + " Hz");
+    if (param.unit === "ms") return r.toFixed(0) + " ms";
+    if (param.unit === "st") return r.toFixed(1) + " st";
+    return r.toFixed(2);
+  }
+
+  function render() {
+    if (listening >= state.candidates.length) listening = 0;
+    var fav = KB.favourite(state);
+    var slots = $("slots");
+    slots.innerHTML = "";
+    state.candidates.forEach(function (c, i) {
+      var el = document.createElement("article");
+      el.className = "slot" + (i === listening && !state.kept ? " listening" : "");
+      el.innerHTML =
+        '<div class="slot-head"><span class="slot-name">' + LETTERS[i] + '</span>' +
+        (showFav && c.favourite ? '<span class="badge">Favourite</span>' : '') + '</div>' +
+        '<canvas class="wave" aria-hidden="true"></canvas>' +
+        '<div class="muted mono" style="font-size:12px">Level before matching <span data-db>…</span></div>' +
+        '<div class="row"><button type="button" data-play>Hear <kbd>' + (i + 1) + '</kbd></button>' +
+        '<button type="button" class="primary" data-choose' + (state.kept ? ' disabled' : '') + '>Choose ' + LETTERS[i] + '</button></div>';
+      el.querySelector("[data-play]").onclick = function () { playSlot(i); };
+      el.querySelector("[data-choose]").onclick = function () { doChoose(i); };
+      slots.appendChild(el);
+      ensure(c.values, c.id).then(function (r) {
+        drawWave(el.querySelector("canvas"), r.buffer);
+        el.querySelector("[data-db]").textContent = r.rawDb.toFixed(1) + " dB";
+      });
+    });
+
+    $("statRound").textContent = state.round;
+    $("statChoices").textContent = state.picks.length;
+    $("statStep").textContent = state.step.toFixed(2);
+    $("statListen").textContent = state.kept ? "Kept" : LETTERS[listening];
+    $("wider").disabled = $("closer").disabled = !fav;
+    $("back").disabled = !state.past.length;
+
+    var h = $("history");
+    if (!state.picks.length) h.innerHTML = '<span class="muted">None yet.</span>';
+    else h.innerHTML = state.picks.map(function (p) {
+      return '<span class="chip' + (p.favourite ? ' same' : '') + '" title="' + (p.favourite ? 'Chose the favourite again' : 'Chose a new variation') + '">R' + p.round + ' ' + (p.favourite ? 'same' : 'new') + ' · ' + p.step.toFixed(2) + '</span>';
+    }).join("");
+
+    // Settings table
+    var t = '<thead><tr><th>Lock</th><th>Setting</th>' + state.candidates.map(function (c, i) {
+      return '<th>' + LETTERS[i] + (showFav && c.favourite ? ' ★' : '') + '</th>';
+    }).join("") + '</tr></thead><tbody>';
+    KB.PARAMS.forEach(function (p, pi) {
+      t += '<tr><td><input type="checkbox" id="lock-' + p.id + '" data-lock="' + p.id + '"' + (state.locks[p.id] ? ' checked' : '') + ' aria-label="Lock ' + p.name + '"></td><td>' + p.name + '</td>';
+      state.candidates.forEach(function (c) {
+        var changed = fav && !c.favourite && Math.abs(c.values[pi] - fav.values[pi]) > 0.05;
+        t += '<td class="num' + (changed && showFav ? ' changed' : '') + '">' + fmt(p, c.values[pi]) + '</td>';
+      });
+      t += '</tr>';
+    });
+    $("settings").innerHTML = t + '</tbody>';
+    Array.prototype.forEach.call(document.querySelectorAll("[data-lock]"), function (box) {
+      box.onchange = function () { state = KB.toggleLock(state, box.getAttribute("data-lock")); render(); };
+    });
+
+    // Kept panel
+    $("keptPanel").hidden = !state.kept;
+    $("keep").disabled = !!state.kept;
+    if (state.kept) {
+      var real = KB.realValues(state.kept.values), named = {};
+      KB.PARAMS.forEach(function (p) { named[p.name] = +real[p.id].toFixed(3); });
+      $("keptTitle").textContent = "Kept after " + state.kept.choices + " choice" + (state.kept.choices === 1 ? "" : "s");
+      $("keptSummary").textContent = "You reached this kick in round " + state.kept.round + ", with variations at size " + state.kept.step.toFixed(2) + " when you stopped.";
+      $("resultText").value = JSON.stringify({
+        choices: state.kept.choices, round: state.kept.round, variationSize: +state.kept.step.toFixed(3),
+        history: state.picks.map(function (p) { return p.favourite ? "same" : "new"; }),
+        locks: Object.keys(state.locks).filter(function (k) { return state.locks[k]; }),
+        matchLoudness: $("match").checked, shuffle: state.shuffle, kick: named
+      }, null, 2);
+    }
+  }
+
+  // ---------- Actions ----------
+  function doChoose(i) { if (state.kept) return; state = KB.choose(state, i); listening = 0; render(); if (!loopTimer) playSlot(0); }
+  $("wider").onclick = function () { state = KB.wider(state); render(); };
+  $("closer").onclick = function () { state = KB.closer(state); render(); };
+  $("back").onclick = function () { state = KB.back(state); keptRender = null; render(); };
+  $("fresh").onclick = function () { state = KB.fresh(state); keptRender = null; listening = 0; render(); };
+  $("keep").onclick = function () {
+    state = KB.keep(state, listening);
+    ensure(state.kept.values, "kept-" + state.round).then(function (r) { keptRender = r; });
+    render();
+  };
+  $("playKept").onclick = function () { if (keptRender) playRender(keptRender); };
+  $("breedFromKept").onclick = function () { state = KB.breedFrom(state, state.kept.values); keptRender = null; listening = 0; render(); };
+  $("loopBtn").onclick = toggleLoop;
+  $("shuffle").onchange = function () { state = KB.setShuffle(state, $("shuffle").checked); };
+  $("showFav").onchange = function () { showFav = $("showFav").checked; render(); };
+  $("copyResult").onclick = function () {
+    var text = $("resultText").value;
+    try {
+      navigator.clipboard.writeText(text).then(function () { $("copyNote").textContent = "Copied."; },
+        function () { $("resultText").select(); $("copyNote").textContent = "Selected. Copy it with your keyboard."; });
+    } catch (e) { $("resultText").select(); $("copyNote").textContent = "Selected. Copy it with your keyboard."; }
+  };
+  document.addEventListener("keydown", function (e) {
+    var tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "select" || tag === "textarea") return;
+    if (e.key === "1" || e.key === "2" || e.key === "3") { playSlot(+e.key - 1); e.preventDefault(); }
+    else if (e.key === "Enter") { doChoose(listening); e.preventDefault(); }
+    else if (e.key === " ") { toggleLoop(); e.preventDefault(); }
+  });
+
+  // ---------- Things to try ----------
+  var SCENARIOS = [
+    { name: "Find a kick", seed: 1001, steps: [
+      "Start the loop. Press 1, 2 and 3 to swap which kick plays in the beat.",
+      "Press Enter (or Choose) on the one you like best. Do not overthink it.",
+      "Keep going until you would happily use what you hear, then press Keep.",
+      "Note the number of choices. The spike hopes for about ten or fewer."
+    ] },
+    { name: "Lock and refine", seed: 2002, steps: [
+      "Choose a few rounds until the length of the kick feels right.",
+      "Lock Decay in the settings table, and Pitch too if it sits well in the beat.",
+      "Keep choosing. Only the punch, click and drive change now.",
+      "Does locking make the search faster, or does it feel like knob-turning again?"
+    ] },
+    { name: "Loudness test", seed: 3003, steps: [
+      "Turn off Match loudness.",
+      "Choose for five rounds, and watch the Level before matching readout on each slot.",
+      "Did you keep picking the loudest one? That is why matching is on by default.",
+      "Turn matching back on and compare how the choices feel."
+    ] },
+    { name: "Favourite on show", seed: 4004, steps: [
+      "Turn on Show favourite. Changed settings are highlighted in the table.",
+      "Choose for a few rounds. Does knowing which slot is the favourite pull you towards it?",
+      "Try Wider when every slot sounds the same, and Closer when they are all too different."
+    ] }
+  ];
+  var tabs = $("tabs"), activeTab = 0;
+  function renderTabs() {
+    tabs.innerHTML = "";
+    SCENARIOS.forEach(function (s, i) {
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = s.name; b.className = i === activeTab ? "on" : "";
+      b.onclick = function () { activeTab = i; renderTabs(); };
+      tabs.appendChild(b);
+    });
+    var s = SCENARIOS[activeTab];
+    $("tabBody").innerHTML = '<ol>' + s.steps.map(function (t) { return '<li>' + t + '</li>'; }).join("") + '</ol>' +
+      '<div class="row"><button type="button" class="primary" id="startScenario">Start this from a fixed point</button>' +
+      '<span class="muted">Same starting kicks every time, so you can compare runs.</span></div>';
+    $("startScenario").onclick = function () {
+      state = KB.create(s.seed, { shuffle: $("shuffle").checked });
+      cache = {}; keptRender = null; listening = 0; render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+  }
+  renderTabs();
+  render();
+  window.addEventListener("resize", function () { render(); });
+})();
+</script>

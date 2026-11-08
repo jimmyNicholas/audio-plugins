@@ -5,7 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { pack, unpack, readChunks, MIDI_EFFECT, AUDIO_EFFECT } from "./amxd.mjs";
+import { pack, unpack, readChunks, MIDI_EFFECT, AUDIO_EFFECT, INSTRUMENT } from "./amxd.mjs";
 
 const tool = fileURLToPath(new URL("./amxd.mjs", import.meta.url));
 
@@ -13,9 +13,10 @@ function patcherOf(project) {
   return JSON.stringify({ patcher: { fileversion: 1, project, boxes: [], lines: [] } }, null, 2) + "\n";
 }
 
-// The numbers Max saves for each device type: "mmmm" and "aaaa" read as big-endian integers.
+// The numbers Max saves for each device type: "mmmm", "aaaa" and "iiii" read as big-endian integers.
 const midiPatcher = patcherOf({ amxdtype: 1835887981 });
 const audioPatcher = patcherOf({ amxdtype: 1633771873 });
+const instrumentPatcher = patcherOf({ amxdtype: 1768515945 });
 
 test("pack writes ampf, meta and ptch chunks for a MIDI effect", () => {
   const chunks = readChunks(pack(midiPatcher));
@@ -33,9 +34,15 @@ test("pack writes the aaaa tag for an audio effect", () => {
   assert.equal(chunks[0].data.toString("ascii"), "aaaa");
 });
 
+test("pack writes the iiii tag for an instrument", () => {
+  const chunks = readChunks(pack(instrumentPatcher, INSTRUMENT));
+  assert.equal(chunks[0].data.toString("ascii"), "iiii");
+});
+
 for (const [type, patcher, other] of [
   [MIDI_EFFECT, midiPatcher, audioPatcher],
   [AUDIO_EFFECT, audioPatcher, midiPatcher],
+  [INSTRUMENT, instrumentPatcher, audioPatcher],
 ]) {
   test(`pack as ${type} rejects a patcher saved as another device type`, () => {
     assert.throws(() => pack(other, type), /amxdtype/);
@@ -90,6 +97,12 @@ test("CLI packs an audio effect with --type audio", (t) => {
   assert.ok(Buffer.compare(fs.readFileSync(path.join(dir, "out.amxd")), pack(audioPatcher, AUDIO_EFFECT)) === 0);
 });
 
+test("CLI packs an instrument with --type instrument", (t) => {
+  const { ok, dir } = cli(t, ["pack", "--type", "instrument", "in.maxpat", "out.amxd"], { "in.maxpat": instrumentPatcher });
+  assert.ok(ok);
+  assert.ok(Buffer.compare(fs.readFileSync(path.join(dir, "out.amxd")), pack(instrumentPatcher, INSTRUMENT)) === 0);
+});
+
 test("CLI fails when --type does not match the patcher", (t) => {
   const { ok, dir, stderr } = cli(t, ["pack", "--type", "audio", "in.maxpat", "out.amxd"], { "in.maxpat": midiPatcher });
   assert.ok(!ok);
@@ -98,7 +111,7 @@ test("CLI fails when --type does not match the patcher", (t) => {
 });
 
 test("CLI rejects an unknown --type", (t) => {
-  const { ok, stderr } = cli(t, ["pack", "--type", "instrument", "in.maxpat", "out.amxd"], { "in.maxpat": midiPatcher });
+  const { ok, stderr } = cli(t, ["pack", "--type", "synth", "in.maxpat", "out.amxd"], { "in.maxpat": midiPatcher });
   assert.ok(!ok);
   assert.match(stderr, /Usage/);
 });

@@ -4,7 +4,7 @@ Working name. A Max for Live instrument for Ableton Live 11 that synthesises a k
 
 Background: [Composing from nothing, without samples](../../../docs/research/sample-free-composition-tools.md), section 5 ("Breeder drum"). The idea is interactive evolution, as in Synplant's seeds and Microtonic's Patternarium, narrowed to one kick and run locally inside Live.
 
-Status: idea, not built. A browser spike of the choosing loop is in [`prototype/kick-breeder-spike.html`](../prototype/kick-breeder-spike.html) (throwaway; the engine script inside it is ES5 and meant to lift into the device). Decisions marked **(proposed)** are the builder's recommendation and still need the user's yes.
+Status: idea. A throwaway Max for Live spike is in [`spike/`](../spike/README.md): an instrument that runs the choosing loop, with a checklist to fill in. The engine in `spike/kick-breeder.js` is ES5 and meant to lift into the real device. Decisions marked **(proposed)** are the builder's recommendation and still need the user's yes.
 
 ## The loop
 
@@ -76,12 +76,12 @@ Follows TAP's pattern ([TAP spec](../../tap/docs/SPEC.md), "Technical approach")
 - **Max 8**, bundled with Live 11. No `gen~` (the licence on hand cannot edit it). No third-party externals.
 - **Breeding engine in `js`, ES5:** settings, mutation, step size, locks, history, slot shuffle and the seeded random generator live in one file that also exports itself for Node, so it is unit tested with `node --test` and checked as ES5 in CI.
 - **Thin patch:** the patch holds the kick voice, the panel and the wiring. Nothing that can be tested lives in the patch.
-- **Instrument device:** Kick Breeder makes sound from MIDI, so it is an instrument, not an effect. `tools/amxd.mjs` packs only MIDI and audio effects today, so it needs an instrument type added, with a test, the same way the audio type was added for Slush Wave.
+- **Instrument device:** Kick Breeder makes sound from MIDI, so it is an instrument, not an effect. `tools/amxd.mjs` packs it with `--type instrument` (`iiii`).
 - **Patch kept as JSON** (`.maxpat`) and packed to an unfrozen `.amxd`; both committed.
 
 ## Open questions
 
-1. **Loudness matching without `gen~`:** render each candidate into a `buffer~` and measure its peak or RMS from `js`, then set a gain per slot? Rendering also makes every replay identical. Needs a spike.
+1. **Loudness matching without `gen~`:** the spike simulates each kick in the `js` and sets a gain from that. Is it close enough by ear, or does it need rendering into a `buffer~` and measuring?
 2. **How many rounds feel right?** If it takes more than about ten choices to land a kick, the step size rules need tuning. The user's listening decides.
 3. **Choice from three, or from more?** Three keeps choices fast. A "show four" option could come later.
 4. **Are nine settings enough,** or does it need a second body oscillator or a sub layer?

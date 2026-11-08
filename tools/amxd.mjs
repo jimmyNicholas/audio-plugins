@@ -9,7 +9,7 @@
 // big-endian integer). Packing checks the two agree, so a patcher saved as one kind of
 // device is never packed as another; see devices/slush-wave/docs/research/amxd-audio-effect.md.
 //
-//   node tools/amxd.mjs pack [--type midi|audio] <in.maxpat> <out.amxd>   (default midi)
+//   node tools/amxd.mjs pack [--type midi|audio|instrument] <in.maxpat> <out.amxd>   (default midi)
 //   node tools/amxd.mjs unpack <in.amxd> <out.maxpat>
 
 import fs from "node:fs";
@@ -17,8 +17,9 @@ import { fileURLToPath } from "node:url";
 
 export const MIDI_EFFECT = "mmmm";
 export const AUDIO_EFFECT = "aaaa";
+export const INSTRUMENT = "iiii";
 
-const TYPES = { midi: MIDI_EFFECT, audio: AUDIO_EFFECT };
+const TYPES = { midi: MIDI_EFFECT, audio: AUDIO_EFFECT, instrument: INSTRUMENT };
 
 function chunk(tag, data) {
   const header = Buffer.alloc(8);
@@ -82,7 +83,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   } else if (command === "unpack" && input && output) {
     fs.writeFileSync(output, unpack(fs.readFileSync(input)));
   } else {
-    console.error("Usage: node amxd.mjs pack [--type midi|audio] <in.maxpat> <out.amxd> | unpack <in.amxd> <out.maxpat>");
+    console.error("Usage: node amxd.mjs pack [--type midi|audio|instrument] <in.maxpat> <out.amxd> | unpack <in.amxd> <out.maxpat>");
     process.exit(1);
   }
 }

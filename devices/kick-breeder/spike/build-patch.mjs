@@ -32,7 +32,8 @@ function shape(text) {
     case "sel": return [2, ["bang", ""]];
     case "t": return [1, args.map((a) => ({ b: "bang", i: "int", f: "float" })[a] || "")];
     case "/": return [2, ["float"]];
-    case "js": return [1, any(5)];
+    case "js": return [1, any(1)];
+    case "route": return [2, any(args.length + 1)];
     case "prepend": return [1, any(1)];
     case "live.thisdevice": return [1, ["bang", "int", "int"]];
     case "deferlow": return [1, any(1)];
@@ -117,35 +118,40 @@ class Patch {
 
 // ---- panel controls -----------------------------------------------------------------------
 
-const UNIT = { int: 0, float: 1, ms: 2, hz: 3, st: 7, enum: 9 };
+const UNIT = { float: 1, enum: 9 };
 
 function parameterBox(p, maxclass, longname, rect, valueof, extra = {}) {
   const outlets = {
     "live.dial": ["", "float"],
+    "live.slider": ["", "float"],
+    "live.numbox": ["", "float"],
     "live.text": ["", ""],
-    "live.tab": ["", "", "float"],
   }[maxclass];
-  return p.add({
+  const { shortname, hidden, ...rest } = extra;
+  const box = {
     maxclass,
-    varname: extra.varname || longname.toLowerCase().replace(/ /g, "_"),
+    varname: rest.varname || longname.toLowerCase().replace(/ /g, "_"),
     numinlets: 1,
     numoutlets: outlets.length,
     outlettype: outlets,
     parameter_enable: 1,
-    ...extra,
+    ...rest,
     patching_rect: p.place(rect[2], rect[3]),
-    presentation: 1,
-    presentation_rect: rect,
     saved_attribute_attributes: {
       valueof: {
         parameter_longname: longname,
-        parameter_shortname: extra.shortname || longname,
+        parameter_shortname: shortname || longname,
         parameter_invisible: 1, // Stored Only: saved with the Set, not automatable
         parameter_initial_enable: 1,
         ...valueof,
       },
     },
-  });
+  };
+  if (!hidden) {
+    box.presentation = 1;
+    box.presentation_rect = rect;
+  }
+  return p.add(box);
 }
 
 const enumOf = (items, initial) => ({
@@ -157,23 +163,13 @@ const enumOf = (items, initial) => ({
   parameter_enum: items,
 });
 
-// A press button: live.text in button mode. Sends "<message> <value>" to the js.
-function button(p, longname, message, rect) {
-  return parameterBox(p, "live.text", longname, rect, enumOf(["off", "on"], 0), {
-    varname: message,
-    mode: 0,
-    text: longname,
-    texton: longname,
-  });
+// A press button: live.text in button mode.
+function button(p, longname, varname, rect, text = longname) {
+  return parameterBox(p, "live.text", longname, rect, enumOf(["off", "on"], 0), { varname, mode: 0, text, texton: text });
 }
 
 function toggle(p, longname, varname, text, rect, initial) {
-  return parameterBox(p, "live.text", longname, rect, enumOf(["off", "on"], initial), {
-    varname,
-    mode: 1,
-    text,
-    texton: text,
-  });
+  return parameterBox(p, "live.text", longname, rect, enumOf(["off", "on"], initial), { varname, mode: 1, text, texton: text });
 }
 
 function label(p, text, rect, extra = {}) {
@@ -206,20 +202,32 @@ function readout(p, varname, rect, text = "") {
   });
 }
 
-// The Kept dials, in the engine's parameter order (KickBreeder.PARAMS in kick-breeder.js).
-export const KEPT = [
-  { longname: "Kept Pitch", shortname: "Pitch", min: 30, max: 120, initial: 55, unit: UNIT.hz, exponent: 2 },
-  { longname: "Kept Sweep", shortname: "Sweep", min: 0, max: 48, initial: 24, unit: UNIT.st },
-  { longname: "Kept Sweep Time", shortname: "Sweep T", min: 5, max: 200, initial: 40, unit: UNIT.ms, exponent: 3 },
-  { longname: "Kept Sweep Curve", shortname: "Curve", min: 0, max: 1, initial: 0.5, unit: UNIT.float },
-  { longname: "Kept Decay", shortname: "Decay", min: 50, max: 1500, initial: 400, unit: UNIT.ms, exponent: 3 },
-  { longname: "Kept Click", shortname: "Click", min: 0, max: 1, initial: 0.3, unit: UNIT.float },
-  { longname: "Kept Click Tone", shortname: "Click T", min: 500, max: 12000, initial: 3000, unit: UNIT.hz, exponent: 3 },
-  { longname: "Kept Drive", shortname: "Drive", min: 0, max: 1, initial: 0.2, unit: UNIT.float },
-  { longname: "Kept Tone", shortname: "Tone", min: 200, max: 16000, initial: 8000, unit: UNIT.hz, exponent: 3 },
-];
+// A message box the js fills with "set ..." by scripting name.
+function store(p, varname) {
+  return p.add({
+    maxclass: "message",
+    varname,
+    numinlets: 2,
+    numoutlets: 1,
+    outlettype: [""],
+    patching_rect: p.place(160),
+    text: "",
+  });
+}
 
-// Every message the panel sends to the js, so the tests can check each has a function.
+// Engine parameters, in KickBreeder.PARAMS order (kick-breeder.js): short names for the locks.
+export const PARAM_NAMES = [
+  "Pitch", "Sweep", "Sweep T", "Curve", "Decay", "Click", "Click T",
+  "Noise", "Noise D", "Noise T", "Comp", "Sat", "Tone",
+];
+export const SAVED = 4;
+
+// MIDI note numbers, with Live's names (C3 = 60).
+export const PLAY_KEYS = { A: 60, B: 62, C: 64, S1: 65, S2: 67, S3: 69, S4: 71 };
+export const ACTION_KEYS = { choose_a: 48, choose_b: 50, choose_c: 52, save_1: 53, save_2: 55, save_3: 57, save_4: 59 };
+export const SLOTS = [...Object.keys(PLAY_KEYS), "CUR"];
+
+// Every message the patch sends to the js, so the tests can check each has a function.
 export const MESSAGES = new Set();
 
 function toJs(p, control, prefix, js) {
@@ -229,172 +237,149 @@ function toJs(p, control, prefix, js) {
   p.connect(pre, 0, js, 0);
 }
 
+function msgToJs(p, text, js) {
+  MESSAGES.add(text.split(" ")[0]);
+  const m = p.msg(text);
+  p.connect(m, 0, js, 0);
+  return m;
+}
+
 // ---- the device -----------------------------------------------------------------------------
 
 function build() {
   const p = new Patch();
 
   p.at(20, 20);
-  p.comment("Kick Breeder spike. Throwaway. See README.md. The js keeps the breeding state and works out each kick's envelopes.");
+  p.comment("Kick Breeder spike. Throwaway. See README.md. The js keeps the breeding state and fills each slot's message boxes.");
   const js = p.obj(`js ${JS_FILE}`, { saved_object_attributes: { filename: JS_FILE, parameter_enable: 0 } });
 
-  // Load: once the device is ready, the js reads the panel and makes the first two kicks.
+  // Load: once the device is ready, the js reads the panel and the saved kicks.
   p.at(20, 80);
   const thisDevice = p.obj("live.thisdevice");
   const defer = p.obj("deferlow");
-  const init = p.msg("init");
+  const init = msgToJs(p, "init", js);
   p.connect(thisDevice, 0, defer, 0);
   p.connect(defer, 0, init, 0);
-  p.connect(init, 0, js, 0);
 
   // ---- panel ----
-  // Column 1: title, readouts, mode and toggles.
+  // Column 1: title, readouts, toggles, Reset, Back, Breed from heard, key help.
   p.at(900, 20);
   label(p, "KICK BREEDER SPIKE", [4, 2, 230, 16], { fontsize: 11 });
   readout(p, "status", [4, 20, 230, 24], "Loading...");
-  readout(p, "detail", [4, 46, 230, 24]);
-  label(p, "Mode", [4, 76, 34, 16]);
-  const mode = parameterBox(p, "live.tab", "Mode", [40, 76, 120, 16], enumOf(["Breed", "Kept"], 0), {
-    varname: "mode",
-    num_lines_patching: 1,
-    num_lines_presentation: 1,
-  });
-  const match = toggle(p, "Match Loudness", "match", "Match level", [4, 100, 74, 15], 1);
-  const shuffle = toggle(p, "Shuffle Slots", "shuffle", "Shuffle", [82, 100, 74, 15], 1);
-  const showFav = toggle(p, "Show Favourite", "showfav", "Show fav", [160, 100, 74, 15], 0);
-  const playKick = button(p, "Play", "play_kick", [4, 122, 74, 15]);
-  label(p, "Hear plays a slot. MIDI notes play the slot you last heard, or the kept kick.", [4, 140, 230, 26], { linecount: 2, fontsize: 9 });
+  readout(p, "detail", [4, 46, 230, 36]);
+  const match = toggle(p, "Match Loudness", "match", "Match level", [4, 86, 74, 15], 1);
+  const shuffle = toggle(p, "Shuffle Slots", "shuffle", "Shuffle", [82, 86, 74, 15], 1);
+  const showFav = toggle(p, "Show Favourite", "showfav", "Show fav", [160, 86, 74, 15], 0);
+  const reset = button(p, "Reset", "reset", [4, 106, 74, 15]);
+  const back = button(p, "Back", "back", [82, 106, 74, 15]);
+  const breedFrom = button(p, "Breed From Heard", "breed_from_heard", [160, 106, 74, 15], "Breed this");
+  label(p, "Keys: C3 D3 E3 play A B C. F3 G3 A3 B3 play saved 1 to 4. C2 D2 E2 choose A B C. F2 G2 A2 B2 save. Other notes play the kick you last heard.", [4, 124, 230, 44], { linecount: 4, fontsize: 9 });
 
-  // Column 2: the slots and the search controls.
+  // Column 2: the slots.
   p.at(1150, 20);
-  const slotControls = [];
-  for (const [i, letter] of ["A", "B", "C"].entries()) {
+  const jsControls = [];
+  ["A", "B", "C"].forEach((letter, i) => {
     const y = 2 + i * 34;
+    const l = letter.toLowerCase();
     label(p, letter, [242, y, 18, 18], { fontsize: 14 });
-    const hear = button(p, `Hear ${letter}`, `hear_${letter.toLowerCase()}`, [262, y, 56, 15]);
-    const choose = button(p, `Choose ${letter}`, `choose_${letter.toLowerCase()}`, [322, y, 60, 15]);
-    readout(p, `fav_${i}`, [262, y + 17, 120, 13]);
-    slotControls.push([hear, `hear_${letter.toLowerCase()}`], [choose, `choose_${letter.toLowerCase()}`]);
-  }
-  const search = [
-    [button(p, "Wider", "wider", [242, 106, 68, 15]), "wider"],
-    [button(p, "Closer", "closer", [314, 106, 68, 15]), "closer"],
-    [button(p, "Back", "back", [242, 126, 68, 15]), "back"],
-    [button(p, "Fresh", "fresh", [314, 126, 68, 15]), "fresh"],
-  ];
-
-  // Column 3: the Kept kick's dials, each with a lock under it, then Keep.
-  p.at(1400, 20);
-  const dials = [];
-  const locks = [];
-  KEPT.forEach((k, i) => {
-    const x = 392 + (i % 5) * 46;
-    const y = i < 5 ? 2 : 64;
-    const valueof = {
-      parameter_type: 0,
-      parameter_mmin: k.min,
-      parameter_mmax: k.max,
-      parameter_initial: [k.initial],
-      parameter_unitstyle: k.unit,
-      parameter_invisible: 0, // automatable: the kept kick is the instrument's sound
-    };
-    if (k.exponent) valueof.parameter_exponent = k.exponent;
-    dials.push(parameterBox(p, "live.dial", k.longname, [x, y, 44, 44], valueof, { varname: `kept_${i}`, shortname: k.shortname }));
-    locks.push(toggle(p, `Lock ${k.shortname}`, `lock_${i}`, "Lock", [x, y + 46, 44, 13], 0));
+    jsControls.push([button(p, `Hear ${letter}`, `hear_${l}`, [262, y, 56, 15], "Hear"), `hear_${l}`]);
+    jsControls.push([button(p, `Choose ${letter}`, `choose_${l}`, [322, y, 60, 15], "Choose"), `choose_${l}`]);
+    readout(p, `fav_${i}`, [262, y + 17, 124, 13]);
   });
-  const keep = button(p, "Keep", "keep", [622, 64, 60, 30]);
-  const breedFromKept = button(p, "Breed From Kept", "breed_from_kept", [622, 98, 60, 30]);
-  label(p, "Kept kick: saved with the set. Locks stop a setting changing while you breed.", [392, 128, 290, 28], { linecount: 2, fontsize: 9 });
+  label(p, "Choosing the favourite again makes the next variations closer.", [242, 106, 144, 26], { linecount: 2, fontsize: 9 });
+
+  // Column 3: saved kicks.
+  p.at(1300, 20);
+  label(p, "SAVED", [392, 2, 60, 14]);
+  for (let n = 1; n <= SAVED; n++) {
+    const y = 18 + (n - 1) * 30;
+    label(p, String(n), [392, y, 12, 15]);
+    jsControls.push([button(p, `Play ${n}`, `play_${n}`, [406, y, 46, 15], "Play"), `play_${n}`]);
+    jsControls.push([button(p, `Save ${n}`, `save_${n}`, [456, y, 46, 15], "Save"), `save_${n}`]);
+    readout(p, `saved_${n - 1}`, [406, y + 16, 154, 13]);
+  }
+  label(p, "Save stores the kick you last heard, with the set.", [392, 140, 168, 26], { linecount: 2, fontsize: 9 });
+
+  // Column 4: Variation slider and locks.
+  p.at(1450, 20);
+  label(p, "Variation", [566, 2, 50, 14]);
+  const variation = parameterBox(p, "live.slider", "Variation", [570, 18, 30, 140], {
+    parameter_type: 0,
+    parameter_mmin: 0.02,
+    parameter_mmax: 0.5,
+    parameter_initial: [0.25],
+    parameter_unitstyle: UNIT.float,
+  }, { varname: "variation" });
+  label(p, "LOCKS", [612, 2, 60, 14]);
+  const locks = PARAM_NAMES.map((name, i) =>
+    toggle(p, `Lock ${name}`, `lock_${i}`, name, [612 + (i % 3) * 46, 18 + Math.floor(i / 3) * 18, 44, 15], 0));
+  label(p, "Lit: kept as it is in new variations.", [612, 112, 136, 26], { linecount: 2, fontsize: 9 });
+
+  // Hidden, stored-only values for the saved kicks, read and written by the js.
+  p.at(1700, 600);
+  for (let n = 1; n <= SAVED; n++) {
+    parameterBox(p, "live.numbox", `Saved ${n} On`, [0, 0, 40, 15], enumOf(["off", "on"], 0), { varname: `save_${n}_on`, hidden: true });
+    PARAM_NAMES.forEach((name, i) => {
+      parameterBox(p, "live.numbox", `Saved ${n} ${name}`, [0, 0, 40, 15], {
+        parameter_type: 0,
+        parameter_mmin: 0,
+        parameter_mmax: 1,
+        parameter_initial: [0.5],
+        parameter_unitstyle: UNIT.float,
+      }, { varname: `save_${n}_${i}`, hidden: true });
+    });
+  }
 
   // Panel to js.
   p.at(1700, 20);
-  for (const [control, message] of [...slotControls, ...search, [playKick, "play_kick"], [keep, "keep"], [breedFromKept, "breed_from_kept"]]) {
+  for (const [control, message] of [...jsControls, [reset, "reset"], [back, "back"], [breedFrom, "breed_from_heard"]]) {
     toJs(p, control, message, js);
   }
   toJs(p, match, "match", js);
   toJs(p, shuffle, "shuffle", js);
   toJs(p, showFav, "showfav", js);
-  toJs(p, mode, "set_mode", js);
-  dials.forEach((d, i) => toJs(p, d, `kept_value ${i}`, js));
+  toJs(p, variation, "variation", js);
   locks.forEach((l, i) => toJs(p, l, `lock ${i}`, js));
 
-  // ---- MIDI in: a note on plays the kick ----
-  p.at(20, 160);
-  p.comment("Note on (velocity above 0) plays the kick. Note off is ignored: the kick always rings out.");
-  const midi = p.obj("midiin");
-  const parse = p.obj("midiparse");
-  const note = p.obj("unpack 0 0");
-  const noteOn = p.obj("sel 0");
-  p.connect(midi, 0, parse, 0);
-  p.connect(parse, 0, note, 0);
-  p.connect(note, 1, noteOn, 0);
-
-  // One trigger for MIDI and for the Hear and Play buttons (js outlet 4). Right to left: start
-  // the pitch sweep, reset the oscillator phase, start the amp and click envelopes, set the
-  // velocity gain.
-  p.at(20, 320);
-  p.comment("Trigger. Right to left: pitch sweep, oscillator phase, amp envelope, click envelope, velocity.");
-  const trig = p.obj("t f b b b b");
-  p.connect(noteOn, 1, trig, 0);
-  p.connect(js, 4, trig, 0);
-  const vel = p.obj("/ 127.");
-  p.connect(trig, 0, vel, 0);
-
-  // Envelope stores. The js sends "set <pairs>"; a bang plays the stored pairs into line~.
-  p.at(240, 360);
-  p.comment("Envelope stores, filled by the js: target, time (ms) pairs for line~.");
-  const freqStore = p.msg();
-  const ampStore = p.msg();
-  const clickStore = p.msg();
-  const phase = p.msg("0.75");
-  p.connect(js, 0, freqStore, 0);
-  p.connect(js, 1, ampStore, 0);
-  p.connect(js, 2, clickStore, 0);
-  p.connect(trig, 4, freqStore, 0);
-  p.connect(trig, 3, phase, 0);
-  p.connect(trig, 2, ampStore, 0);
-  p.connect(trig, 1, clickStore, 0);
-
-  // Body: a sine (cycle~ is a cosine; phase 0.75 starts it at zero) swept by the frequency
-  // envelope, shaped by the amp envelope.
-  p.at(240, 520);
-  p.comment("Body: cycle~ swept by the pitch envelope, times the amp envelope.");
+  // ---- the voice: one monophonic kick, shared by every slot ----
+  // A new hit restarts every envelope, like a drum machine's kick channel.
+  p.at(240, 1000);
+  p.comment("Voice. Body: cycle~ swept by the pitch envelope, times the amp envelope.");
   const freqLine = p.obj("line~");
   const osc = p.obj("cycle~");
   const ampLine = p.obj("line~");
   const body = p.obj("*~");
-  p.connect(freqStore, 0, freqLine, 0);
   p.connect(freqLine, 0, osc, 0);
-  p.connect(phase, 0, osc, 1);
-  p.connect(ampStore, 0, ampLine, 0);
   p.connect(osc, 0, body, 0);
   p.connect(ampLine, 0, body, 1);
 
-  // Click: band-passed noise, times the click envelope.
-  p.at(520, 520);
-  p.comment("Click: noise~ band-passed by svf~, times the click envelope.");
+  p.at(520, 1000);
+  p.comment("Click: band-passed noise. Noise layer: low-passed noise. Each times its envelope.");
   const noise = p.obj("noise~");
-  const svf = p.obj("svf~ 3000 0.3");
+  const clickFilter = p.obj("svf~ 3000 0.3");
   const clickLine = p.obj("line~");
   const click = p.obj("*~");
-  p.connect(noise, 0, svf, 0);
-  p.connect(svf, 2, click, 0);
-  p.connect(clickStore, 0, clickLine, 0);
+  const noiseFilter = p.obj("svf~ 2000 0.");
+  const noiseLine = p.obj("line~");
+  const noiseLayer = p.obj("*~");
+  p.connect(noise, 0, clickFilter, 0);
+  p.connect(clickFilter, 2, click, 0);
   p.connect(clickLine, 0, click, 1);
+  p.connect(noise, 0, noiseFilter, 0);
+  p.connect(noiseFilter, 0, noiseLayer, 0);
+  p.connect(noiseLine, 0, noiseLayer, 1);
 
-  // Settings that are not envelopes: click tone, drive in, drive out, tone, output gain.
-  p.at(760, 360);
-  p.comment("Click tone, drive in, drive out, tone, gain.");
-  const statics = p.obj("unpack 0. 0. 0. 0. 0.");
-  p.connect(js, 3, statics, 0);
+  p.at(760, 1000);
+  p.comment("Settings: click tone, noise tone, saturation in, saturation out, tone, gain.");
+  const statics = p.obj("unpack 0. 0. 0. 0. 0. 0.");
 
-  // Mix, drive (tanh, normalised so full scale stays full scale), tone, level, safety clip.
-  p.at(240, 760);
-  p.comment("Mix, drive: tanh~(x * k) / tanh(k), tone: lores~, level-matched gain, velocity, then clip~ for safety.");
+  p.at(240, 1250);
+  p.comment("Mix, saturation: tanh~(x * k) / tanh(k), tone: lores~, level-matched gain, velocity, then clip~ for safety.");
   const mix = p.obj("+~");
-  const driveIn = p.obj("*~ 1.");
+  const mixNoise = p.obj("+~");
+  const satIn = p.obj("*~ 1.");
   const shaper = p.obj("tanh~");
-  const driveOut = p.obj("*~ 1.");
+  const satOut = p.obj("*~ 1.");
   const tone = p.obj("lores~ 8000 0.");
   const gain = p.obj("*~ 0.5");
   const velocity = p.obj("*~ 1.");
@@ -402,21 +387,84 @@ function build() {
   const out = p.obj("plugout~");
   p.connect(body, 0, mix, 0);
   p.connect(click, 0, mix, 1);
-  p.connect(mix, 0, driveIn, 0);
-  p.connect(driveIn, 0, shaper, 0);
-  p.connect(shaper, 0, driveOut, 0);
-  p.connect(driveOut, 0, tone, 0);
+  p.connect(mix, 0, mixNoise, 0);
+  p.connect(noiseLayer, 0, mixNoise, 1);
+  p.connect(mixNoise, 0, satIn, 0);
+  p.connect(satIn, 0, shaper, 0);
+  p.connect(shaper, 0, satOut, 0);
+  p.connect(satOut, 0, tone, 0);
   p.connect(tone, 0, gain, 0);
   p.connect(gain, 0, velocity, 0);
   p.connect(velocity, 0, safety, 0);
   p.connect(safety, 0, out, 0);
   p.connect(safety, 0, out, 1);
-  p.connect(statics, 0, svf, 1);
-  p.connect(statics, 1, driveIn, 1);
-  p.connect(statics, 2, driveOut, 1);
-  p.connect(statics, 3, tone, 1);
-  p.connect(statics, 4, gain, 1);
+  p.connect(statics, 0, clickFilter, 1);
+  p.connect(statics, 1, noiseFilter, 1);
+  p.connect(statics, 2, satIn, 1);
+  p.connect(statics, 3, satOut, 1);
+  p.connect(statics, 4, tone, 1);
+  p.connect(statics, 5, gain, 1);
+  const vel = p.obj("/ 127.");
   p.connect(vel, 0, velocity, 1);
+  const phase = p.msg("0.75");
+  p.connect(phase, 0, osc, 1);
+
+  // ---- slots: each has its stores and a trigger ----
+  // Trigger, right to left: tell the js which slot was heard (mapped keys only), settings,
+  // pitch sweep, noise, amp and click envelopes, oscillator phase (cycle~ is a cosine; 0.75
+  // starts it at zero), then velocity.
+  const triggers = {};
+  SLOTS.forEach((slot, k) => {
+    p.at(20 + k * 190, 400);
+    p.comment(`Slot ${slot}`);
+    const note = p.obj("sel 0");
+    const trig = p.obj("t f b b b b b b b");
+    p.connect(note, 1, trig, 0);
+    const stores = {};
+    for (const part of ["statics", "freq", "noise", "amp", "click"]) stores[part] = store(p, `${slot}_${part}`);
+    p.connect(stores.statics, 0, statics, 0);
+    p.connect(stores.freq, 0, freqLine, 0);
+    p.connect(stores.noise, 0, noiseLine, 0);
+    p.connect(stores.amp, 0, ampLine, 0);
+    p.connect(stores.click, 0, clickLine, 0);
+    if (slot !== "CUR") p.connect(trig, 7, msgToJs(p, `heard_slot ${slot}`, js), 0);
+    p.connect(trig, 6, stores.statics, 0);
+    p.connect(trig, 5, stores.freq, 0);
+    p.connect(trig, 4, stores.noise, 0);
+    p.connect(trig, 3, stores.amp, 0);
+    p.connect(trig, 2, stores.click, 0);
+    p.connect(trig, 1, phase, 0);
+    p.connect(trig, 0, vel, 0);
+    triggers[slot] = note;
+  });
+
+  // Hear and Play buttons: the js sends "<slot> 127".
+  p.at(20, 300);
+  const fromJs = p.obj(`route ${SLOTS.join(" ")}`);
+  p.connect(js, 0, fromJs, 0);
+  SLOTS.forEach((slot, k) => p.connect(fromJs, k, triggers[slot], 0));
+
+  // ---- MIDI in: routed by pitch ----
+  p.at(20, 160);
+  p.comment("Notes by pitch (Live's names, C3 = 60). Play keys go straight to their slot; action keys go to the js; any other note plays the kick last heard. Note off (velocity 0) is ignored.");
+  const midi = p.obj("midiin");
+  const parse = p.obj("midiparse");
+  const playKeys = Object.values(PLAY_KEYS);
+  const actionKeys = Object.values(ACTION_KEYS);
+  const byKey = p.obj(`route ${[...playKeys, ...actionKeys].join(" ")}`);
+  p.connect(midi, 0, parse, 0);
+  p.connect(parse, 0, byKey, 0);
+  Object.keys(PLAY_KEYS).forEach((slot, k) => p.connect(byKey, k, triggers[slot], 0));
+  p.at(1000, 160);
+  Object.keys(ACTION_KEYS).forEach((message, k) => {
+    const noteOn = p.obj("sel 0");
+    p.connect(byKey, playKeys.length + k, noteOn, 0);
+    p.connect(noteOn, 1, msgToJs(p, message, js), 0);
+  });
+  p.at(500, 160);
+  const other = p.obj("unpack 0 0");
+  p.connect(byKey, playKeys.length + actionKeys.length, other, 0);
+  p.connect(other, 1, triggers.CUR, 0);
 
   const parameters = { inherited_shortname: 1 };
   for (const { box } of p.boxes) {
@@ -425,7 +473,7 @@ function build() {
     parameters[box.id] = [v.parameter_longname, v.parameter_shortname, 0];
   }
 
-  const width = 686;
+  const width = 754;
   return {
     patcher: {
       fileversion: 1,

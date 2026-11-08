@@ -1,13 +1,13 @@
 // Checks on the generated Kick Breeder spike device. Nobody can run Max here, so these read the
-// patcher JSON: files in sync, the device type, known objects only, valid lines, and that the
-// panel and the js agree on message names, scripting names and ranges.
+// patcher JSON: files in sync, the device type, known objects only, valid lines, the key map,
+// and that the panel and the js agree on message names, scripting names and ranges.
 
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import { pack, INSTRUMENT } from "../../../../tools/amxd.mjs";
-import { FILE, JS_FILE, KEPT, MESSAGES, patcherText } from "../build-patch.mjs";
+import { FILE, JS_FILE, PARAM_NAMES, SAVED, PLAY_KEYS, ACTION_KEYS, SLOTS, MESSAGES, patcherText } from "../build-patch.mjs";
 
 const require = createRequire(import.meta.url);
 const here = (name) => new URL(name, import.meta.url);
@@ -15,13 +15,21 @@ const text = patcherText();
 const patcher = JSON.parse(text).patcher;
 const boxes = patcher.boxes.map((b) => b.box);
 const byId = Object.fromEntries(boxes.map((b) => [b.id, b]));
+const byName = Object.fromEntries(boxes.filter((b) => b.varname).map((b) => [b.varname, b]));
+const lines = patcher.lines.map((l) => l.patchline);
 const jsSource = fs.readFileSync(here(`../${JS_FILE}`), "utf8");
 const KB = require(`../${JS_FILE}`);
 
+const targets = (id, outlet) => lines.filter((l) => l.source[0] === id && l.source[1] === outlet).map((l) => byId[l.destination[0]]);
+const only = (list, what) => {
+  assert.equal(list.length, 1, `expected one ${what}, found ${list.length}`);
+  return list[0];
+};
+
 // Standard Max 8 and MSP objects only. Check the Max reference before adding to this list.
 const MAX_OBJECTS = new Set([
-  "midiin", "midiparse", "unpack", "sel", "t", "/", "js", "prepend", "live.thisdevice", "deferlow",
-  "line~", "cycle~", "*~", "+~", "noise~", "svf~", "tanh~", "lores~", "clip~", "plugout~",
+  "midiin", "midiparse", "route", "unpack", "sel", "t", "/", "js", "prepend", "live.thisdevice",
+  "deferlow", "line~", "cycle~", "*~", "+~", "noise~", "svf~", "tanh~", "lores~", "clip~", "plugout~",
 ]);
 
 test("the committed .maxpat and .amxd match the builder", () => {
@@ -42,7 +50,7 @@ test("only known Max objects are used", () => {
 });
 
 test("every line joins real boxes on real inlets and outlets", () => {
-  for (const { patchline: l } of patcher.lines) {
+  for (const l of lines) {
     const from = byId[l.source[0]];
     const to = byId[l.destination[0]];
     assert.ok(from && to, "line to a missing box");
@@ -56,30 +64,89 @@ test("the js box has as many outlets as the js declares", () => {
   assert.equal(js.numoutlets, Number(jsSource.match(/^outlets = (\d+);/m)[1]));
 });
 
-test("every message the panel sends has a function in the js", () => {
-  assert.ok(MESSAGES.size > 10);
-  for (const name of [...MESSAGES, "init"]) {
+test("every message the patch sends has a function in the js", () => {
+  assert.ok(MESSAGES.size > 15);
+  for (const name of MESSAGES) {
     assert.match(jsSource, new RegExp(`^function ${name}\\(`, "m"), `no function ${name} in ${JS_FILE}`);
   }
 });
 
-test("every scripting name the js looks up is on the panel", () => {
-  const varnames = new Set(boxes.map((b) => b.varname).filter(Boolean));
-  const looked = new Set([...jsSource.matchAll(/(?:named|show)\("([a-z_]+)"[,)]/g)].map((m) => m[1]));
-  for (let i = 0; i < 9; i++) looked.add(`kept_${i}`).add(`lock_${i}`);
+test("every scripting name the js uses is in the patch", () => {
+  const looked = new Set([...jsSource.matchAll(/(?:named|show|setBox)\("([a-z_]+)"[,)]/g)].map((m) => m[1]));
+  for (let i = 0; i < PARAM_NAMES.length; i++) looked.add(`lock_${i}`);
   for (let i = 0; i < 3; i++) looked.add(`fav_${i}`);
-  for (const name of looked) assert.ok(varnames.has(name), `no box named ${name}`);
+  for (let n = 1; n <= SAVED; n++) {
+    looked.add(`saved_${n - 1}`).add(`save_${n}_on`);
+    for (let i = 0; i < PARAM_NAMES.length; i++) looked.add(`save_${n}_${i}`);
+  }
+  for (const slot of SLOTS) for (const part of ["statics", "freq", "noise", "amp", "click"]) looked.add(`${slot}_${part}`);
+  for (const name of looked) assert.ok(byName[name], `no box named ${name}`);
 });
 
-test("the Kept dials cover the engine's ranges, in its order", () => {
-  assert.equal(KEPT.length, KB.PARAMS.length);
-  KEPT.forEach((k, i) => {
-    const dial = boxes.find((b) => b.varname === `kept_${i}`);
-    const v = dial.saved_attribute_attributes.valueof;
-    assert.equal(v.parameter_mmin, KB.PARAMS[i].min, k.longname);
-    assert.equal(v.parameter_mmax, KB.PARAMS[i].max, k.longname);
-    assert.equal(v.parameter_invisible, 0, "automatable");
+test("the locks follow the engine's settings, in order", () => {
+  assert.deepEqual(PARAM_NAMES, KB.PARAMS.map((p) => p.short));
+});
+
+test("the Variation slider covers the engine's range", () => {
+  const v = byName.variation.saved_attribute_attributes.valueof;
+  assert.equal(byName.variation.maxclass, "live.slider");
+  assert.equal(v.parameter_mmin, KB.MIN_STEP);
+  assert.equal(v.parameter_mmax, KB.MAX_STEP);
+  assert.deepEqual(v.parameter_initial, [KB.START_STEP]);
+});
+
+test("saved kicks are hidden, stored-only values", () => {
+  const hidden = boxes.filter((b) => /^save_\d_/.test(b.varname || ""));
+  assert.equal(hidden.length, SAVED * (PARAM_NAMES.length + 1));
+  for (const b of hidden) {
+    assert.equal(b.maxclass, "live.numbox");
+    assert.ok(!b.presentation);
+    assert.equal(b.saved_attribute_attributes.valueof.parameter_invisible, 1);
+  }
+});
+
+// MIDI route -> sel 0 -> trigger -> that slot's stores.
+function slotStores(selBox) {
+  const trig = only(targets(selBox.id, 1), "trigger after sel 0");
+  assert.equal(trig.text, "t f b b b b b b b");
+  return trig;
+}
+
+test("the key map plays each slot, and the trigger sets the settings before the envelopes", () => {
+  const route = only(boxes.filter((b) => b.text && b.text.startsWith("route 60")), "MIDI route");
+  const parse = only(boxes.filter((b) => b.text === "midiparse"), "midiparse");
+  assert.ok(targets(parse.id, 0).includes(route));
+  Object.entries(PLAY_KEYS).forEach(([slot, note], k) => {
+    assert.equal(route.text.split(" ")[k + 1], String(note));
+    const sel = only(targets(route.id, k), `sel for ${slot}`);
+    const trig = slotStores(sel);
+    // Right to left: outlet 6 settings, 5 pitch, 4 noise, 3 amp, 2 click.
+    ["statics", "freq", "noise", "amp", "click"].forEach((part, i) => {
+      assert.ok(targets(trig.id, 6 - i).includes(byName[`${slot}_${part}`]), `${slot} ${part}`);
+    });
+    assert.ok(targets(trig.id, 7).some((b) => b.text === `heard_slot ${slot}`));
   });
+  assert.deepEqual(PLAY_KEYS, { A: 60, B: 62, C: 64, S1: 65, S2: 67, S3: 69, S4: 71 });
+});
+
+test("action keys choose and save, and other notes play the kick last heard", () => {
+  const route = boxes.find((b) => b.text && b.text.startsWith("route 60"));
+  const playCount = Object.keys(PLAY_KEYS).length;
+  Object.entries(ACTION_KEYS).forEach(([message, note], k) => {
+    assert.equal(route.text.split(" ")[playCount + k + 1], String(note));
+    const sel = only(targets(route.id, playCount + k), `sel for ${message}`);
+    assert.equal(only(targets(sel.id, 1), message).text, message);
+  });
+  assert.deepEqual(ACTION_KEYS, { choose_a: 48, choose_b: 50, choose_c: 52, save_1: 53, save_2: 55, save_3: 57, save_4: 59 });
+  const rest = only(targets(route.id, playCount + Object.keys(ACTION_KEYS).length), "unpack for other notes");
+  const sel = only(targets(rest.id, 1), "sel for other notes");
+  const trig = slotStores(sel);
+  assert.ok(targets(trig.id, 6).includes(byName.CUR_statics));
+});
+
+test("panel buttons reach the slots through the js", () => {
+  const route = only(boxes.filter((b) => b.text === `route ${SLOTS.join(" ")}`), "js route");
+  SLOTS.forEach((slot, k) => slotStores(only(targets(route.id, k), `sel for ${slot}`)));
 });
 
 test("parameter names are unique and listed", () => {

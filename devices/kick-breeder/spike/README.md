@@ -4,7 +4,7 @@ A throwaway Max for Live **instrument** for Live 11 (Max 8). It answers one ques
 
 > If you choose between kicks round after round, with new ones bred from each choice, do you land on a kick you like within about ten rounds?
 
-Every sound is synthesised: a swept sine, a noise click, drive and a low-pass. No samples. Spec: [`../docs/SPEC.md`](../docs/SPEC.md).
+Every sound is synthesised: a swept sine body, a noise click, a filtered noise layer, compression, saturation and a low-pass. No samples. Spec: [`../docs/SPEC.md`](../docs/SPEC.md).
 
 ## Files
 
@@ -18,13 +18,41 @@ Every sound is synthesised: a swept sine, a noise click, drive and a low-pass. N
 
 ## How the device works
 
-- **Breed mode:** round 1 has slots A and B. Press **Hear** to play a slot; **Choose** keeps that kick as the favourite and breeds two variations, so later rounds have A, B and C. The favourite moves between slots unless Shuffle is off.
-- **MIDI notes** play the slot you last heard, so a running clip lets you compare kicks in a beat.
-- **Keep** copies the slot you last heard into the nine **Kept** dials and switches **Mode** to Kept. From then on MIDI plays the kept kick, the dials tweak it, and it saves with the set.
-- **Breed From Kept** starts a new search around the kept kick.
-- **Locks** under each dial stop that setting changing in new variations.
-- **Wider / Closer** make the variations more or less different. **Back** undoes a round. **Fresh** starts again.
-- **Match level** plays every kick at about the same loudness (worked out by a rough simulation in the js). **Show fav** marks the favourite's slot.
+- **Round 1** has slots A and B. **Hear** plays a slot; **Choose** keeps that kick as the favourite and breeds two variations, so later rounds have A, B and C. The favourite moves between slots unless Shuffle is off.
+- **Variation** (the slider) sets how different the variations are, and breeds them again when you move it. Choosing the favourite again also moves it down, as you are close.
+- **Save** puts the kick you last heard into one of four saved slots, which are saved with the set. **Play** plays a saved kick.
+- **Breed this** starts a new search around the kick you last heard (a saved one, for example).
+- **Locks** keep a setting as it is in new variations. **Back** undoes a round. **Reset** starts again at round 1 with the starting variation and no locks; saved kicks stay.
+- **Match level** plays every kick at about the same loudness (from a rough simulation in the js). **Show fav** marks the favourite's slot.
+
+### Keys
+
+Live's note names, where C3 is middle C (MIDI 60).
+
+| Keys | Do |
+| --- | --- |
+| C3, D3, E3 | Play slot A, B, C |
+| F3, G3, A3, B3 | Play saved 1, 2, 3, 4 |
+| C2, D2, E2 | Choose A, B, C |
+| F2, G2, A2, B2 | Save the kick you last heard to 1, 2, 3, 4 |
+| Any other note | Play the kick you last heard, so a drum clip on C1 still works for listening in a beat |
+
+Velocity sets the level. Note off is ignored: each kick rings out until the next one.
+
+### The kick
+
+| Setting | Range |
+| --- | --- |
+| Pitch | 30 to 120 Hz |
+| Sweep, Sweep time, Curve | 0 to 48 semitones above Pitch, falling over 5 to 200 ms, straight to snappy |
+| Decay | 50 to 1500 ms |
+| Click, Click tone | Level 0 to 1; band-pass 500 Hz to 12 kHz |
+| Noise, Noise decay, Noise tone | Level 0 to 1; 10 to 1000 ms; low-pass 200 Hz to 12 kHz |
+| Comp | 0 to 1: brings the tail of the body and noise up against the hit |
+| Sat | 0 to 1: soft clipping (tanh) |
+| Tone | Low-pass over everything, 200 Hz to 16 kHz |
+
+**Compression** works on the envelopes, not the audio: it is worked out in the js like a compressor with a fixed threshold (-24 dB) and a ratio from 1:1 to 10:1, with make-up gain. It cannot pump or distort, and it leaves the click alone, like a compressor with a slow attack. A real signal compressor would need `gen~` or an object whose controls could not be checked here.
 
 ## Set up
 
@@ -39,39 +67,45 @@ Fill in the Pass column (y / n / a note) and send it back.
 
 | # | Do | Expect | Pass |
 | --- | --- | --- | --- |
-| 1 | Load the device | The status line reads `Round 1 \| choices 0 \| variation 0.25 \| hearing A`. Slot C reads `(none)`. No red lines in the Max Console | [ ] |
-| 2 | Press **Hear A**, then **Hear B** | Two different kicks. The line under the status describes each one | [ ] |
-| 3 | Play the clip, then press **Hear A** and **Hear B** while it runs | The clip plays whichever slot you heard last | [ ] |
-| 4 | **Choose** either slot | Round 2, and slot C now has a kick | [ ] |
-| 5 | Turn on **Show fav**. **Choose** the slot marked favourite | Variation drops from 0.25 to 0.15 | [ ] |
-| 6 | Turn on **Lock** under **Decay**. **Choose** a few times, watching the decay in the description | Decay stays the same | [ ] |
-| 7 | Turn **Match level** off for a few rounds, then on | Off: some kicks are much louder. On: they sit at about the same level. Note whether it affected which you picked | [ ] |
-| 8 | Try **Wider**, **Closer**, **Back** and **Fresh** | Wider: slots more different. Closer: more alike. Back: the previous round. Fresh: round 1 again | [ ] |
-| 9 | When you like a kick, **Hear** it, then **Keep** | Mode switches to **Kept**, the dials move, the clip plays that kick, and the status says how many choices it took | [ ] |
-| 10 | Turn a **Kept** dial while the clip plays | The kick changes | [ ] |
-| 11 | Save the set, close it, open it again | Mode is still Kept and the same kick plays | [ ] |
-| 12 | **Breed From Kept** | Back in Breed mode, with the kept kick as the favourite and two close variations | [ ] |
-| 13 | Listen to a fast clip (16th notes) for a while | Note any clicks between hits, or hits that feel late | [ ] |
+| 1 | Load the device | The status line reads `Round 1 \| choices 0 \| variation 0.25 \| hearing A`. Slot C reads `E3 (none this round)`. Saved 1 to 4 read `empty`. No red lines in the Max Console | [ ] |
+| 2 | Press **Hear** on A, then B | Two different kicks. The line under the status describes each one | [ ] |
+| 3 | Play **C3** and **D3** on your keyboard | The same two kicks | [ ] |
+| 4 | Play the clip, then press C3 and D3 while it runs | The clip plays whichever slot you played last | [ ] |
+| 5 | Play **C2** (or press **Choose** on A) | Round 2, and E3 now plays slot C | [ ] |
+| 6 | Turn on **Show fav**. Choose the slot marked favourite | Variation drops from 0.25 to 0.15, and the slider moves | [ ] |
+| 7 | Drag **Variation** up, then down, and hear the slots | High: very different kicks. Low: nearly the same | [ ] |
+| 8 | Light **Decay** under Locks. Choose a few times, watching the description | Decay stays the same | [ ] |
+| 9 | Find a kick with a lot of **Noise**, and one with high **Comp** and **Sat** | You can hear the noise layer, the longer, fuller tail, and the grit | [ ] |
+| 10 | Turn **Match level** off for a few rounds, then on | Off: some kicks are much louder. On: about the same level | [ ] |
+| 11 | Hear a kick, then play **F2** (or press **Save** on 1) | Saved 1 shows the kick, and **F3** plays it | [ ] |
+| 12 | Fill saved 2 to 4 with **G2**, **A2**, **B2**; play **G3**, **A3**, **B3** | Each plays its saved kick | [ ] |
+| 13 | **Back**, then **Reset** | Back: the previous round. Reset: round 1, variation 0.25, locks off, saved kicks still there | [ ] |
+| 14 | Play a saved kick, then **Breed this** | A new search with that kick as the favourite | [ ] |
+| 15 | Save the set, close it, open it again | Saved 1 to 4 are still there and play the same kicks | [ ] |
+| 16 | Play a fast clip (16th notes) for a while | Note any clicks between hits, or hits that feel late | [ ] |
 
 ## The spike's answer
 
-Do a few full searches from **Fresh** to **Keep** and note:
+Do a few full searches from **Reset** to **Save** and note:
 
-| Run | Choices to Keep | How it felt (too slow, too random, stuck, good) |
+| Run | Choices to Save | How it felt (too slow, too random, stuck, good) |
 | --- | --- | --- |
 | 1 | | |
 | 2 | | |
 | 3 | | |
+
+Do the C2 to E2 and F2 to B2 keys for choosing and saving feel right, or would another layout be better?
 
 Also worth a line each:
 
 - Did you trust your choice more with **Match level** on?
 - Did knowing the favourite (**Show fav**) pull you towards it?
 - Is anything missing from the kick itself: a sub, a second body layer, longer clicks?
+- Is the envelope compression enough, or do you want a real compressor on the audio?
 
 ## Known limits
 
-- The breeding history is not saved with the set. Only the Kept kick is.
+- The breeding rounds are not saved with the set. Saved kicks are.
 - Loudness matching is based on a simulation of the patch, so levels are close, not exact.
-- Turning a Kept dial reruns that simulation in the js, so dragging a dial fast may lag a little.
-- Note off is ignored: each kick rings out. A new note restarts the kick, which can click if the last one is still sounding.
+- One voice: a new hit restarts the kick, which can click if the last one is still sounding.
+- Saved kicks can't be tweaked with knobs. Use **Breed this** with a small Variation instead.

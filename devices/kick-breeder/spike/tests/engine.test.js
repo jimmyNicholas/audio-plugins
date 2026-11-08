@@ -48,27 +48,33 @@ test("a locked setting never changes in variations", () => {
   }
 });
 
-test("Back undoes a choice, and Fresh starts again with the same locks", () => {
+test("Back undoes a choice; Reset starts again with no locks and the starting size", () => {
   const one = KB.choose(KB.create(5), 0);
   const two = KB.choose(one, 2);
   assert.deepEqual(KB.back(two).candidates, one.candidates);
   assert.equal(KB.back(two).round, one.round);
   assert.equal(KB.back(KB.create(5)).round, 1, "nothing to go back to");
-  const locked = KB.setLock(two, "pitch", true);
-  const fresh = KB.fresh(locked);
+  const fresh = KB.reset(KB.setStep(KB.setLock(two, "pitch", true), 0.05));
   assert.equal(fresh.round, 1);
   assert.equal(fresh.candidates.length, 2);
-  assert.equal(fresh.locks.pitch, true);
+  assert.equal(fresh.step, KB.START_STEP);
+  assert.deepEqual(fresh.locks, {});
+  assert.equal(fresh.past.length, 0);
 });
 
-test("Wider and Closer resize the variations around the favourite", () => {
+test("the Variation slider sets the size and breeds the variations again", () => {
   const start = KB.create(6);
-  assert.equal(KB.wider(start), start, "no favourite yet");
+  const early = KB.setStep(start, 0.1);
+  assert.equal(early.step, 0.1);
+  assert.deepEqual(early.candidates, start.candidates, "no favourite yet, so round 1 kicks stay");
   const s = KB.choose(start, 0);
-  const wide = KB.wider(s);
-  assert.ok(wide.step > s.step);
+  const wide = KB.setStep(s, 0.45);
+  assert.equal(wide.step, 0.45);
   assert.deepEqual(KB.favourite(wide).values, KB.favourite(s).values);
-  assert.ok(KB.closer(s).step < s.step);
+  assert.notDeepEqual(wide.candidates, s.candidates);
+  assert.equal(wide.past.length, s.past.length, "dragging the slider does not fill Back");
+  assert.equal(KB.setStep(s, 9).step, KB.MAX_STEP);
+  assert.equal(KB.setStep(s, 0).step, KB.MIN_STEP);
 });
 
 test("the same seed gives the same search", () => {
@@ -91,10 +97,42 @@ test("Breed from kept starts a search around the kept kick", () => {
   assert.deepEqual(KB.favourite(s).values, kept);
 });
 
-test("real values round-trip", () => {
+test("real values span each setting's range", () => {
   for (const p of KB.PARAMS) {
-    for (const v of [0, 0.25, 0.5, 1]) assert.ok(Math.abs(KB.fromReal(p, KB.toReal(p, v)) - v) < 1e-9);
+    assert.ok(Math.abs(KB.toReal(p, 0) - p.min) < 1e-9, p.id);
+    assert.ok(Math.abs(KB.toReal(p, 1) - p.max) < 1e-6, p.id);
   }
+});
+
+test("compression lifts the tail against the hit, and 0 leaves it alone", () => {
+  for (const level of [1, 0.5, 0.1, 0.01]) assert.ok(Math.abs(KB.compress(level, 0) - level) < 1e-12);
+  assert.equal(KB.compress(1, 1), 1, "the peak stays at full scale");
+  assert.ok(KB.compress(0.1, 1) > 0.1);
+  assert.ok(KB.compress(0.1, 1) > KB.compress(0.1, 0.5));
+  assert.equal(KB.compress(0, 1), 0);
+});
+
+test("the noise layer follows Noise level and Noise decay", () => {
+  const values = KB.PARAMS.map(() => 0.5);
+  const quiet = values.slice();
+  quiet[7] = 0;
+  const v = KB.voice(values, false);
+  const p = KB.realValues(values);
+  assert.ok(Math.abs(v.noise[2] - p.noiseLevel * 0.6) < 1e-12);
+  const time = (pairs) => pairs.filter((_, i) => i % 2 === 1).reduce((a, b) => a + b, 0);
+  assert.ok(Math.abs(time(v.noise) - (p.noiseDecay + 6.5)) < 1e-6);
+  assert.ok(KB.voice(quiet, false).noise.every((x, i) => i % 2 === 1 || x === 0));
+});
+
+test("the settings list matches the patch's unpack order", () => {
+  const values = KB.PARAMS.map(() => 0.5);
+  const p = KB.realValues(values);
+  const s = KB.voice(values, false).statics;
+  assert.equal(s.length, 6);
+  assert.equal(s[0], p.clickTone);
+  assert.equal(s[1], p.noiseTone);
+  assert.equal(s[4], p.tone);
+  assert.equal(s[5], 0.5, "raw gain when not matching");
 });
 
 test("the voice sweeps from the start pitch down to Pitch over Sweep time", () => {
@@ -108,7 +146,7 @@ test("the voice sweeps from the start pitch down to Pitch over Sweep time", () =
   assert.ok(Math.abs(time(v.freq) - p.sweepTime) < 1e-6);
   assert.ok(Math.abs(time(v.amp) - (p.decay + 6.5)) < 1e-6);
   assert.equal(v.amp[v.amp.length - 2], 0, "ends silent");
-  assert.ok(v.freq.length / 2 <= 64 && v.amp.length / 2 <= 64 && v.click.length / 2 <= 64, "fits in line~");
+  assert.ok([v.freq, v.amp, v.click, v.noise].every((e) => e.length / 2 <= 64), "fits in line~");
 });
 
 test("matching brings different kicks to about the same loudness", () => {
@@ -118,9 +156,9 @@ test("matching brings different kicks to about the same loudness", () => {
     for (const c of s.candidates) {
       const v = KB.voice(c.values, true);
       const l = KB.loudness(KB.realValues(c.values));
-      if (l.peak * v.gain < 0.949) levels.push(l.rms * v.gain);
+      if (l.peak * v.statics[5] < 0.949) levels.push(l.rms * v.statics[5]);
     }
-    s = KB.fresh(s);
+    s = KB.reset(s);
   }
   assert.ok(levels.length >= 6);
   for (const level of levels) assert.ok(Math.abs(level - 0.25) < 1e-9);
@@ -131,13 +169,13 @@ test("the matched gain never pushes the simulated peak past the limit", () => {
   for (let i = 0; i < 10; i++) {
     for (const c of s.candidates) {
       const l = KB.loudness(KB.realValues(c.values));
-      assert.ok(l.peak * KB.voice(c.values, true).gain <= 0.95 + 1e-9);
+      assert.ok(l.peak * KB.voice(c.values, true).statics[5] <= 0.95 + 1e-9);
     }
-    s = KB.fresh(s);
+    s = KB.reset(s);
   }
 });
 
 test("describe names the main settings", () => {
   const text = KB.describe(KB.PARAMS.map(() => 0.5));
-  assert.match(text, /Hz, sweep \d+ st in \d+ ms, decay \d+ ms/);
+  assert.match(text, /Hz, sweep \d+ st in \d+ ms, decay \d+ ms, click [\d.]+, noise [\d.]+, comp [\d.]+, sat [\d.]+/);
 });

@@ -1,6 +1,6 @@
 # Research: how small independent plugin and Max for Live developers make money
 
-Researched 2026-11-09. Purpose: to test the money side of [`docs/business/plugin-business-plan.md`](../business/plugin-business-plan.md) against what real developers do. The work comes in three stages, as asked: **Observe** (what developers actually do), **Apply** (how each pattern fits Jimmy), and **Invest** (what each option costs, earns and trades away). Section 5 lists where the findings change the current plan.
+Researched 2026-11-09. Purpose: to test the money side of the [first business plan](../history/2026-11-08-first-plan.md) (now superseded by [`current-plan.md`](../current-plan.md)) against what real developers do. The work comes in three stages, as asked: **Observe** (what developers actually do), **Apply** (how each pattern fits Jimmy), and **Invest** (what each option costs, earns and trades away). Section 5 lists where the findings change the current plan.
 
 ## How to read this
 

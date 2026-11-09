@@ -1,6 +1,6 @@
 # Research: the "Bandcamp discography" model for many small, cheap tools
 
-Researched 2026-11-09. Purpose: to test whether Jimmy can sell many small, quick, unique items (plugins, Max for Live devices, sample packs, tools) cheaply one by one, plus "everything" as one cheap "full digital discography", as music labels do on Bandcamp. It also checks whether Bandcamp allows plugins at all, what it costs an Australian seller, and how the model compares with itch.io, Gumroad, Lemon Squeezy and Payhip. The work follows the same three stages as [`indie-plugin-monetisation.md`](indie-plugin-monetisation.md): **Observe**, **Apply**, **Invest**. Section 4 lists where the findings change [`plugin-business-plan.md`](../business/plugin-business-plan.md).
+Researched 2026-11-09. Purpose: to test whether Jimmy can sell many small, quick, unique items (plugins, Max for Live devices, sample packs, tools) cheaply one by one, plus "everything" as one cheap "full digital discography", as music labels do on Bandcamp. It also checks whether Bandcamp allows plugins at all, what it costs an Australian seller, and how the model compares with itch.io, Gumroad, Lemon Squeezy and Payhip. The work follows the same three stages as [`indie-plugin-monetisation.md`](indie-plugin-monetisation.md): **Observe**, **Apply**, **Invest**. Section 4 lists where the findings change [`plugin-business-plan.md`](../history/2026-11-08-first-plan.md).
 
 ## How to read this
 

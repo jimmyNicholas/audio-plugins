@@ -1,5 +1,7 @@
 # Plugin business plan: paths, trade-offs and release pipeline
 
+> **Superseded** by [`../current-plan.md`](../current-plan.md) on 2026-11-09. Kept for reference; the research docs tested this version.
+
 Written 2026-11-08 from a planning conversation, then checked against web sources the same day. Purpose: one place for the decisions made so far, the options still open, and the release pipeline, so a collaborator can pick it up cold.
 
 ## How to read this

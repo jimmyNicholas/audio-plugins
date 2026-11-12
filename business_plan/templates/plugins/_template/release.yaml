@@ -1,0 +1,25 @@
+# Plugin manifest. Copy plugins/_template/ to plugins/<slug>/ and fill in.
+
+slug: plugin-slug
+name: Plugin Name
+one_liner: ""              # one sentence: what it does, in plain words
+status: idea               # idea | building | ready
+albums: []                 # album slugs this plugin belongs to
+price_aud: 0
+platforms: [windows]       # add macos, linux later
+formats: [vst3]
+
+story:
+  why: story/why.md
+  prototype: story/prototype.md
+
+media:
+  screenshot: media/screenshot.png
+  before: media/before.mp3
+  after: media/after.mp3
+
+web_demo: true             # free browser version on the plugin's page
+
+seo:
+  title: ""
+  description: ""          # 155 characters or fewer

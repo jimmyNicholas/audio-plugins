@@ -16,7 +16,8 @@ TAP started as part of the web app [next-annoying-piano](https://github.com/jimm
 ## Layout
 
 ```
-devices/<name>/      one folder per device: patch, scripts, tests, docs
+albums/NN-<slug>/    one folder per album: manifest, story, art, music, samples
+devices/<name>/      one folder per Max for Live device: patch, scripts, tests, docs
 shared/breeder/      the breeding loop, panel and keys shared by Kick and Snare Breeder
 tools/amxd.mjs       packs a .maxpat into an .amxd, and back; shared by every device
 ```
@@ -31,6 +32,14 @@ Code moves into a shared folder once a second device needs it, not before. A dev
 ## Tests
 
 `npm test` from the repo root runs every test. No dependencies; Node 18 or later is enough. CI also checks that device and shared scripts are ES5, since that is all Max 8's `js` object understands.
+
+## Albums
+
+| Album | Status | Folder |
+| --- | --- | --- |
+| 1. Bloodline Breaks | Draft: collection stage. Sample-free hip hop drums, bred from nothing. | [`albums/01-bloodline-breaks/`](albums/01-bloodline-breaks/) |
+
+Each album folder is a copy of [`business_plan/templates/albums/_template/`](business_plan/templates/albums/_template/). JUCE plugins will go in `plugins/<slug>/` at the root, starting with the Bloodline Breaks spike.
 
 ## Business plan
 

@@ -1,0 +1,47 @@
+# Album manifest. Copy albums/_template/ to albums/NN-<slug>/ and fill in.
+# An album can only be marked "ready" when every check in templates/README.md passes.
+
+number: 1
+slug: bloodline-breaks
+title: Bloodline Breaks
+status: draft              # draft | ready | released
+release_date:              # filled in by the release step
+
+theme: >
+  Sample-free hip hop drums. Hip hop was built on digging crates for breaks;
+  this album breeds them from nothing, by ear, round after round.
+
+pricing_aud:
+  album: 0                 # must be below the album's singles added together
+  discography_discount: 50 # % off the discography; rises as the catalogue grows
+
+contents:
+  plugins: [bloodline]     # placeholder slug for the one drum breeder (Kick, Snare, Hats); name not settled
+  samples: samples/bloodline-breaks-samples.zip
+  tracks:
+    - file: music/01-track-name.wav
+      title: Track Name
+      heard:               # at least one per track; links the music to the tools
+        - { plugin: plugin-slug, at: "0:00", note: "what you hear it doing" }
+
+story:
+  liner_notes: story/liner-notes.md
+  essay: story/essay.md    # optional; delete the line if there is none
+  related_writing:
+    - docs/research/boom-bap-drum-sound.md
+    - docs/research/sample-free-composition-tools.md
+    - docs/research/boundary-pushing-music-philosophy.md
+
+art:
+  cover: art/cover.png     # 3000 x 3000
+  banner: art/banner.png   # wide
+
+seo:
+  title: ""
+  description: ""          # 155 characters or fewer
+  keywords: []
+
+store:
+  checkout: itch           # itch | payhip | lemonsqueezy | other
+  album_page: ""           # store URL, created by hand as a draft
+  bandcamp_draft: false    # true once the music and samples are drafted on Bandcamp (if used)

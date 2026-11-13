@@ -37,3 +37,15 @@ _Avoid_: Generator, randomiser, evolver
 **Drum**:
 One kind of sound a breeder makes, such as kick, snare or hats. In a plugin with one shared voice, a drum is a zone within that voice's settings: choosing one centres breeding there, but any sound stays reachable. With no drum chosen, breeding starts anywhere. One plugin can hold several drums.
 _Avoid_: Voice (the synthesis code for a drum), instrument, pad
+
+**Row**:
+One breeding lane in a breeder plugin's pad grid: three candidate pads (A, B, C) and a Choose pad, with its own zone, spread and favourite. The Bloodline Breaks spike has three rows, one per drum by default, and a bottom row that plays each row's last chosen sound.
+_Avoid_: Lane, slot, track
+
+**Favourite**:
+A row's last chosen candidate. It stays on its pad while the other two pads get new sounds bred from it, and it plays on the row's bottom pad.
+_Avoid_: Winner, keeper, parent
+
+**Spread**:
+How far new candidates are bred from the favourite. Choosing the favourite again narrows it; choosing a new candidate twice in a row widens it.
+_Avoid_: Step size (the code's name for it), mutation rate, Wider and Closer

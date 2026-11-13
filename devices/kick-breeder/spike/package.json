@@ -1,0 +1,10 @@
+{
+  "name": "kick-breeder-spike",
+  "private": true,
+  "description": "Throwaway Max for Live spike of Kick Breeder. No dependencies: run the tests with `npm test` here or from the repo root.",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test",
+    "build": "node build-patch.mjs"
+  }
+}

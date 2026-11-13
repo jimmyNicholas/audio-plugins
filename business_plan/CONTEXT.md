@@ -35,5 +35,5 @@ A sound source you set by choosing between candidates, round after round, rather
 _Avoid_: Generator, randomiser, evolver
 
 **Drum**:
-One kind of sound a breeder makes, such as kick, snare or hats, with its own settings and voice. One plugin can hold several drums.
+One kind of sound a breeder makes, such as kick, snare or hats. In a plugin with one shared voice, a drum is a range within that voice's settings; choosing one keeps breeding in its territory. One plugin can hold several drums.
 _Avoid_: Voice (the synthesis code for a drum), instrument, pad

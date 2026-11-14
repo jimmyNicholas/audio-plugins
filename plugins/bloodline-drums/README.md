@@ -18,9 +18,9 @@ What it follows:
 ## Install on the Mac
 
 1. Open the [Bloodline Drums workflow runs](https://github.com/jimmyNicholas/audio-plugins/actions/workflows/bloodline-drums.yml), pick the latest green run on `claude/plugin-album-collection-5nvyi5`, and download **Bloodline-drums-mac** (you need to be logged in to GitHub).
-2. Unzip it (a zip inside a zip; unzip both). You get a **Bloodline-drums** folder of its own. In Terminal, from inside that folder: `sh install-bloodline-drums.sh`. It copies the VST3 and AU into `~/Library/Audio/Plug-Ins`, clears the quarantine flag (the plugin is not signed), and removes the copy installed under the old name, **Bloodline**, which has the same plugin ID.
+2. Unzip it (a zip inside a zip; unzip both). You get a **Bloodline-drums** folder of its own. In Terminal, from inside that folder: `sh install-bloodline-drums.sh`. It copies the VST3 and AU into `~/Library/Audio/Plug-Ins` and clears the quarantine flag (the plugin is not signed). It also removes the first spike, **Bloodline**, from your Library and the system one (asking for your password if it is in the system one), and resets the Audio Unit cache. Quit and reopen Live after.
 3. In Live: Preferences, Plug-Ins, make sure "Use VST3 Plug-In System Folders" and "Use Audio Units" are on, then Rescan.
-4. Load **one** of the two formats on a MIDI track (Plug-Ins, Jimmy Nicholas, Bloodline Drums). Don't load the VST3 and the AU in the same set. It replaces the first spike, which was called Bloodline.
+4. Load **one** of the two formats on a MIDI track (Plug-Ins, Jimmy Nicholas, Bloodline Drums). Don't load the VST3 and the AU in the same set. It has its own plugin ID, so it no longer clashes with the first spike, which was called Bloodline.
 5. Set the MPD226 to Bank A, so its pads send notes 36 to 51.
 
 Or build it yourself on the Mac (Xcode 15.2, or 14.3.1 on macOS before 13.5, and CMake 3.22 or later):

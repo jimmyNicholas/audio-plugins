@@ -68,7 +68,7 @@ jobs:
           mkdir -p ~/Library/Audio/Plug-Ins/Components
           cp -R "build/BloodlineDrums_artefacts/Release/AU/Bloodline Drums.component" ~/Library/Audio/Plug-Ins/Components/
           killall -9 AudioComponentRegistrar || true
-          auval -v aumu Bldl Jnic
+          auval -v aumu Bldr Jnic
 
       # Everything inside one Bloodline-drums folder, so unzipping several downloads never mixes them.
       - name: Zip

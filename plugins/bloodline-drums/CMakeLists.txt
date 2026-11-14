@@ -41,7 +41,7 @@ if(BLOODLINE_DRUMS_PLUGIN)
   juce_add_plugin(BloodlineDrums
     COMPANY_NAME "Jimmy Nicholas"
     PLUGIN_MANUFACTURER_CODE Jnic
-    PLUGIN_CODE Bldl
+    PLUGIN_CODE Bldr
     PRODUCT_NAME "Bloodline Drums"
     IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE

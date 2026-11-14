@@ -39,11 +39,31 @@ One kind of sound a breeder makes, such as kick, snare or hats. In a plugin with
 _Avoid_: Voice (the synthesis code for a drum), instrument, pad
 
 **Row**:
-One breeding lane in a breeder plugin's pad grid: three candidate pads (A, B, C) and a Choose pad, with its own zone, spread and favourite. The Bloodline Breaks spike has three rows, one per drum by default, and a bottom row that plays each row's last chosen sound.
-_Avoid_: Lane, slot, track
+One breeding lane in a breeder plugin's pad grid: three sibling candidates (A, B, C) and a fourth pad, with its own zone, spread, favourite and locks. A row is either open or placed, and sits on the workbench or in a kit slot.
+_Avoid_: Lane, slot (a slot is where a row sits), track
+
+**Open**:
+A row that is breeding: its fourth pad is Choose, and its zone and locks can be changed. The workbench row is always open; a placed row can be opened where it sits and closed again.
+_Avoid_: Editing, unlocked
+
+**Placed**:
+A row that is played, not bred: its fourth pad is Random, which plays one of its three siblings, never the same twice in a row.
+_Avoid_: Saved, finished, frozen
+
+**Workbench**:
+The bottom row of the grid, where new rows are bred. It is always open, and starts again with no zone once its row is placed in the kit.
+_Avoid_: Editor, bench row
+
+**Kit**:
+The slots above the workbench, each blank or holding a placed row. A row's sound follows its slot, so moving a row changes what a clip on that slot plays.
+_Avoid_: Rack (an Ableton word), crate, pad, bank
+
+**Start again**:
+Wiping a whole breeder plugin back to an empty kit and a fresh workbench. Resetting one open row instead draws three fresh candidates and keeps its zone and locks.
+_Avoid_: Kit reset, clear (emptying one slot)
 
 **Favourite**:
-A row's last chosen candidate. It stays on its pad while the other two pads get new sounds bred from it, and it plays on the row's bottom pad.
+A row's last chosen candidate. It stays on its pad while the other two pads get new sounds bred from it.
 _Avoid_: Winner, keeper, parent
 
 **Spread**:

@@ -1,0 +1,84 @@
+name: FX Breeder
+
+# The FX Breeder spike in plugins/fx-breeder. Kept apart from tests.yml so the Max for Live tests stay fast.
+on:
+  push:
+    paths:
+      - "plugins/fx-breeder/**"
+      - "plugins/shared/**"
+      - ".github/workflows/fx-breeder.yml"
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JUCE's Linux packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libasound2-dev libjack-jackd2-dev ladspa-sdk \
+            libfreetype-dev libfontconfig1-dev libx11-dev libxcomposite-dev libxcursor-dev libxext-dev \
+            libxinerama-dev libxrandr-dev libxrender-dev libxi-dev libegl-dev libglu1-mesa-dev \
+            mesa-common-dev xvfb
+
+      - name: Configure
+        run: cmake -S plugins/fx-breeder -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j4
+
+      - name: Core tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Offline renders
+        run: |
+          mkdir -p renders
+          build/fx_render renders 1
+
+      - name: pluginval
+        run: |
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Linux.zip
+          unzip -q pluginval.zip
+          xvfb-run -a ./pluginval --strictness-level 10 --validate-in-process \
+            --validate "build/FxBreeder_artefacts/Release/VST3/FX Breeder.vst3"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fx-breeder-renders
+          path: renders/*.wav
+
+  mac:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      # A universal binary, so it runs on the Intel Mac (macOS 13) as well as Apple Silicon.
+      - name: Configure
+        run: >
+          cmake -S plugins/fx-breeder -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build
+        run: cmake --build build -j4 --target FxBreeder_VST3 FxBreeder_AU
+
+      - name: Validate the AU
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R "build/FxBreeder_artefacts/Release/AU/FX Breeder.component" ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          auval -v aufx Fxbr Jnic
+
+      - name: Zip
+        run: |
+          mkdir -p dist
+          cp -R "build/FxBreeder_artefacts/Release/VST3/FX Breeder.vst3" dist/
+          cp -R "build/FxBreeder_artefacts/Release/AU/FX Breeder.component" dist/
+          cp plugins/fx-breeder/install-mac.sh dist/
+          cd dist && zip -qry ../FxBreeder-mac.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FxBreeder-mac
+          path: FxBreeder-mac.zip

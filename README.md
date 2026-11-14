@@ -17,7 +17,9 @@ JUCE plugins, built with CMake. Each builds and tests on its own; see its README
 
 | Plugin | What it does | Docs |
 | --- | --- | --- |
-| [Bloodline](plugins/bloodline/) | Spike. A sample-free drum instrument for Bloodline Breaks: three rows of drums bred by choosing between pads, played from an MPD226. One shared voice, with Kick, Snare and Hats as zones within it. | [README and checklist](plugins/bloodline/README.md) |
+| [Bloodline](plugins/bloodline/) | Spike. A sample-free drum instrument for Bloodline Breaks: breed drums on a workbench by choosing between pads, then place them in a kit of three slots, all from an MPD226. One shared 19-setting voice, with Kick, Snare and Hats as optional zones. | [README and checklist](plugins/bloodline/README.md) |
+| [Synth Breeder](plugins/synth-breeder/) | Spike, mouse led. A guess at a synth version: a litter of eight patches to click through while you play or a riff loops, bred, crossed, and steered by zones. | [README](plugins/synth-breeder/README.md) |
+| [FX Breeder](plugins/fx-breeder/) | Spike, mouse led. An audio effect that breeds whole chains of up to six effects (which, in what order, and their settings), for one drum or the bus, with a Wild switch. | [README](plugins/fx-breeder/README.md) |
 
 TAP started as part of the web app [next-annoying-piano](https://github.com/jimmyNicholas/next-annoying-piano) and moved here with its history on 2026-10-28.
 
@@ -27,6 +29,7 @@ TAP started as part of the web app [next-annoying-piano](https://github.com/jimm
 albums/NN-<slug>/    one folder per album: manifest, story, art, music, samples
 devices/<name>/      one folder per Max for Live device: patch, scripts, tests, docs
 plugins/<slug>/      one folder per JUCE plugin: a plain C++ core, the JUCE layer, tests
+plugins/shared/      the litter breeding loop and test harness shared by Synth Breeder and FX Breeder
 shared/breeder/      the breeding loop, panel and keys shared by Kick and Snare Breeder
 tools/amxd.mjs       packs a .maxpat into an .amxd, and back; shared by every device
 ```

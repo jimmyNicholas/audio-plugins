@@ -4,6 +4,9 @@ using namespace bloodline;
 
 namespace {
 
+// juce::String(x, 0) keeps every decimal, so whole numbers are rounded here.
+juce::String num(double v, int places) { return places == 0 ? juce::String(juce::roundToInt(v)) : juce::String(v, places); }
+
 // From the #38 mock.
 const juce::Colour kBg(0xff17181b), kPanel(0xff212226), kPad(0xff2c2d32), kEdge(0xff3a3b41);
 const juce::Colour kFg(0xffe8e6e1), kMuted(0xff8d8b86), kBlank(0xff1d1e21);
@@ -20,18 +23,18 @@ juce::Colour zoneColour(Zone z) {
 
 const Zone kZoneOrder[kNumZones] = { Zone::Kick, Zone::Snare, Zone::Hats, Zone::None };
 
-juce::String hz(double v) { return v >= 1000 ? juce::String(v / 1000.0, v >= 10000 ? 1 : 2) + " kHz" : juce::String(v, v < 100 ? 1 : 0) + " Hz"; }
+juce::String hz(double v) { return v >= 1000 ? num(v / 1000.0, v >= 10000 ? 1 : 2) + " kHz" : num(v, v < 100 ? 1 : 0) + " Hz"; }
 
 juce::String formatValue(int setting, double norm) {
   const double v = toReal(setting, norm);
   const juce::String unit(info(setting).unit);
-  if (setting == Pan) return std::abs(v) < 0.01 ? juce::String("C") : juce::String(std::abs(v) * 100.0, 0) + (v < 0 ? " L" : " R");
+  if (setting == Pan) return std::abs(v) < 0.01 ? juce::String("C") : juce::String(juce::roundToInt(std::abs(v) * 100.0)) + (v < 0 ? " L" : " R");
   if (setting == Bits) return juce::String(v, 1) + " bits";
   if (unit == "Hz") return hz(v);
-  if (unit == "s") return v < 1.0 ? juce::String(v * 1000.0, v < 0.01 ? 1 : 0) + " ms" : juce::String(v, 2) + " s";
+  if (unit == "s") return v < 1.0 ? num(v * 1000.0, v < 0.01 ? 1 : 0) + " ms" : juce::String(v, 2) + " s";
   if (unit == "st") return juce::String(v, 1) + " st";
   if (unit == "dB") return juce::String(v, 1) + " dB";
-  return juce::String(v * 100.0, 0) + "%";
+  return juce::String(juce::roundToInt(v * 100.0)) + "%";
 }
 
 juce::String lineName(int line) { return line == kBench ? "BENCH" : "SLOT " + juce::String(line); }
@@ -326,7 +329,7 @@ void BloodlineEditor::paintInspector(juce::Graphics& g, juce::Rectangle<int> are
   };
   {
     const double pan = row.rowPan();
-    auto track = rowLine("ROW PAN", std::abs(pan) < 0.01 ? juce::String("C") : juce::String(std::abs(pan) * 100, 0) + (pan < 0 ? " L" : " R"));
+    auto track = rowLine("ROW PAN", std::abs(pan) < 0.01 ? juce::String("C") : juce::String(juce::roundToInt(std::abs(pan) * 100)) + (pan < 0 ? " L" : " R"));
     slider(g, track, (pan + 1) / 2, true, c, [this, line](double v) { act([=](Instrument& i) { i.setRowPan(line, v * 2 - 1); }); });
     const double db = row.rowLevel();
     auto lt = rowLine("ROW LEVEL", juce::String(db, 1) + " dB");

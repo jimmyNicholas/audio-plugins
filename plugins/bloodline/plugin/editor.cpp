@@ -140,7 +140,7 @@ void BloodlineEditor::paintPad(juce::Graphics& g, int note) {
   const auto c = row ? zoneColour(row->zone()) : kMuted;
   const bool flashing = juce::Time::getMillisecondCounter() < flashUntil_[(size_t) i];
 
-  juce::Colour fill = kPad;
+  juce::Colour fill = row ? kPad.interpolatedWith(c, 0.10f) : kPad;
   float alpha = 1.0f;
   const Values* bars = nullptr;
   juce::String label;
@@ -219,7 +219,7 @@ void BloodlineEditor::paintInspector(juce::Graphics& g) {
     g.drawText(juce::String(zoneName(kZoneOrder[z])).toUpperCase(), r, juce::Justification::centred);
   }
 
-  // Spread: a meter between its narrowest and widest, the step, and the new-candidate count.
+  // Spread: a meter between its narrowest and widest, its value, and the new-candidate count.
   {
     auto r = spreadRect_;
     g.setColour(kMuted);
@@ -228,13 +228,13 @@ void BloodlineEditor::paintInspector(juce::Graphics& g) {
     auto meter = r.removeFromLeft(110).withSizeKeepingCentre(110, 6).toFloat();
     g.setColour(kPad);
     g.fillRoundedRectangle(meter, 3.0f);
-    const Tuning t;
-    const float share = (float) ((row.step() - t.minStep) / (t.maxStep - t.minStep));
+    const Tuning& t = row.tuning();
+    const float share = (float) ((row.spread() - t.minSpread) / (t.maxSpread - t.minSpread));
     g.setColour(c);
     g.fillRoundedRectangle(meter.withWidth(juce::jmax(3.0f, meter.getWidth() * share)), 3.0f);
     r.removeFromLeft(10);
     g.setColour(kMuted);
-    g.drawText(juce::String(row.step(), 3), r.removeFromLeft(50), juce::Justification::centredLeft);
+    g.drawText(juce::String(row.spread(), 3), r.removeFromLeft(50), juce::Justification::centredLeft);
     g.setColour(c);
     const juce::String dots = juce::String::fromUTF8(row.newInARow() > 0 ? "\xe2\x97\x8f\xe2\x97\x8b" : "\xe2\x97\x8b\xe2\x97\x8b");
     g.drawText(dots, r.removeFromLeft(30), juce::Justification::centredLeft);
@@ -266,8 +266,8 @@ void BloodlineEditor::paintInspector(juce::Graphics& g) {
     }
     if (shown >= 0) {
       const double v = row.candidate(shown)[(size_t) s];
-      const double lo = row.locked(s) ? v : juce::jmax(0.0, v - row.step());
-      const double hi = row.locked(s) ? v : juce::jmin(1.0, v + row.step());
+      const double lo = row.locked(s) ? v : juce::jmax(0.0, v - row.spread());
+      const double hi = row.locked(s) ? v : juce::jmin(1.0, v + row.spread());
       g.setColour(c.withAlpha(0.25f));
       g.fillRect(bar.getX() + bar.getWidth() * (float) lo, bar.getY(), bar.getWidth() * (float) (hi - lo), bar.getHeight());
       g.setColour(c);

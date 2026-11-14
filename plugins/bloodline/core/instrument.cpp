@@ -50,7 +50,7 @@ void Instrument::render(float* out, int n) {
   for (auto& v : voices_) if (v.active()) v.render(out, n);
 }
 // One header line, then one line per row:
-//   row <seed> <zone> <favourite> <last pressed> <step> <new in a row> <locks as 0s and 1s> <24 values>
+//   row <seed> <zone> <favourite> <last pressed> <spread> <new in a row> <locks as 0s and 1s> <24 values>
 // Numbers in the C locale, doubles to 17 significant digits so they come back exactly.
 std::string Instrument::save() const {
   std::ostringstream out;
@@ -58,7 +58,7 @@ std::string Instrument::save() const {
   out << std::setprecision(17) << "bloodline 1\n";
   for (const Row& r : rows_) {
     out << "row " << r.seed() << ' ' << static_cast<int>(r.zone()) << ' ' << r.favourite() << ' '
-        << r.lastPressed() << ' ' << r.step() << ' ' << r.newInARow() << ' ';
+        << r.lastPressed() << ' ' << r.spread() << ' ' << r.newInARow() << ' ';
     for (int i = 0; i < kNumSettings; ++i) out << (r.locked(i) ? '1' : '0');
     for (int pad = 0; pad < Row::kPads; ++pad)
       for (double v : r.candidate(pad)) out << ' ' << v;
@@ -78,9 +78,9 @@ bool Instrument::load(const std::string& text) {
   for (Row& row : rows) {
     std::uint32_t seed = 0;
     int zone = 0, favourite = -1, last = -1, newCount = 0;
-    double step = 0;
+    double spread = 0;
     std::string lockBits;
-    if (!(in >> word >> seed >> zone >> favourite >> last >> step >> newCount >> lockBits)) return false;
+    if (!(in >> word >> seed >> zone >> favourite >> last >> spread >> newCount >> lockBits)) return false;
     if (word != "row" || zone < 0 || zone >= kNumZones || lockBits.size() != (size_t) kNumSettings) return false;
     std::array<bool, kNumSettings> locks{};
     for (int i = 0; i < kNumSettings; ++i) {
@@ -91,7 +91,7 @@ bool Instrument::load(const std::string& text) {
     for (auto& pad : pads)
       for (double& v : pad)
         if (!(in >> v) || !std::isfinite(v)) return false;
-    row.restore(seed, static_cast<Zone>(zone), pads, favourite, last, step, newCount, locks);
+    row.restore(seed, static_cast<Zone>(zone), pads, favourite, last, spread, newCount, locks);
   }
   rows_ = rows;
   return true;

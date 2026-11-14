@@ -15,10 +15,8 @@ enum class Zone { None, Kick, Snare, Hats };
 constexpr int kNumZones = 4;
 
 struct SettingInfo {
-  const char* id;     // short, stable: used in saved state
   const char* name;   // shown in the UI
-  const char* unit;   // "Hz", "st", "ms", "%" or ""
-  double min, max;    // full range, in real units
+  double min, max;    // full range, in real units (Decay in seconds)
   bool logScale;
 };
 

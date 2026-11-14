@@ -18,7 +18,7 @@ std::uint32_t scatter(std::uint32_t x) {
 }
 
 Row::Row(std::uint32_t seed, Zone zone, Tuning tuning)
-    : t_(tuning), seed_(scatter(seed)), zone_(zone), step_(tuning.startStep) {
+    : t_(tuning), seed_(scatter(seed)), zone_(zone), spread_(tuning.startSpread) {
   for (auto& pad : pads_) pad = freshDraw();
 }
 
@@ -55,7 +55,7 @@ Values Row::mutate(const Values& from) {
   Values v{};
   for (int i = 0; i < kNumSettings; ++i) {
     if (locks_[i]) { v[i] = from[i]; continue; }
-    double x = fold(from[i] + gauss() * step_);
+    double x = fold(from[i] + gauss() * spread_);
     if (zone_ != Zone::None) {
       const Range r = zoneRange(zone_, i);
       if (x < r.lo) x += (r.lo - x) * t_.pull;
@@ -76,10 +76,10 @@ bool Row::choose() {
   const int picked = lastPressed_;
   if (favourite_ >= 0) { // the first choice leaves the spread and count alone
     if (picked == favourite_) {
-      step_ = std::max(t_.minStep, step_ * t_.narrow);
+      spread_ = std::max(t_.minSpread, spread_ * t_.narrow);
       newCount_ = 0;
     } else if (++newCount_ >= 2) {
-      step_ = std::min(t_.maxStep, step_ * t_.widen);
+      spread_ = std::min(t_.maxSpread, spread_ * t_.widen);
       newCount_ = 0;
     }
   }
@@ -91,14 +91,14 @@ bool Row::choose() {
   return true;
 }
 void Row::restore(std::uint32_t seed, Zone zone, const std::array<Values, kPads>& pads, int favourite,
-                  int lastPressed, double step, int newCount, const std::array<bool, kNumSettings>& locks) {
+                  int lastPressed, double spread, int newCount, const std::array<bool, kNumSettings>& locks) {
   seed_ = (seed == 0 || seed >= kModulus) ? scatter(seed) : seed; // a valid Park-Miller state as is
   zone_ = zone;
   for (int pad = 0; pad < kPads; ++pad)
     for (int i = 0; i < kNumSettings; ++i) pads_[pad][i] = std::clamp(pads[pad][i], 0.0, 1.0);
   favourite_ = (favourite >= 0 && favourite < kPads) ? favourite : -1;
   lastPressed_ = (lastPressed >= 0 && lastPressed < kPads) ? lastPressed : -1;
-  step_ = std::clamp(step, t_.minStep, t_.maxStep);
+  spread_ = std::clamp(spread, t_.minSpread, t_.maxSpread);
   newCount_ = std::clamp(newCount, 0, 1);
   locks_ = locks;
 }

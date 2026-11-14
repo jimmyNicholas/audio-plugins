@@ -74,7 +74,7 @@ TEST("the first choice sets the favourite and leaves the spread alone") {
   Row row(7, Zone::Snare);
   row.press(2);
   row.choose();
-  CHECK_NEAR(row.step(), 0.25, 1e-12);
+  CHECK_NEAR(row.spread(), 0.25, 1e-12);
   CHECK_EQ(row.newInARow(), 0);
 }
 
@@ -98,9 +98,9 @@ TEST("spread: the favourite again narrows by 0.6, down to 0.02") {
   Row row(3, Zone::None);
   pick(row, 0);
   pick(row, 0);
-  CHECK_NEAR(row.step(), 0.15, 1e-12);
+  CHECK_NEAR(row.spread(), 0.15, 1e-12);
   for (int i = 0; i < 20; ++i) pick(row, 0);
-  CHECK_NEAR(row.step(), 0.02, 1e-12);
+  CHECK_NEAR(row.spread(), 0.02, 1e-12);
 }
 
 TEST("spread: a new candidate twice in a row widens by 1.6, up to 0.5, and the count restarts") {
@@ -108,13 +108,13 @@ TEST("spread: a new candidate twice in a row widens by 1.6, up to 0.5, and the c
   pick(row, 0);
   pick(row, other(row));
   CHECK_EQ(row.newInARow(), 1);
-  CHECK_NEAR(row.step(), 0.25, 1e-12);
+  CHECK_NEAR(row.spread(), 0.25, 1e-12);
   pick(row, other(row));
-  CHECK_NEAR(row.step(), 0.4, 1e-12);
+  CHECK_NEAR(row.spread(), 0.4, 1e-12);
   CHECK_EQ(row.newInARow(), 0);
   pick(row, other(row));
   pick(row, other(row));
-  CHECK_NEAR(row.step(), 0.5, 1e-12);
+  CHECK_NEAR(row.spread(), 0.5, 1e-12);
 }
 
 TEST("spread: choosing the favourite in between restarts the new-candidate count") {
@@ -123,7 +123,7 @@ TEST("spread: choosing the favourite in between restarts the new-candidate count
   pick(row, other(row));       // count 1
   pick(row, row.favourite());  // narrows to 0.15, count 0
   pick(row, other(row));       // count 1, no widening
-  CHECK_NEAR(row.step(), 0.15, 1e-12);
+  CHECK_NEAR(row.spread(), 0.15, 1e-12);
   CHECK_EQ(row.newInARow(), 1);
 }
 
@@ -192,7 +192,7 @@ TEST("restore clamps values and rejects bad indexes") {
   CHECK_EQ(row.candidate(0)[Pitch], 1.0);
   CHECK_EQ(row.favourite(), -1);
   CHECK_EQ(row.lastPressed(), -1);
-  CHECK_NEAR(row.step(), 0.5, 1e-12);
+  CHECK_NEAR(row.spread(), 0.5, 1e-12);
   CHECK(row.newInARow() <= 1);
   CHECK(row.zone() == Zone::Snare);
 }
@@ -205,7 +205,7 @@ TEST("the same seed and the same presses give the same row; a restored row breed
   std::array<bool, kNumSettings> locks{};
   Row c(1, Zone::None);
   c.restore(a.seed(), a.zone(), { a.candidate(0), a.candidate(1), a.candidate(2) }, a.favourite(),
-            a.lastPressed(), a.step(), a.newInARow(), locks);
+            a.lastPressed(), a.spread(), a.newInARow(), locks);
   pick(a, 1); pick(c, 1);
   for (int pad = 0; pad < 3; ++pad) CHECK(a.candidate(pad) == c.candidate(pad));
 }

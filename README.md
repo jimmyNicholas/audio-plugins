@@ -1,6 +1,6 @@
 # Audio plugins
 
-Max for Live devices for Ableton Live 11 and Max 8.
+Max for Live devices for Ableton Live 11 and Max 8, and JUCE plugins (VST3 and AU).
 
 ## Devices
 
@@ -48,7 +48,7 @@ Code moves into a shared folder once a second device needs it, not before. A dev
 | --- | --- | --- |
 | 1. Bloodline Breaks | Draft: collection stage. Sample-free hip hop drums, bred from nothing. | [`albums/01-bloodline-breaks/`](albums/01-bloodline-breaks/) |
 
-Each album folder is a copy of [`business_plan/templates/albums/_template/`](business_plan/templates/albums/_template/). JUCE plugins will go in `plugins/<slug>/` at the root, starting with the Bloodline Breaks spike.
+Each album folder is a copy of [`business_plan/templates/albums/_template/`](business_plan/templates/albums/_template/). JUCE plugins live in `plugins/<slug>/` at the root; the first is the Bloodline Breaks spike, [`plugins/bloodline/`](plugins/bloodline/).
 
 ## Business plan
 

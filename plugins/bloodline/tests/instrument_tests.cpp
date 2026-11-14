@@ -128,7 +128,7 @@ static void breedSome(Instrument& inst) {
 
 static bool sameRow(const Row& a, const Row& b) {
   bool same = a.zone() == b.zone() && a.favourite() == b.favourite() && a.lastPressed() == b.lastPressed() &&
-              a.step() == b.step() && a.newInARow() == b.newInARow() && a.seed() == b.seed();
+              a.spread() == b.spread() && a.newInARow() == b.newInARow() && a.seed() == b.seed();
   for (int pad = 0; pad < Row::kPads; ++pad) same = same && a.candidate(pad) == b.candidate(pad);
   for (int i = 0; i < kNumSettings; ++i) same = same && a.locked(i) == b.locked(i);
   return same;

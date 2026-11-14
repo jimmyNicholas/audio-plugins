@@ -10,7 +10,7 @@ namespace bloodline {
 
 // Tunable by ear (#37, #43).
 struct Tuning {
-  double startStep = 0.25, minStep = 0.02, maxStep = 0.5;
+  double startSpread = 0.25, minSpread = 0.02, maxSpread = 0.5;
   double narrow = 0.6;        // choosing the favourite again
   double widen = 1.6;         // choosing a new candidate twice in a row
   double zoneShare = 0.8;     // share of fresh draws taken from the zone
@@ -40,13 +40,14 @@ public:
   int lastPressed() const { return lastPressed_; }  // -1 if none since the last choice
   bool hasChosen() const { return favourite_ >= 0; }
   const Values& chosen() const { return pads_[static_cast<size_t>(favourite_ < 0 ? 0 : favourite_)]; } // the bottom pad
-  double step() const { return step_; }
+  double spread() const { return spread_; }
   int newInARow() const { return newCount_; }       // new candidates chosen in a row, 0 or 1
   std::uint32_t seed() const { return seed_; }
+  const Tuning& tuning() const { return t_; }
 
   // For restoring saved state. Values are clamped and indexes checked.
   void restore(std::uint32_t seed, Zone zone, const std::array<Values, kPads>& pads, int favourite,
-               int lastPressed, double step, int newCount, const std::array<bool, kNumSettings>& locks);
+               int lastPressed, double spread, int newCount, const std::array<bool, kNumSettings>& locks);
 
 private:
   double rand();
@@ -61,7 +62,7 @@ private:
   std::array<bool, kNumSettings> locks_{};
   int favourite_ = -1;
   int lastPressed_ = -1;
-  double step_;
+  double spread_;
   int newCount_ = 0;
 };
 

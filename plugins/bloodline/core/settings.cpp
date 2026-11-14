@@ -8,14 +8,14 @@ namespace {
 
 // From #43's starting table. Body / Noise is the share of noise; Decay is in seconds here.
 const SettingInfo kInfo[kNumSettings] = {
-  { "pitch",  "Pitch",        "Hz", 30.0,  1000.0,  true  },
-  { "sweep",  "Sweep",        "st", 0.0,   48.0,    false },
-  { "decay",  "Decay",        "ms", 0.020, 1.5,     true  },
-  { "noise",  "Body / Noise", "%",  0.0,   1.0,     false },
-  { "tone",   "Noise tone",   "Hz", 200.0, 12000.0, true  },
-  { "metal",  "Metal",        "",   0.0,   1.0,     false },
-  { "click",  "Click",        "",   0.0,   1.0,     false },
-  { "drive",  "Drive",        "",   0.0,   1.0,     false },
+  { "Pitch", 30.0,  1000.0,  true  },
+  { "Sweep", 0.0,   48.0,    false },
+  { "Decay", 0.020, 1.5,     true  },
+  { "Body / Noise",  0.0,   1.0,     false },
+  { "Noise tone", 200.0, 12000.0, true  },
+  { "Metal",   0.0,   1.0,     false },
+  { "Click",   0.0,   1.0,     false },
+  { "Drive",   0.0,   1.0,     false },
 };
 
 // Real-unit zones: { lo, hi } per setting, in kInfo's order. Drive is full range for every drum.

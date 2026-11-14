@@ -3,6 +3,7 @@
 Spike for [#41](https://github.com/jimmyNicholas/audio-plugins/issues/41), part of [Map: Bloodline Breaks](https://github.com/jimmyNicholas/audio-plugins/issues/29). One instrument plugin with one shared drum voice. Kick, Snare and Hats are zones within it. You breed three rows of drums by choosing between pads, all from an MPD226. It is throwaway: it answers whether the breeding loop works as one JUCE instrument, and what the real plugin should change.
 
 What it follows:
+
 - **Voice and zones:** [#43](https://github.com/jimmyNicholas/audio-plugins/issues/43). Eight settings (Pitch, Sweep, Decay, Body / Noise, Noise tone, Metal, Click, Drive). With a zone on, 80% of fresh draws come from it, and mutations outside it are pulled halfway back. The favourite is never pulled.
 - **Pads and breeding:** [#37](https://github.com/jimmyNicholas/audio-plugins/issues/37). Notes 36 to 51, three rows of A, B, C and Choose, bottom pads play each row's favourite, and the spread rules.
 - **UI:** [#38](https://github.com/jimmyNicholas/audio-plugins/issues/38), Layout C. A bare grid with row tabs, and one inspector with the zone switch, spread and locks.
@@ -46,6 +47,7 @@ Notes from a clip count as presses too, so a clip that hits Choose pads will bre
 Play it over a boom bap loop (around 85 to 95 BPM). Post the answers on [#41](https://github.com/jimmyNicholas/audio-plugins/issues/41), with what should change before the plugin set.
 
 **Install and basics**
+
 1. Did it install and load in Live 11 without trouble? VST3, AU, or both? Anything odd with Gatekeeper or the rescan?
 2. Do the MPD226's Bank A pads line up with the grid on screen (36 bottom left)?
 3. Any clicks, dropouts, CPU spikes or stuck sounds?
@@ -89,6 +91,7 @@ cmake -S plugins/bloodline -B build -G Ninja -DCMAKE_BUILD_TYPE=Release    # eve
 ```
 
 Tests sit at three seams:
+
 - `tests/row_tests.cpp`: breeding, zones, the pull, spread, locks, restore.
 - `tests/voice_tests.cpp`: the sound, by numbers.
 - `tests/instrument_tests.cpp`: notes in, audio and state out.
@@ -96,6 +99,26 @@ Tests sit at three seams:
 On Linux the plugin builds as VST3 and Standalone, and CI runs pluginval at strictness 10 on the VST3. The [workflow](../../.github/workflows/bloodline.yml) also builds the universal Mac VST3 and AU and runs `auval`.
 
 Known shortcuts, fine for a spike:
+
 - The breeding rules here differ from `shared/breeder/engine.js` (no Back, Keep or shuffle, and a spread that widens), so this is a new engine, not a port, and there are no shared test vectors.
 - The seed is scattered before Park-Miller sees it, because small seeds give near-zero first draws. The Max engine has the same weakness.
 - Metal's squares are naive, so they alias. The audio thread and the editor share one lock.
+
+
+
+User Thoughts after testing. 
+
+1. It works fine as far as I can tell. I skipped the questions above because I'm driving this.
+2. It needs a reset option
+3. I liked that I could play all three versions in the drum roll. I ended up using nearly all of them to make a 1 bar loop. The similarity was nice
+4. I can see the bottom row being [A][B][C][choose]. This row is the current row being worked. The row above is blank [ ] [ ] [ ] [ bring selected row here]. After the selected row is placed into the row above that row becomes [ A ] [ B ] [ C ] [ random A , B, or C]
+5. If the row is opened in edit mode again. the [random] becomes [choose] 
+6. The settings should be able to be adjusted by the user. We need a pan and high pass / low pass option. Actually, a much bigger range of options. They shouldn't be effects though. That's seperate
+7.  Each new opening row should start in [none]. 
+8. The rows should be able to move up and down.
+9. I would like to see a seperate version that is just for effects. Reverb, delay, compression, saturation, filter, widening, limiting. These are can be added to a drum pad individually or to the whole bus. The chain is also part of the randomisation
+10. Things need to stay experimental so ranges should fall outside recommended norms.   
+  
+  
+  
+  

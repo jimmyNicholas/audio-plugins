@@ -22,8 +22,8 @@ static bool inZone(Zone z, int setting, double v) {
   return v >= r.lo && v <= r.hi;
 }
 
-// Kick's pitch zone (40 to 90 Hz) is about 23% of the full 30 Hz to 1 kHz log range, so an 80%
-// zone draw puts about 85% of pitches in it, and a draw with no zone about 23%.
+// Kick's pitch zone (40 to 90 Hz) is about 18% of the full 20 Hz to 2 kHz log range, so an 80%
+// zone draw puts about 84% of pitches in it, and a draw with no zone about 18%.
 TEST("fresh draws come from the zone about 80% of the time, and from anywhere with no zone") {
   int inKick = 0, inNone = 0, n = 0;
   for (std::uint32_t seed = 1; seed <= 2000; ++seed) {
@@ -34,8 +34,8 @@ TEST("fresh draws come from the zone about 80% of the time, and from anywhere wi
       n += 1;
     }
   }
-  CHECK_NEAR(inKick / double(n), 0.85, 0.03);
-  CHECK_NEAR(inNone / double(n), 0.23, 0.03);
+  CHECK_NEAR(inKick / double(n), 0.835, 0.03);
+  CHECK_NEAR(inNone / double(n), 0.176, 0.03);
 }
 
 TEST("every fresh value is between 0 and 1") {
@@ -131,8 +131,12 @@ TEST("spread: choosing the favourite in between restarts the new-candidate count
 static Row rowWithFavourite(std::uint32_t seed, double v, Zone zone) {
   Row row(seed, zone);
   Values fav; fav.fill(v);
-  std::array<bool, kNumSettings> noLocks{};
-  row.restore(row.seed(), zone, { fav, fav, fav }, 0, -1, 0.02, 0, noLocks);
+  Row::State s = row.state();
+  s.pads = { fav, fav, fav };
+  s.favourite = 0;
+  s.lastPressed = -1;
+  s.spread = 0.02;
+  row.restore(s);
   return row;
 }
 
@@ -187,14 +191,20 @@ TEST("locked settings copy the favourite; unlocked ones still vary") {
 TEST("restore clamps values and rejects bad indexes") {
   Row row(1, Zone::None);
   Values wild; wild.fill(3.0);
-  std::array<bool, kNumSettings> locks{};
-  row.restore(9, Zone::Snare, { wild, wild, wild }, 7, 9, 99.0, 5, locks);
+  Row::State s;
+  s.seed = 9; s.zone = Zone::Snare; s.pads = { wild, wild, wild };
+  s.favourite = 7; s.lastPressed = 9; s.lastPlayed = -4; s.spread = 99.0; s.newCount = 5;
+  s.rowPan = 4; s.rowLevel = -100;
+  row.restore(s);
   CHECK_EQ(row.candidate(0)[Pitch], 1.0);
   CHECK_EQ(row.favourite(), -1);
   CHECK_EQ(row.lastPressed(), -1);
   CHECK_NEAR(row.spread(), 0.5, 1e-12);
   CHECK(row.newInARow() <= 1);
   CHECK(row.zone() == Zone::Snare);
+  CHECK_EQ(row.lastPlayed(), -1);
+  CHECK_EQ(row.rowPan(), 1.0);
+  CHECK_EQ(row.rowLevel(), kRowLevelMin);
 }
 
 TEST("the same seed and the same presses give the same row; a restored row breeds on the same way") {
@@ -202,12 +212,114 @@ TEST("the same seed and the same presses give the same row; a restored row breed
   for (int pad : { 0, 2, 2, 1, 0 }) { pick(a, pad); pick(b, pad); }
   for (int pad = 0; pad < 3; ++pad) CHECK(a.candidate(pad) == b.candidate(pad));
 
-  std::array<bool, kNumSettings> locks{};
   Row c(1, Zone::None);
-  c.restore(a.seed(), a.zone(), { a.candidate(0), a.candidate(1), a.candidate(2) }, a.favourite(),
-            a.lastPressed(), a.spread(), a.newInARow(), locks);
+  c.restore(a.state());
   pick(a, 1); pick(c, 1);
   for (int pad = 0; pad < 3; ++pad) CHECK(a.candidate(pad) == c.candidate(pad));
+}
+
+TEST("Random: an equal pick, never the same pad twice in a row, and it breeds nothing") {
+  Row row(21, Zone::None);
+  const Row::State before = row.state();
+  std::uint32_t r = 99;
+  auto next = [&r] { r = r * 1664525u + 1013904223u; return (r >> 8) / 16777216.0; };
+  int counts[3] = {}, last = -1;
+  for (int i = 0; i < 3000; ++i) {
+    const int pad = row.random(next());
+    CHECK(pad != last);
+    CHECK_EQ(row.lastPlayed(), pad);
+    counts[pad] += 1;
+    last = pad;
+  }
+  for (int c : counts) CHECK_NEAR(c / 3000.0, 1.0 / 3.0, 0.03);
+  for (int pad = 0; pad < 3; ++pad) CHECK(row.candidate(pad) == before.pads[pad]);
+  CHECK_EQ(row.favourite(), -1);
+}
+
+TEST("reset: three fresh candidates, no favourite, the starting spread; zone, locks, Pan, Level and Mono kept") {
+  Row row(4, Zone::Snare);
+  row.setLock(Metal, true);
+  row.setRowPan(-0.5);
+  row.setRowLevel(-6);
+  row.setRowMono(true);
+  pick(row, 0);
+  pick(row, 0);
+  const Values old = row.candidate(1);
+  row.reset();
+  CHECK(row.candidate(1) != old);
+  CHECK_EQ(row.favourite(), -1);
+  CHECK_EQ(row.lastPressed(), -1);
+  CHECK_EQ(row.lastPlayed(), -1);
+  CHECK_NEAR(row.spread(), 0.25, 1e-12);
+  CHECK(row.zone() == Zone::Snare);
+  CHECK(row.locked(Metal));
+  CHECK_EQ(row.rowPan(), -0.5);
+  CHECK_EQ(row.rowLevel(), -6.0);
+  CHECK(row.rowMono());
+}
+
+TEST("Level starts at 0 dB, is never bred, and each pad keeps its own") {
+  Row row(8, Zone::None);
+  for (int pad = 0; pad < 3; ++pad) CHECK_EQ(row.candidate(pad)[Level], 1.0);
+  row.setValue(2, Level, 0.25);
+  pick(row, 0);
+  for (int i = 0; i < 5; ++i) pick(row, other(row));
+  int quiet = 0;
+  for (int pad = 0; pad < 3; ++pad) quiet += row.candidate(pad)[Level] == 0.25;
+  CHECK_EQ(quiet, 1); // pad C keeps the level it was turned to, round after round
+  CHECK_EQ(row.candidate(2)[Level], 0.25);
+  for (int pad = 0; pad < 3; ++pad) CHECK(row.candidate(pad)[Level] == 1.0 || row.candidate(pad)[Level] == 0.25);
+}
+
+TEST("every unlocked setting except Level changes every round") {
+  Row row(12, Zone::None);
+  pick(row, 1);
+  const Values& fav = row.candidate(1);
+  for (int pad : { 0, 2 })
+    for (int i = 0; i < kNumSettings; ++i)
+      CHECK((i == Level) == (row.candidate(pad)[i] == fav[i]));
+}
+
+TEST("turning a setting by hand changes that pad; on the favourite, the next round breeds from it") {
+  Row row = rowWithFavourite(30, 0.5, Zone::None);
+  row.setValue(0, Pitch, 0.9);
+  CHECK_EQ(row.candidate(0)[Pitch], 0.9);
+  CHECK_NEAR(row.spread(), 0.02, 1e-12); // no change to the spread
+  CHECK(!row.locked(Pitch));
+  pick(row, 0);
+  CHECK_NEAR(row.candidate(1)[Pitch], 0.9, 0.08);
+  row.setValue(0, Pitch, 7.0);
+  CHECK_EQ(row.candidate(0)[Pitch], 1.0);
+}
+
+TEST("Mono: the Kick zone switches the row's Mono on; pad or row Mono centres a pad and keeps its pan") {
+  Row row(5, Zone::None);
+  CHECK(!row.rowMono());
+  row.setValue(0, Pan, 0.0); // hard left
+  CHECK_EQ(row.padPan(0), -1.0);
+  row.setRowPan(0.25);
+  CHECK_EQ(row.padPan(0), -0.75);
+  row.setPadMono(0, true);
+  CHECK_EQ(row.padPan(0), 0.0);
+  row.setPadMono(0, false);
+  row.setZone(Zone::Kick);
+  CHECK(row.rowMono());
+  CHECK_EQ(row.padPan(0), 0.0);
+  row.setRowMono(false);
+  row.setZone(Zone::Kick); // already Kick: stays off
+  CHECK(!row.rowMono());
+  CHECK_EQ(row.padPan(0), -0.75);
+  CHECK(Row(5, Zone::Kick).rowMono());
+}
+
+TEST("a pad's level is its own plus the row's, in dB") {
+  Row row(5, Zone::None);
+  row.setValue(1, Level, toNorm(Level, -6));
+  row.setRowLevel(-3);
+  CHECK_NEAR(row.padLevel(1), -9.0, 1e-9);
+  CHECK_NEAR(row.padLevel(0), -3.0, 1e-9);
+  row.setRowLevel(50);
+  CHECK_EQ(row.rowLevel(), kRowLevelMax);
 }
 
 CHECK_MAIN

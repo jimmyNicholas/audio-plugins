@@ -6,6 +6,7 @@ namespace bloodline {
 
 namespace {
 constexpr std::uint64_t kModulus = 2147483647; // Park-Miller, as in shared/breeder/engine.js
+constexpr double kPi = 3.14159265358979323846;
 
 // Park-Miller's first draws follow small seeds closely (seeds 1 to 2000 all start near 0), so
 // scatter the seed first. A 32-bit integer hash, then into 1 to kModulus - 1.
@@ -15,11 +16,19 @@ std::uint32_t scatter(std::uint32_t x) {
   x ^= x >> 16;
   return static_cast<std::uint32_t>(x % (kModulus - 1)) + 1;
 }
+
+// Reflect off the ends, so values near an edge are not piled up on it.
+double fold(double v) {
+  if (v < 0) v = -v;
+  if (v > 1) v = 2 - v;
+  return std::clamp(v, 0.0, 1.0);
 }
+} // namespace
 
 Row::Row(std::uint32_t seed, Zone zone, Tuning tuning)
     : t_(tuning), seed_(scatter(seed)), zone_(zone), spread_(tuning.startSpread) {
   for (auto& pad : pads_) pad = freshDraw();
+  if (zone == Zone::Kick) rowMono_ = true;
 }
 
 double Row::rand() {
@@ -29,9 +38,10 @@ double Row::rand() {
 
 double Row::gauss() {
   double u1 = std::max(rand(), 1e-9), u2 = rand();
-  return std::sqrt(-2.0 * std::log(u1)) * std::cos(2.0 * M_PI * u2);
+  return std::sqrt(-2.0 * std::log(u1)) * std::cos(2.0 * kPi * u2);
 }
 
+// Level starts at 0 dB, so a quiet candidate never sounds like a bad one (#45).
 Values Row::freshDraw() {
   Values v{};
   for (int i = 0; i < kNumSettings; ++i) {
@@ -39,21 +49,17 @@ Values Row::freshDraw() {
     if (zone_ != Zone::None && rand() < t_.zoneShare) r = zoneRange(zone_, i);
     v[i] = r.lo + (r.hi - r.lo) * rand();
   }
+  v[Level] = 1.0;
   return v;
 }
 
-// Reflect off the ends, so values near an edge are not piled up on it.
-static double fold(double v) {
-  if (v < 0) v = -v;
-  if (v > 1) v = 2 - v;
-  return std::clamp(v, 0.0, 1.0);
-}
-
-// Locked settings copy the favourite. With a zone on, a value outside it moves part of the way
-// back to the nearest edge (a soft wall, #43), so every sound stays reachable.
-Values Row::mutate(const Values& from) {
+// Locked settings copy the favourite, and each pad keeps its own Level. With a zone on, a value
+// outside it moves part of the way back to the nearest edge (a soft wall, #43), so every sound
+// stays reachable. Settings outside the zoned groups span 0 to 1, so they are never pulled.
+Values Row::mutate(const Values& from, double ownLevel) {
   Values v{};
   for (int i = 0; i < kNumSettings; ++i) {
+    if (!info(i).bred) { v[i] = ownLevel; continue; }
     if (locks_[i]) { v[i] = from[i]; continue; }
     double x = fold(from[i] + gauss() * spread_);
     if (zone_ != Zone::None) {
@@ -68,6 +74,7 @@ Values Row::mutate(const Values& from) {
 
 const Values& Row::press(int pad) {
   lastPressed_ = pad;
+  lastPlayed_ = pad;
   return pads_[pad];
 }
 
@@ -85,22 +92,90 @@ bool Row::choose() {
   }
   favourite_ = picked;
   lastPressed_ = -1;
+  lastPlayed_ = picked;
   const Values fav = pads_[picked];
   for (int pad = 0; pad < kPads; ++pad)
-    if (pad != picked) pads_[pad] = mutate(fav);
+    if (pad != picked) pads_[pad] = mutate(fav, pads_[pad][Level]);
   return true;
 }
-void Row::restore(std::uint32_t seed, Zone zone, const std::array<Values, kPads>& pads, int favourite,
-                  int lastPressed, double spread, int newCount, const std::array<bool, kNumSettings>& locks) {
-  seed_ = (seed == 0 || seed >= kModulus) ? scatter(seed) : seed; // a valid Park-Miller state as is
+
+int Row::random(double r) {
+  r = std::clamp(r, 0.0, 0.999999);
+  int pad;
+  if (lastRandom_ < 0) pad = static_cast<int>(r * kPads);
+  else {
+    pad = static_cast<int>(r * (kPads - 1)); // one of the other two
+    if (pad >= lastRandom_) pad += 1;
+  }
+  lastRandom_ = pad;
+  lastPlayed_ = pad;
+  return pad;
+}
+
+void Row::reset() {
+  for (auto& pad : pads_) pad = freshDraw();
+  padMono_ = {};
+  favourite_ = lastPressed_ = lastPlayed_ = lastRandom_ = -1;
+  spread_ = t_.startSpread;
+  newCount_ = 0;
+}
+
+void Row::setZone(Zone zone) {
+  if (zone == Zone::Kick && zone_ != Zone::Kick) rowMono_ = true;
   zone_ = zone;
-  for (int pad = 0; pad < kPads; ++pad)
-    for (int i = 0; i < kNumSettings; ++i) pads_[pad][i] = std::clamp(pads[pad][i], 0.0, 1.0);
-  favourite_ = (favourite >= 0 && favourite < kPads) ? favourite : -1;
-  lastPressed_ = (lastPressed >= 0 && lastPressed < kPads) ? lastPressed : -1;
-  spread_ = std::clamp(spread, t_.minSpread, t_.maxSpread);
-  newCount_ = std::clamp(newCount, 0, 1);
-  locks_ = locks;
+}
+
+void Row::setValue(int pad, int setting, double norm) {
+  if (pad < 0 || pad >= kPads || setting < 0 || setting >= kNumSettings) return;
+  pads_[static_cast<size_t>(pad)][static_cast<size_t>(setting)] = std::clamp(norm, 0.0, 1.0);
+}
+
+void Row::setRowPan(double pan) { rowPan_ = std::clamp(pan, -1.0, 1.0); }
+void Row::setRowLevel(double db) { rowLevel_ = std::clamp(db, kRowLevelMin, kRowLevelMax); }
+
+double Row::padPan(int pad) const {
+  if (rowMono_ || padMono_[static_cast<size_t>(pad)]) return 0.0;
+  return std::clamp(toReal(Pan, pads_[static_cast<size_t>(pad)][Pan]) + rowPan_, -1.0, 1.0);
+}
+
+double Row::padLevel(int pad) const { return toReal(Level, pads_[static_cast<size_t>(pad)][Level]) + rowLevel_; }
+
+Row::State Row::state() const {
+  State s;
+  s.seed = seed_;
+  s.zone = zone_;
+  s.pads = pads_;
+  s.favourite = favourite_;
+  s.lastPressed = lastPressed_;
+  s.lastPlayed = lastPlayed_;
+  s.spread = spread_;
+  s.newCount = newCount_;
+  s.locks = locks_;
+  s.padMono = padMono_;
+  s.rowPan = rowPan_;
+  s.rowLevel = rowLevel_;
+  s.rowMono = rowMono_;
+  return s;
+}
+
+void Row::restore(const State& s) {
+  auto pad = [](int i) { return (i >= 0 && i < kPads) ? i : -1; };
+  seed_ = (s.seed == 0 || s.seed >= kModulus) ? scatter(s.seed) : s.seed; // a valid Park-Miller state as is
+  zone_ = s.zone;
+  for (int p = 0; p < kPads; ++p)
+    for (int i = 0; i < kNumSettings; ++i)
+      pads_[p][i] = std::isfinite(s.pads[p][i]) ? std::clamp(s.pads[p][i], 0.0, 1.0) : 0.5;
+  favourite_ = pad(s.favourite);
+  lastPressed_ = pad(s.lastPressed);
+  lastPlayed_ = pad(s.lastPlayed);
+  lastRandom_ = -1;
+  spread_ = std::clamp(std::isfinite(s.spread) ? s.spread : t_.startSpread, t_.minSpread, t_.maxSpread);
+  newCount_ = std::clamp(s.newCount, 0, 1);
+  locks_ = s.locks;
+  padMono_ = s.padMono;
+  setRowPan(std::isfinite(s.rowPan) ? s.rowPan : 0.0);
+  setRowLevel(std::isfinite(s.rowLevel) ? s.rowLevel : 0.0);
+  rowMono_ = s.rowMono;
 }
 
 } // namespace bloodline

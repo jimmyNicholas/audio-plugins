@@ -3,65 +3,232 @@
 #include <iomanip>
 #include <locale>
 #include <sstream>
+
 namespace bloodline {
-// Grid rows from the bottom: 0 is the bottom row (36 to 39), 3 is row 1 (48 to 51).
-Pad padFor(int note) {
+
+int noteFor(int line, int pad) { return kFirstNote + line * 4 + pad; }
+
+// Each new row gets the next seed, so a fresh workbench after placing differs from the last one.
+Instrument::Instrument(std::uint32_t seed) : bench_(seed, Zone::None), nextSeed_(seed + 1) {}
+
+Row Instrument::freshRow() { return Row(nextSeed_++, Zone::None); }
+
+void Instrument::prepare(double sr) { for (auto& v : voices_) v.prepare(sr); }
+
+Pad Instrument::padFor(int note) const {
   Pad p;
   const int i = note - kFirstNote;
   if (i < 0 || i >= kNumPads) return p;
-  const int gridRow = i / 4, col = i % 4;
-  if (gridRow == 0) {
-    if (col == 3) { p.kind = Pad::Empty; return p; }
-    p.kind = Pad::Bottom;
-    p.row = 2 - col; // 36 plays row 3, 37 row 2, 38 row 1
-    return p;
-  }
-  p.row = 3 - gridRow;
-  if (col == 3) p.kind = Pad::Choose;
-  else { p.kind = Pad::Candidate; p.pad = col; }
+  p.line = i / 4;
+  const int col = i % 4;
+  if (p.line != kBench && !slots_[p.line - 1]) { p.kind = col == 3 ? Pad::Place : Pad::Blank; return p; }
+  if (col < 3) { p.kind = Pad::Candidate; p.pad = col; return p; }
+  p.kind = isOpen(p.line) ? Pad::Choose : Pad::Random;
   return p;
 }
-int candidateNote(int row, int pad) { return kFirstNote + (3 - row) * 4 + pad; }
-int chooseNote(int row) { return candidateNote(row, 3); }
-int bottomNote(int row) { return kFirstNote + (2 - row); }
-Instrument::Instrument(std::uint32_t seed) : rows_{ Row(seed, Zone::Hats), Row(seed + 1, Zone::Snare), Row(seed + 2, Zone::Kick) } {}
-void Instrument::prepare(double sr) { for (auto& v : voices_) v.prepare(sr); }
+
+const Row* Instrument::row(int line) const {
+  if (line == kBench) return &bench_;
+  if (line < 1 || line > kNumSlots || !slots_[line - 1]) return nullptr;
+  return &*slots_[line - 1];
+}
+
+Row* Instrument::any(int line) { return const_cast<Row*>(static_cast<const Instrument*>(this)->row(line)); }
+Row* Instrument::editable(int line) { return isOpen(line) ? any(line) : nullptr; }
+
+bool Instrument::isOpen(int line) const {
+  if (line == kBench) return true;
+  return line >= 1 && line <= kNumSlots && slots_[line - 1] && open_[line - 1];
+}
+
+// xorshift32, apart from the rows' own breeding, so playing Random never changes what is bred.
+double Instrument::draw() {
+  pick_ ^= pick_ << 13; pick_ ^= pick_ >> 17; pick_ ^= pick_ << 5;
+  return pick_ / 4294967296.0;
+}
+
+void Instrument::trigger(int note, int line, int pad, float velocity) {
+  const Row& r = *row(line);
+  voices_[note - kFirstNote].trigger(r.candidate(pad), velocity, r.padPan(pad), r.padLevel(pad));
+}
+
 void Instrument::noteOn(int note, float velocity) {
   const Pad p = padFor(note);
-  if (p.kind == Pad::None || p.kind == Pad::Empty) return;
-  Voice& voice = voices_[note - kFirstNote];
   switch (p.kind) {
     case Pad::Candidate:
-      voice.trigger(rows_[p.row].press(p.pad), velocity);
+      any(p.line)->press(p.pad);
+      trigger(note, p.line, p.pad, velocity);
       break;
     case Pad::Choose:
-      if (rows_[p.row].choose()) voice.trigger(rows_[p.row].chosen(), velocity);
+      if (any(p.line)->choose()) trigger(note, p.line, row(p.line)->favourite(), velocity);
       break;
-    case Pad::Bottom:
-      if (rows_[p.row].hasChosen()) voice.trigger(rows_[p.row].chosen(), velocity);
+    case Pad::Random:
+      trigger(note, p.line, any(p.line)->random(draw()), velocity);
+      break;
+    case Pad::Place:
+      place(p.line);
       break;
     default:
       break;
   }
 }
 
-void Instrument::render(float* out, int n) {
-  for (int i = 0; i < n; ++i) out[i] = 0.0f;
-  for (auto& v : voices_) if (v.active()) v.render(out, n);
+void Instrument::render(float* left, float* right, int n) {
+  for (int i = 0; i < n; ++i) left[i] = right[i] = 0.0f;
+  for (auto& v : voices_) if (v.active()) v.render(left, right, n);
 }
-// One header line, then one line per row:
-//   row <seed> <zone> <favourite> <last pressed> <spread> <new in a row> <locks as 0s and 1s> <24 values>
-// Numbers in the C locale, doubles to 17 significant digits so they come back exactly.
+
+bool Instrument::place(int line) {
+  if (line < 1 || line > kNumSlots || slots_[line - 1]) return false;
+  slots_[line - 1] = bench_;
+  open_[line - 1] = false;
+  bench_ = freshRow(); // completely fresh: None, starting spread, no locks (#44)
+  return true;
+}
+
+bool Instrument::setOpen(int line, bool open) {
+  if (line < 1 || line > kNumSlots || !slots_[line - 1]) return false;
+  open_[line - 1] = open;
+  return true;
+}
+
+bool Instrument::move(int line, int by) {
+  const int to = line + by;
+  if (line < 1 || line > kNumSlots || to < 1 || to > kNumSlots || (by != 1 && by != -1)) return false;
+  if (!slots_[line - 1]) return false; // moving a blank is moving its neighbour; do that instead
+  std::swap(slots_[line - 1], slots_[to - 1]);
+  std::swap(open_[line - 1], open_[to - 1]);
+  return true;
+}
+
+bool Instrument::reset(int line) {
+  Row* r = editable(line);
+  if (!r) return false;
+  r->reset();
+  return true;
+}
+
+bool Instrument::clear(int line) {
+  if (line < 1 || line > kNumSlots || !slots_[line - 1]) return false;
+  slots_[line - 1].reset();
+  open_[line - 1] = false;
+  return true;
+}
+
+void Instrument::startAgain() {
+  for (int s = 0; s < kNumSlots; ++s) { slots_[s].reset(); open_[s] = false; }
+  bench_ = freshRow();
+}
+
+bool Instrument::setZone(int line, Zone zone) {
+  Row* r = editable(line);
+  if (!r) return false;
+  r->setZone(zone);
+  return true;
+}
+
+bool Instrument::setLock(int line, int setting, bool on) {
+  Row* r = editable(line);
+  if (!r || setting < 0 || setting >= kNumSettings) return false;
+  r->setLock(setting, on);
+  return true;
+}
+
+bool Instrument::setValue(int line, int setting, double norm) {
+  Row* r = editable(line);
+  if (!r || r->lastPlayed() < 0 || setting < 0 || setting >= kNumSettings) return false;
+  r->setValue(r->lastPlayed(), setting, norm);
+  return true;
+}
+
+bool Instrument::setPadMono(int line, int pad, bool on) {
+  Row* r = editable(line);
+  if (!r || pad < 0 || pad >= Row::kPads) return false;
+  r->setPadMono(pad, on);
+  return true;
+}
+
+bool Instrument::setRowPan(int line, double pan) {
+  Row* r = any(line);
+  if (!r) return false;
+  r->setRowPan(pan);
+  return true;
+}
+
+bool Instrument::setRowLevel(int line, double db) {
+  Row* r = any(line);
+  if (!r) return false;
+  r->setRowLevel(db);
+  return true;
+}
+
+bool Instrument::setRowMono(int line, bool on) {
+  Row* r = any(line);
+  if (!r) return false;
+  r->setRowMono(on);
+  return true;
+}
+
+// A header line with the next seed, then one line for the workbench and one per slot:
+//   bench <row>
+//   slot blank
+//   slot <open 0 or 1> <row>
+// where <row> is: seed zone favourite lastPressed lastPlayed spread newInARow locks padMono rowPan
+// rowLevel rowMono, then 3 x 19 values. Locks and pad Mono are written as 0s and 1s. Numbers in
+// the C locale, doubles to 17 significant digits so they come back exactly.
+namespace {
+
+void writeRow(std::ostream& out, const Row& r) {
+  const Row::State s = r.state();
+  out << s.seed << ' ' << static_cast<int>(s.zone) << ' ' << s.favourite << ' ' << s.lastPressed << ' '
+      << s.lastPlayed << ' ' << s.spread << ' ' << s.newCount << ' ';
+  for (bool b : s.locks) out << (b ? '1' : '0');
+  out << ' ';
+  for (bool b : s.padMono) out << (b ? '1' : '0');
+  out << ' ' << s.rowPan << ' ' << s.rowLevel << ' ' << (s.rowMono ? 1 : 0);
+  for (const auto& pad : s.pads)
+    for (double v : pad) out << ' ' << v;
+}
+
+template <size_t N>
+bool readBits(const std::string& text, std::array<bool, N>& bits) {
+  if (text.size() != N) return false;
+  for (size_t i = 0; i < N; ++i) {
+    if (text[i] != '0' && text[i] != '1') return false;
+    bits[i] = text[i] == '1';
+  }
+  return true;
+}
+
+bool readRow(std::istream& in, Row& row) {
+  Row::State s;
+  int zone = 0, mono = 0;
+  std::string locks, padMono;
+  if (!(in >> s.seed >> zone >> s.favourite >> s.lastPressed >> s.lastPlayed >> s.spread >> s.newCount >> locks >>
+        padMono >> s.rowPan >> s.rowLevel >> mono))
+    return false;
+  if (zone < 0 || zone >= kNumZones || !readBits(locks, s.locks) || !readBits(padMono, s.padMono)) return false;
+  s.zone = static_cast<Zone>(zone);
+  s.rowMono = mono != 0;
+  for (auto& pad : s.pads)
+    for (double& v : pad)
+      if (!(in >> v) || !std::isfinite(v)) return false;
+  row.restore(s);
+  return true;
+}
+
+} // namespace
+
 std::string Instrument::save() const {
   std::ostringstream out;
   out.imbue(std::locale::classic());
-  out << std::setprecision(17) << "bloodline 1\n";
-  for (const Row& r : rows_) {
-    out << "row " << r.seed() << ' ' << static_cast<int>(r.zone()) << ' ' << r.favourite() << ' '
-        << r.lastPressed() << ' ' << r.spread() << ' ' << r.newInARow() << ' ';
-    for (int i = 0; i < kNumSettings; ++i) out << (r.locked(i) ? '1' : '0');
-    for (int pad = 0; pad < Row::kPads; ++pad)
-      for (double v : r.candidate(pad)) out << ' ' << v;
+  out << std::setprecision(17) << "bloodline 2 " << nextSeed_ << "\nbench ";
+  writeRow(out, bench_);
+  out << '\n';
+  for (int s = 0; s < kNumSlots; ++s) {
+    out << "slot ";
+    if (!slots_[s]) out << "blank";
+    else { out << (open_[s] ? 1 : 0) << ' '; writeRow(out, *slots_[s]); }
     out << '\n';
   }
   return out.str();
@@ -72,28 +239,27 @@ bool Instrument::load(const std::string& text) {
   in.imbue(std::locale::classic());
   std::string word;
   int version = 0;
-  if (!(in >> word >> version) || word != "bloodline" || version != 1) return false;
+  std::uint32_t nextSeed = 0;
+  if (!(in >> word >> version >> nextSeed) || word != "bloodline" || version != 2) return false;
 
-  std::array<Row, kNumRows> rows = rows_;
-  for (Row& row : rows) {
-    std::uint32_t seed = 0;
-    int zone = 0, favourite = -1, last = -1, newCount = 0;
-    double spread = 0;
-    std::string lockBits;
-    if (!(in >> word >> seed >> zone >> favourite >> last >> spread >> newCount >> lockBits)) return false;
-    if (word != "row" || zone < 0 || zone >= kNumZones || lockBits.size() != (size_t) kNumSettings) return false;
-    std::array<bool, kNumSettings> locks{};
-    for (int i = 0; i < kNumSettings; ++i) {
-      if (lockBits[i] != '0' && lockBits[i] != '1') return false;
-      locks[i] = lockBits[i] == '1';
-    }
-    std::array<Values, Row::kPads> pads{};
-    for (auto& pad : pads)
-      for (double& v : pad)
-        if (!(in >> v) || !std::isfinite(v)) return false;
-    row.restore(seed, static_cast<Zone>(zone), pads, favourite, last, spread, newCount, locks);
+  Row bench = bench_;
+  if (!(in >> word) || word != "bench" || !readRow(in, bench)) return false;
+  std::array<std::optional<Row>, kNumSlots> slots;
+  std::array<bool, kNumSlots> open{};
+  for (int s = 0; s < kNumSlots; ++s) {
+    if (!(in >> word) || word != "slot" || !(in >> word)) return false;
+    if (word == "blank") continue;
+    if (word != "0" && word != "1") return false;
+    Row r = bench_;
+    if (!readRow(in, r)) return false;
+    slots[s] = r;
+    open[s] = word == "1";
   }
-  rows_ = rows;
+  bench_ = bench;
+  slots_ = slots;
+  open_ = open;
+  nextSeed_ = nextSeed;
   return true;
 }
-}
+
+} // namespace bloodline

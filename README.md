@@ -11,6 +11,14 @@ Max for Live devices for Ableton Live 11 and Max 8.
 | [Snare Breeder](devices/snare-breeder/) | Spike. The snare version of Kick Breeder: skin, snare wires and claps, bred the same way, on the same shared code. | [Spec](devices/snare-breeder/docs/SPEC.md), [spike](devices/snare-breeder/spike/README.md) |
 | [Slush Wave](devices/slush-wave/) | Paused. A planned family of audio effects for the slushwave sound; so far research and a pitch layer audition prototype. | [Handoff](devices/slush-wave/HANDOFF.md), [context](devices/slush-wave/CONTEXT.md) |
 
+## Plugins
+
+JUCE plugins, built with CMake. Each builds and tests on its own; see its README.
+
+| Plugin | What it does | Docs |
+| --- | --- | --- |
+| [Bloodline](plugins/bloodline/) | Spike. A sample-free drum instrument for Bloodline Breaks: three rows of drums bred by choosing between pads, played from an MPD226. One shared voice, with Kick, Snare and Hats as zones within it. | [README and checklist](plugins/bloodline/README.md) |
+
 TAP started as part of the web app [next-annoying-piano](https://github.com/jimmyNicholas/next-annoying-piano) and moved here with its history on 2026-10-28.
 
 ## Layout
@@ -18,6 +26,7 @@ TAP started as part of the web app [next-annoying-piano](https://github.com/jimm
 ```
 albums/NN-<slug>/    one folder per album: manifest, story, art, music, samples
 devices/<name>/      one folder per Max for Live device: patch, scripts, tests, docs
+plugins/<slug>/      one folder per JUCE plugin: a plain C++ core, the JUCE layer, tests
 shared/breeder/      the breeding loop, panel and keys shared by Kick and Snare Breeder
 tools/amxd.mjs       packs a .maxpat into an .amxd, and back; shared by every device
 ```
@@ -31,7 +40,7 @@ Code moves into a shared folder once a second device needs it, not before. A dev
 
 ## Tests
 
-`npm test` from the repo root runs every test. No dependencies; Node 18 or later is enough. CI also checks that device and shared scripts are ES5, since that is all Max 8's `js` object understands.
+`npm test` from the repo root runs every Max for Live and tools test. No dependencies; Node 18 or later is enough. CI also checks that device and shared scripts are ES5, since that is all Max 8's `js` object understands. The JUCE plugins have their own C++ tests, run with `ctest`; see each plugin's README.
 
 ## Albums
 

@@ -1,0 +1,85 @@
+name: Bloodline Synth
+
+# The Bloodline Synth spike in plugins/bloodline-synth. Kept apart from tests.yml so the Max for Live tests stay fast.
+on:
+  push:
+    paths:
+      - "plugins/bloodline-synth/**"
+      - "plugins/shared/**"
+      - ".github/workflows/bloodline-synth.yml"
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JUCE's Linux packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libasound2-dev libjack-jackd2-dev ladspa-sdk \
+            libfreetype-dev libfontconfig1-dev libx11-dev libxcomposite-dev libxcursor-dev libxext-dev \
+            libxinerama-dev libxrandr-dev libxrender-dev libxi-dev libegl-dev libglu1-mesa-dev \
+            mesa-common-dev xvfb
+
+      - name: Configure
+        run: cmake -S plugins/bloodline-synth -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j4
+
+      - name: Core tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Offline renders
+        run: |
+          mkdir -p renders
+          build/synth_render renders 1
+
+      - name: pluginval
+        run: |
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Linux.zip
+          unzip -q pluginval.zip
+          xvfb-run -a ./pluginval --strictness-level 10 --validate-in-process \
+            --validate "build/BloodlineSynth_artefacts/Release/VST3/Bloodline Synth.vst3"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bloodline-synth-renders
+          path: renders/*.wav
+
+  mac:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      # A universal binary, so it runs on the Intel Mac (macOS 13) as well as Apple Silicon.
+      - name: Configure
+        run: >
+          cmake -S plugins/bloodline-synth -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build
+        run: cmake --build build -j4 --target BloodlineSynth_VST3 BloodlineSynth_AU
+
+      - name: Validate the AU
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R "build/BloodlineSynth_artefacts/Release/AU/Bloodline Synth.component" ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          auval -v aumu Synb Jnic
+
+      # Everything inside one Bloodline-synth folder, so unzipping several downloads never mixes them.
+      - name: Zip
+        run: |
+          mkdir -p "dist/Bloodline-synth"
+          cp -R "build/BloodlineSynth_artefacts/Release/VST3/Bloodline Synth.vst3" "dist/Bloodline-synth/"
+          cp -R "build/BloodlineSynth_artefacts/Release/AU/Bloodline Synth.component" "dist/Bloodline-synth/"
+          cp plugins/bloodline-synth/install-bloodline-synth.sh "dist/Bloodline-synth/"
+          cd dist && zip -qry ../Bloodline-synth-mac.zip "Bloodline-synth"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bloodline-synth-mac
+          path: Bloodline-synth-mac.zip

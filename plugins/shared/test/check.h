@@ -1,4 +1,4 @@
-// A tiny test harness: no dependencies, one executable per seam, run by ctest. Shared by Synth Breeder and FX Breeder; Bloodline keeps its own copy in tests/.
+// A tiny test harness: no dependencies, one executable per seam, run by ctest. Shared by Bloodline Synth and Bloodline Effects; Bloodline keeps its own copy in tests/.
 #pragma once
 #include <cmath>
 #include <cstdio>

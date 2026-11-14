@@ -1,4 +1,4 @@
-// A litter: the mouse-led breeding loop shared by Synth Breeder and FX Breeder. Plain C++17,
+// A litter: the mouse-led breeding loop shared by Bloodline Synth and Bloodline Effects. Plain C++17,
 // header only, no JUCE.
 //
 // A litter is a handful of candidates. Click one to hear it (select). Breed from it, and it stays

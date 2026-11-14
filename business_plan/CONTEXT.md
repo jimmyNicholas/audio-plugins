@@ -66,6 +66,18 @@ _Avoid_: Kit reset, clear (emptying one slot)
 A row's last chosen candidate. It stays on its pad while the other two pads get new sounds bred from it.
 _Avoid_: Winner, keeper, parent
 
+**Setting**:
+One thing about a drum's sound, such as Pitch, Decay or Pan, with a range that reaches well past the usual norms. Every candidate has a value for each setting; breeding changes them, and the player can also turn them by hand on an open row.
+_Avoid_: Parameter, knob, control
+
+**Lock**:
+Holding one setting on a row so breeding stops changing it. A locked setting can still be turned by hand.
+_Avoid_: Freeze, pin, hold
+
+**Mono**:
+A switch, on a row or on one pad, that plays the sound centred whatever its pan. Choosing the Kick zone switches it on for the row.
+_Avoid_: Centre, width
+
 **Spread**:
 How far new candidates are bred from the favourite. Choosing the favourite again narrows it; choosing a new candidate twice in a row widens it.
 _Avoid_: Step size (the code's name for it), mutation rate, Wider and Closer

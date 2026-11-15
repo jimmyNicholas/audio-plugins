@@ -79,3 +79,4 @@ Research that is not tied to one device lives in [`docs/research/`](docs/researc
 - [Boundary-pushing music philosophy, 2016 to 2026](docs/research/boundary-pushing-music-philosophy.md): ideas from the last ten years, turned into design prompts.
 - [Recent ambient, dark ambient and slushwave practice](docs/research/recent-ambient-practice.md): pitched-down and AI-free generative moves since 2016, with device ideas.
 - [Composing from nothing, without samples](docs/research/sample-free-composition-tools.md): synthesised drums, free and boundary-pushing synths, and MIDI generators for a fresh start with no sample library.
+- [What makes a drum groove feel good](docs/research/groove-and-drum-feel.md): syncopation, accents, microtiming, swing, dynamics and density in the groove research, and which suit dials, breeding or locks in Bloodline.

@@ -1,6 +1,6 @@
 # Audio plugins
 
-Max for Live devices for Ableton Live 11 and Max 8.
+Max for Live devices for Ableton Live 11 and Max 8, and JUCE plugins (VST3 and AU).
 
 ## Devices
 
@@ -11,12 +11,39 @@ Max for Live devices for Ableton Live 11 and Max 8.
 | [Snare Breeder](devices/snare-breeder/) | Spike. The snare version of Kick Breeder: skin, snare wires and claps, bred the same way, on the same shared code. | [Spec](devices/snare-breeder/docs/SPEC.md), [spike](devices/snare-breeder/spike/README.md) |
 | [Slush Wave](devices/slush-wave/) | Paused. A planned family of audio effects for the slushwave sound; so far research and a pitch layer audition prototype. | [Handoff](devices/slush-wave/HANDOFF.md), [context](devices/slush-wave/CONTEXT.md) |
 
+## Plugins
+
+JUCE plugins, built with CMake. Each builds and tests on its own; see its README.
+
+| Plugin | What it does | Docs |
+| --- | --- | --- |
+| [Bloodline Drums](plugins/bloodline-drums/) | Spike. A sample-free drum instrument for Bloodline Breaks: breed drums on a workbench by choosing between pads, then place them in a kit of three slots, all from an MPD226. One shared 19-setting voice, with Kick, Snare and Hats as optional zones. | [README and checklist](plugins/bloodline-drums/README.md) |
+| [Bloodline Synth](plugins/bloodline-synth/) | Spike, mouse led. A guess at a synth version: a litter of eight patches to click through while you play or a riff loops, bred, crossed, and steered by zones. | [README](plugins/bloodline-synth/README.md) |
+| [Bloodline Effects](plugins/bloodline-effects/) | Spike, mouse led. An audio effect that breeds whole chains of up to six effects (which, in what order, and their settings), for one drum or the bus, with a Wild switch. | [README](plugins/bloodline-effects/README.md) |
+| [Bloodline Breaks](plugins/bloodline-breaks/) | Prototype, mouse led. Breeds one-bar loops of up to four drums on pads 36 to 39, in Bloodline Synth's litter of eight, with soft-pull swing and hip hop styles, a taste learned from what you breed, and drag-out MIDI. | [README and checklist](plugins/bloodline-breaks/README.md) |
+| [Bloodline Drums 2](plugins/bloodline-drums-2/) | Prototype, mouse led. Bloodline Drums' voice bred in Bloodline Synth's litter of eight, with eight keep pads where the keyboard was: drag a sound onto a pad to keep it and start the next drum. | [README and checklist](plugins/bloodline-drums-2/README.md) |
+| [Bloodline Breaks 2](plugins/bloodline-breaks-2/) | Prototype, mouse led. Bloodline Drums 2 and Bloodline Breaks in one instrument, four tiles a side: breed and keep drums on the left, breed and keep loops that play them on the right. No MIDI between tracks needed, so it works as an AU. | [README and checklist](plugins/bloodline-breaks-2/README.md) |
+| [Bloodline Synth 2](plugins/bloodline-synth-2/) | Prototype, mouse led. Bloodline Synth's sounds bred and kept on the left; two, four or eight bar loops that play them bred on the right, steered by eight traits, an octave range and time locks. One instrument, so it works as an AU. | [README and checklist](plugins/bloodline-synth-2/README.md) |
+
+### Installing plugins on the Mac
+
+[`tools/install-plugin.sh`](tools/install-plugin.sh) installs the latest green Mac build of a plugin straight from CI: no browser, no zips, no quarantine flag. Once, install GitHub's command-line tool (on an Intel Mac, the `_macOS_universal.pkg` from [its releases](https://github.com/cli/cli/releases/latest); on Apple Silicon, `brew install gh` works too), then run `gh auth login`. After that, from any folder:
+
+```
+gh api -H "Accept: application/vnd.github.raw" "repos/jimmyNicholas/audio-plugins/contents/tools/install-plugin.sh?ref=claude/plugin-album-collection-5nvyi5" | sh -s bloodline-breaks-2
+```
+
+Swap the last word for `bloodline-synth-2`, `bloodline-breaks` or `bloodline-drums-2`. With a copy of the repo, `sh tools/install-plugin.sh bloodline-breaks-2` does the same. Then rescan in Live.
+
 TAP started as part of the web app [next-annoying-piano](https://github.com/jimmyNicholas/next-annoying-piano) and moved here with its history on 2026-10-28.
 
 ## Layout
 
 ```
-devices/<name>/      one folder per device: patch, scripts, tests, docs
+albums/NN-<slug>/    one folder per album: manifest, story, art, music, samples
+devices/<name>/      one folder per Max for Live device: patch, scripts, tests, docs
+plugins/<slug>/      one folder per JUCE plugin: a plain C++ core, the JUCE layer, tests
+plugins/shared/      the litter breeding loop and test harness shared by Bloodline Synth and Bloodline Effects
 shared/breeder/      the breeding loop, panel and keys shared by Kick and Snare Breeder
 tools/amxd.mjs       packs a .maxpat into an .amxd, and back; shared by every device
 ```
@@ -30,7 +57,15 @@ Code moves into a shared folder once a second device needs it, not before. A dev
 
 ## Tests
 
-`npm test` from the repo root runs every test. No dependencies; Node 18 or later is enough. CI also checks that device and shared scripts are ES5, since that is all Max 8's `js` object understands.
+`npm test` from the repo root runs every Max for Live and tools test. No dependencies; Node 18 or later is enough. CI also checks that device and shared scripts are ES5, since that is all Max 8's `js` object understands. The JUCE plugins have their own C++ tests, run with `ctest`; see each plugin's README.
+
+## Albums
+
+| Album | Status | Folder |
+| --- | --- | --- |
+| 1. Bloodline Breaks | Draft: collection stage. Sample-free hip hop drums, bred from nothing. | [`albums/01-bloodline-breaks/`](albums/01-bloodline-breaks/) |
+
+Each album folder is a copy of [`business_plan/templates/albums/_template/`](business_plan/templates/albums/_template/). JUCE plugins live in `plugins/<slug>/` at the root; the Bloodline Breaks spikes are [`plugins/bloodline-drums/`](plugins/bloodline-drums/), with [`bloodline-synth/`](plugins/bloodline-synth/) and [`bloodline-effects/`](plugins/bloodline-effects/) beside it.
 
 ## Business plan
 

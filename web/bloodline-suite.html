@@ -1,0 +1,456 @@
+<title>Bloodline Suite</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: a litter of four whole loops (drums, bass, keys, lead, effects), then the heard loop laid out part by part, then eight kept loops. One deliberate dark look, as in the plugins. */
+:root {
+  color-scheme: dark;
+  --bg: #15171c; --panel: #1e2128; --panel-2: #262a33; --line: #343945; --fg: #ece8e1; --muted: #8d929d; --faint: #5d626d;
+  --acc: #ff8a65; --lock: #c9b8ff;
+  --drums: #ff8a65; --bass: #f2c14e; --keys: #6cb6ff; --lead: #b48cff; --fx: #5fd3c4;
+  --kick: #ff6f61; --snare: #6cb6ff; --hat: #f2c94c; --perc: #7ddc8a;
+  --grid-bar: rgba(236, 232, 225, 0.22); --grid-beat: rgba(236, 232, 225, 0.07); --lock-band: rgba(201, 184, 255, 0.13);
+  --display: 'Space Grotesk', 'Avenir Next', system-ui, sans-serif;
+  --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+html, body { background: var(--bg); color: var(--fg); }
+body { font: 14px/1.4 var(--body); -webkit-tap-highlight-color: transparent; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+button { font: inherit; color: inherit; }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top-in, .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding-block: 10px; max-width: 1240px; margin: 0 auto; }
+.brand { display: flex; align-items: baseline; gap: 8px; margin-right: auto; }
+.brand b { font: 700 18px/1 var(--display); }
+.brand small { color: var(--muted); font: 11px var(--mono); }
+.transport { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.play { min-width: 74px; height: 38px; border-radius: 19px; border: 0; background: var(--fg); color: var(--bg); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.play[aria-pressed="true"] { background: var(--acc); }
+.play svg { width: 12px; height: 12px; }
+.bpm { display: flex; align-items: center; background: var(--panel); border-radius: 19px; height: 38px; }
+.bpm button { width: 34px; height: 38px; border: 0; background: none; cursor: pointer; font-size: 17px; color: var(--muted); }
+.bpm span { font: 500 15px var(--mono); min-width: 30px; text-align: center; font-variant-numeric: tabular-nums; }
+.bpm small { color: var(--muted); font-size: 10px; letter-spacing: 0.08em; margin-left: 3px; }
+.pos { font: 500 15px var(--mono); color: var(--muted); min-width: 44px; font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 16px 48px; display: grid; gap: 18px; }
+.label { font: 600 10px/1 var(--body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.seg { display: inline-flex; background: var(--panel); border-radius: 8px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button { border: 0; background: none; padding: 0 10px; height: 30px; border-radius: 6px; cursor: pointer; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--acc); color: var(--bg); }
+.btn { border: 1px solid var(--line); background: var(--panel-2); height: 32px; padding: 0 12px; border-radius: 7px; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.btn:hover { border-color: var(--faint); }
+.btn[aria-pressed="true"] { background: var(--pc, var(--acc)); color: var(--bg); border-color: transparent; }
+.btn.small { height: 28px; padding: 0 8px; font-size: 12px; }
+.btn.big { height: 38px; padding: 0 16px; background: var(--acc); color: var(--bg); border: 0; font-weight: 600; }
+.btn:disabled { opacity: 0.35; cursor: default; }
+button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+input[type=range] { -webkit-appearance: none; appearance: none; background: none; height: 22px; width: 100%; min-width: 0; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--pc, var(--acc)) var(--p, 50%), var(--line) var(--p, 50%)); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--pc, var(--acc)) var(--p, 50%), var(--line) var(--p, 50%)); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--fg); margin-top: -6px; }
+input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--fg); border: 0; }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.spread { display: flex; align-items: center; gap: 8px; flex: 1 1 200px; min-width: 0; }
+.spread output { font: 12px var(--mono); color: var(--muted); width: 34px; text-align: right; }
+.intro { display: grid; gap: 4px; }
+.intro h1 { margin: 0; font: 700 clamp(22px, 5vw, 30px)/1.1 var(--display); text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); max-width: 65ch; }
+.panel { background: var(--panel); border-radius: 12px; padding: 14px; display: grid; gap: 12px; min-width: 0; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 820px) { .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.card { background: var(--panel-2); border-radius: 10px; padding: 9px; display: grid; gap: 6px; cursor: pointer; border: 1px solid transparent; min-width: 0; }
+.card.hear { border-color: var(--acc); }
+.card-top { display: flex; align-items: baseline; gap: 6px; }
+.card-top b { font: 700 18px var(--display); }
+.badge { font: 600 10px var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--acc); }
+.badge.parent { color: var(--fg); }
+.view { position: relative; background: var(--bg); border-radius: 6px; overflow: hidden; }
+.view canvas { display: block; width: 100%; height: 100%; }
+.card .view { height: 104px; }
+.ph { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--fg); opacity: 0.8; pointer-events: none; left: 0; }
+.meta { font: 11px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btns3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.btns3 .btn { padding: 0 4px; }
+.heard-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.heard-head h2 { margin: 0; font: 700 20px var(--display); }
+.prog { display: flex; gap: 4px; flex-wrap: wrap; }
+.prog span { font: 500 12px var(--mono); background: var(--bg); border-radius: 4px; padding: 3px 7px; }
+.arr { height: 230px; }
+.parts { display: grid; gap: 6px; }
+.part { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; background: var(--panel-2); border-radius: 8px; padding: 8px 10px; }
+.part > i { width: 10px; height: 28px; border-radius: 3px; background: var(--pc); grid-row: span 2; }
+.part .name { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.part .name b { font: 600 14px var(--display); }
+.part .name span { color: var(--muted); font: 11px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.part .ctl { display: flex; gap: 4px; }
+.part .vol { grid-column: 2 / 4; display: flex; align-items: center; gap: 8px; }
+@media (min-width: 720px) { .part { grid-template-columns: 10px minmax(160px, 1fr) minmax(120px, 220px) auto; } .part > i { grid-row: auto; } .part .vol { grid-column: auto; } }
+.slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+@media (min-width: 820px) { .slots { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+.slot { position: relative; height: 64px; border-radius: 7px; border: 1px dashed var(--line); background: none; cursor: pointer; padding: 0; overflow: hidden; font: 10px var(--mono); color: var(--faint); }
+.slot.full { border: 1px solid var(--line); background: var(--bg); }
+.slot.full canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.slot.playing { border-color: var(--acc); box-shadow: inset 0 0 0 1px var(--acc); }
+.slot.queued { animation: blink 0.5s steps(2) infinite; }
+@keyframes blink { 50% { border-color: var(--acc); } }
+.slot .n { position: absolute; left: 4px; top: 2px; z-index: 1; color: var(--muted); }
+.slot .x { position: absolute; right: 2px; top: 2px; z-index: 2; width: 20px; height: 20px; border-radius: 4px; border: 0; background: var(--panel-2); color: var(--muted); cursor: pointer; font-size: 12px; line-height: 20px; }
+.note { color: var(--muted); font-size: 12px; max-width: 65ch; }
+.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 18px; font-weight: 500; font-size: 13px; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 20; }
+.toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .slot.queued { animation: none; } .toast { transition: none; } }
+</style>
+
+<header class="top"><div class="top-in">
+  <div class="brand"><b>Bloodline Suite</b><small>drums · synth · effects</small></div>
+  <div class="transport">
+    <button class="play" id="play" aria-pressed="false"></button>
+    <div class="bpm"><button id="bpm-down" aria-label="Slower">−</button><span id="bpm">90</span><small>BPM</small><button id="bpm-up" aria-label="Faster">+</button></div>
+    <span class="pos" id="pos">1.1</span>
+  </div>
+</div></header>
+
+<main class="wrap" id="app"></main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="bloodline-engine.js"></script>
+<script>
+(function () {
+'use strict';
+const T = BL.transport, R = Math.random;
+const css = getComputedStyle(document.documentElement);
+const C = n => css.getPropertyValue(n).trim();
+const COLORS = { lanes: [C('--kick'), C('--snare'), C('--hat'), C('--perc')], barLine: C('--grid-bar'), beatLine: C('--grid-beat'), lock: C('--lock-band') };
+const PLAY_ICON = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1l9 5-9 5z" fill="currentColor"/></svg>';
+const STOP_ICON = '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="2" width="8" height="8" fill="currentColor"/></svg>';
+
+function h(sel, props, ...kids) {
+  const [tag, ...cls] = sel.split('.');
+  const el = document.createElement(tag || 'div');
+  if (cls.length) el.className = cls.join(' ');
+  if (props) for (const k in props) {
+    const v = props[k];
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'style') el.style.cssText = v;
+    else if (k === 'html') el.innerHTML = v;
+    else if (v === true) el.setAttribute(k, '');
+    else if (v !== false && v != null) el.setAttribute(k, v);
+  }
+  for (const k of kids.flat(9)) { if (k == null || k === false) continue; el.append(k.nodeType ? k : document.createTextNode(k)); }
+  return el;
+}
+let draws = [], heads = [];
+function slider(id, value, onInput, label) {
+  const el = h('input', { type: 'range', id, min: 0, max: 1000, value: Math.round(value * 1000), 'aria-label': label || id });
+  const paint = () => el.style.setProperty('--p', (el.value / 10) + '%');
+  paint();
+  el.addEventListener('input', () => { paint(); onInput(el.value / 1000, false); });
+  el.addEventListener('change', () => onInput(el.value / 1000, true));
+  el.addEventListener('click', e => e.stopPropagation());
+  return el;
+}
+const seg = (options, current, onPick, label) => h('div.seg', { role: 'group', 'aria-label': label }, options.map(o => h('button', { 'aria-pressed': String(o === current), onclick: () => onPick(o) }, o)));
+const btn = (text, onclick, o = {}) => h('button.btn' + (o.small ? '.small' : '') + (o.big ? '.big' : ''), { onclick: e => { e.stopPropagation(); onclick(e); }, disabled: o.disabled, 'aria-pressed': o.pressed != null ? String(o.pressed) : null, title: o.title, style: o.style }, text);
+let toastTimer;
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1600); }
+
+// ---------- the song: every part generated
+const MOODS = {
+  None: { style: 'None', bpm: null, drums: 'None', music: 'None' },
+  'Boom bap': { style: 'Boom bap', bpm: 90, drums: 'Dirt', music: 'Space' },
+  'Lo-fi': { style: 'Lo-fi', bpm: 78, drums: 'Dirt', music: 'Space' },
+  'Four floor': { style: 'Four floor', bpm: 122, drums: 'Motion', music: 'Space' },
+  Broken: { style: 'Broken', bpm: 104, drums: 'Glitch', music: 'Motion' },
+};
+const PARTS = ['drums', 'bass', 'keys', 'lead', 'fx'];
+const PART_NAMES = { drums: 'Drums', bass: 'Bass', keys: 'Keys', lead: 'Lead', fx: 'Effects' };
+const ROLES = {
+  // trait ranges: Tonal, Mono/Poly, Melodic/Rhythmic, On/Off beat, Dynamic, Clustered/Open, Sparse/Dense, Short/Long
+  bass: { lo: 28, hi: 52, zones: ['Bass'], bias: [[0, 0.15], [0, 0.1], [0.35, 0.9], [0.1, 0.6], [0.1, 0.5], [0.2, 0.7], [0.15, 0.45], [0.2, 0.7]] },
+  keys: { lo: 48, hi: 74, zones: ['Keys', 'Pad'], bias: [[0, 0.12], [0.65, 1], [0.6, 1], [0, 0.45], [0, 0.4], [0.15, 0.6], [0.05, 0.22], [0.55, 1]] },
+  lead: { lo: 60, hi: 86, zones: ['Lead', 'Pluck'], bias: [[0, 0.25], [0, 0.12], [0, 0.45], [0.2, 0.8], [0.2, 0.7], [0.2, 0.8], [0.12, 0.45], [0.1, 0.7]] },
+};
+const PROGS = [[0, 5, 2, 6], [0, 3, 4, 0], [0, 6, 5, 6], [0, 3, 0, 4], [0, 2, 5, 4], [0, 5, 3, 4], [0, 4, 5, 3], [0, 0, 5, 6]];
+const st = { bars: 4, key: 9, scale: 'Minor', mood: 'Boom bap' };
+T.bpm = 90;
+const cpFor = (role, g) => ({ bars: g.bars, scale: g.scale, lo: ROLES[role].lo, hi: ROLES[role].hi, prog: g.prog });
+function makeProg(bars) {
+  const p = BL.pick(PROGS);
+  if (bars === 2) return [p[0], p[1] || 5];
+  if (bars === 4) return p.slice();
+  return p.flatMap(d => [d, d]);
+}
+function freshPart(g, part) {
+  const M = MOODS[g.mood];
+  if (part === 'drums') { g.kit = ['Kick', 'Snare', 'Hats', 'Perc'].map(z => BL.soundFresh('drum', z)); g.beat = BL.drumFresh(M.style, g.bars); }
+  else if (part === 'fx') { g.fxDrums = BL.fxFresh(M.drums); g.fxDrums.mix *= 0.6; g.fxMusic = BL.fxFresh(M.music); g.fxMusic.mix *= 0.7; }
+  else { const role = ROLES[part]; g[part] = { snd: BL.soundFresh('synth', BL.pick(role.zones)), loop: BL.synthFresh(cpFor(part, g), role.bias) }; }
+}
+function songFresh() {
+  const g = { mood: st.mood, bars: st.bars, scale: st.scale, prog: makeProg(st.bars) };
+  PARTS.forEach(p => freshPart(g, p));
+  return g;
+}
+const locks = { drums: false, bass: false, keys: false, lead: false, fx: false };
+function transposeBar(loop, bar, delta, role, g) {
+  loop.notes.forEach(n => { if (n.s >= bar * 4 && n.s < bar * 4 + 4) n.p = BL.scaleStep(n.p, delta, g.scale, ROLES[role].lo, ROLES[role].hi); });
+}
+function songMutate(src, s) {
+  const g = BL.clone(src);
+  if (!locks.drums) { g.kit = g.kit.map(k => BL.soundMutate(k, s * 0.5)); g.beat = BL.drumMutate(g.beat, s); }
+  ['bass', 'keys', 'lead'].forEach(p => { if (locks[p]) return; g[p].snd = BL.soundMutate(g[p].snd, s * 0.5); g[p].loop = BL.synthMutate(g[p].loop, s, cpFor(p, g)); });
+  if (!locks.fx) { g.fxDrums = BL.fxMutate(g.fxDrums, s, false); g.fxMusic = BL.fxMutate(g.fxMusic, s, false); }
+  if (!locks.bass && !locks.keys && !locks.lead && R() < s * 1.5) {
+    const bar = 1 + Math.floor(R() * (g.prog.length - 1)), old = g.prog[bar];
+    const nw = BL.pick([2, 3, 4, 5, 6].filter(d => d !== old));
+    g.prog[bar] = nw;
+    ['bass', 'keys', 'lead'].forEach(p => transposeBar(g[p].loop, bar, nw - old, p, g));
+  }
+  return g;
+}
+function songCross(a, b) {
+  const g = BL.clone(a);
+  if (!locks.drums && R() < 0.5) { g.kit = BL.clone(b.kit); g.beat = BL.clone(b.beat); }
+  if (!locks.fx && R() < 0.5) { g.fxDrums = BL.clone(b.fxDrums); g.fxMusic = BL.clone(b.fxMusic); }
+  const anyLocked = locks.bass || locks.keys || locks.lead;
+  const sameHarmony = a.prog.join() === b.prog.join() && a.bars === b.bars;
+  if (sameHarmony) ['bass', 'keys', 'lead'].forEach(p => { if (!locks[p] && R() < 0.5) g[p] = BL.clone(b[p]); });
+  else if (!anyLocked && R() < 0.5 && a.bars === b.bars) { g.prog = b.prog.slice(); ['bass', 'keys', 'lead'].forEach(p => { g[p] = BL.clone(b[p]); }); }
+  // sounds can always swap: they carry no harmony
+  ['bass', 'keys', 'lead'].forEach(p => { if (!locks[p] && R() < 0.3) g[p].snd = BL.clone(b[p].snd); });
+  return g;
+}
+function songResize(src, bars) {
+  const g = BL.clone(src);
+  if (g.bars === bars) return g;
+  g.prog = bars < g.bars ? g.prog.slice(0, bars) : Array.from({ length: bars }, (_, i) => src.prog[i % src.prog.length]);
+  g.bars = bars;
+  g.beat = BL.drumResize(g.beat, bars);
+  ['bass', 'keys', 'lead'].forEach(p => { g[p].loop = BL.synthResize(g[p].loop, bars, cpFor(p, g)); });
+  return g;
+}
+const L = new BL.Litter({ fresh: songFresh, mutate: songMutate, cross: songCross });
+const slots = Array(8).fill(null);
+let src = { kind: 'litter', i: 0 }, queued = null, queueAt = 0, launchAt = 0;
+const current = () => src.kind === 'litter' ? L.items[src.i] : slots[src.i];
+const sameSrc = (a, b) => a && b && a.kind === b.kind && a.i === b.i;
+
+// ---------- audio graph: drums with their chain; bass, keys and lead through the music chain
+const vols = { drums: 0.9, bass: 0.8, keys: 0.5, lead: 0.45, fx: 1 };
+const muted = { drums: false, bass: false, keys: false, lead: false, fx: false };
+const bus = {};
+bus.music = new BL.Bus();
+bus.drums = new BL.Bus();
+['bass', 'keys', 'lead'].forEach(p => { bus[p] = new BL.Bus(bus.music.input); });
+['drums', 'bass', 'keys', 'lead'].forEach(p => bus[p].setVolume(vols[p]));
+let fxShown = null;
+function applyFx() {
+  const g = current(); if (!g) return;
+  const key = JSON.stringify([g.fxDrums, g.fxMusic, muted.fx]);
+  if (key === fxShown) return;
+  fxShown = key;
+  bus.drums.setFx(g.fxDrums, muted.fx); bus.music.setFx(g.fxMusic, muted.fx);
+}
+function applyMutes() { ['drums', 'bass', 'keys', 'lead'].forEach(p => bus[p].setMuted(muted[p])); applyFx(); }
+T.sources.add((b0, b1) => {
+  if (queued && b0 >= queueAt) {
+    src = queued; launchAt = queueAt; queued = null;
+    const wait = Math.max(0, (T.timeOf(launchAt) - BL.ctx.currentTime) * 1000);
+    setTimeout(() => { applyFx(); render(); }, wait);
+  }
+  const g = current(); if (!g) return;
+  const Lb = g.bars * 4;
+  g.beat.lanes.forEach((lane, li) => lane.hits.forEach(hit => {
+    const a = T.inWindow(BL.swingWarp(hit.pos, g.beat.swing) / 4 + launchAt, Lb, b0, b1);
+    if (a >= 0) BL.playDrum(g.kit[li], T.timeOf(a), hit.vel, bus.drums.input);
+  }));
+  ['bass', 'keys', 'lead'].forEach(p => g[p].loop.notes.forEach(n => {
+    const a = T.inWindow(n.s + launchAt, Lb, b0, b1);
+    if (a >= 0) BL.playSynth(g[p].snd, n.p + st.key, T.timeOf(a), n.l * 60 / T.bpm, n.v, bus[p].input);
+  }));
+});
+function hear(next) {
+  BL.audio();
+  if (!T.playing) { src = next; launchAt = 0; queued = null; applyFx(); T.start(); }
+  else if (!sameSrc(next, src)) { queued = next; queueAt = Math.ceil(T.next / 4) * 4; }
+  render();
+}
+
+// ---------- drawing
+const PART_COLORS = { bass: C('--bass'), keys: C('--keys'), lead: C('--lead') };
+function drawSong(cv, g, big) {
+  const { c, w, h: H } = BL.fitCanvas(cv);
+  if (!g) return;
+  const beats = g.bars * 4;
+  for (let b = 0; b < beats; b++) { c.fillStyle = b % 4 === 0 ? COLORS.barLine : COLORS.beatLine; if (big || b % 4 === 0) c.fillRect(Math.round(b / beats * w), 0, 1, H); }
+  const bands = [['lead', 0.24], ['keys', 0.24], ['bass', 0.22], ['drums', 0.3]];
+  let y = 0;
+  for (const [part, share] of bands) {
+    const bh = H * share, pad = big ? 4 : 2;
+    if (locks[part]) { c.fillStyle = COLORS.lock; c.fillRect(0, y, w, bh); }
+    if (part === 'drums') {
+      const rh = (bh - pad) / 4;
+      g.beat.lanes.forEach((lane, li) => {
+        c.fillStyle = COLORS.lanes[li];
+        lane.hits.forEach(hit => { const x = BL.swingWarp(hit.pos, g.beat.swing) / g.beat.len * w, hh = Math.max(1.5, (rh - 1) * (0.35 + hit.vel * 0.65)); c.fillRect(x, y + pad / 2 + (3 - li) * rh + (rh - hh) / 2, Math.max(1.5, w / g.beat.len * 0.55), hh); });
+      });
+    } else {
+      const notes = g[part].loop.notes, lo = ROLES[part].lo, hi = ROLES[part].hi, rows = hi - lo + 1, nh = Math.max(1.5, (bh - pad) / rows);
+      c.fillStyle = PART_COLORS[part];
+      notes.forEach(n => { c.globalAlpha = 0.45 + n.v * 0.55; c.fillRect(n.s / beats * w, y + pad / 2 + (bh - pad) - (n.p - lo + 1) * (bh - pad) / rows, Math.max(1.5, n.l / beats * w - 1), nh); });
+      c.globalAlpha = 1;
+    }
+    y += bh;
+  }
+}
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+function chordName(g, d) {
+  const sc = BL.SCALES[g.scale];
+  if (sc.length !== 7) return String(BL.mod(d, sc.length) + 1);
+  const n = BL.mod(d, 7), third = BL.mod(sc[(n + 2) % 7] - sc[n], 12), fifth = BL.mod(sc[(n + 4) % 7] - sc[n], 12);
+  const r = ROMAN[n];
+  return third === 4 ? r : fifth === 6 ? r.toLowerCase() + '°' : r.toLowerCase();
+}
+function rootName(g, d) { const sc = BL.SCALES[g.scale]; return BL.NOTE_NAMES[BL.mod(st.key + sc[BL.mod(d, sc.length)], 12)]; }
+function chainText(fx) { return fx.fx.map(f => BL.FX_TYPES[f.type].name).join(' > ') || 'dry'; }
+function zoneOf(p, g) { return g[p].snd.zone; }
+
+// ---------- page
+function render() {
+  draws = []; heads = [];
+  renderTransport();
+  const app = document.getElementById('app');
+  const g = current();
+  const scales = Object.keys(BL.SCALES);
+  app.replaceChildren(
+    h('section.intro', null,
+      h('h1', null, 'Drums, bass, keys, lead and effects, bred together'),
+      h('p', null, 'Every loop is generated whole: a kit and a beat, a chord progression with bass, keys and a lead over it, and an effects chain on the drums and on the music. Tap a loop to hear it, breed the one you like, and lock any part to keep it while the rest changes.')),
+    h('section.panel', { 'aria-label': 'Litter' },
+      h('div.row', null, h('span.label', null, 'Mood'), seg(Object.keys(MOODS), st.mood, m => { st.mood = m; const b = MOODS[m].bpm; if (b) T.setBpm(b); L.refresh(); fxShown = null; applyFx(); render(); }, 'Mood')),
+      h('div.row', null,
+        h('span.label', null, 'Bars'), seg(['2', '4', '8'], String(st.bars), b => setBars(+b), 'Bars'),
+        h('span.label', null, 'Key'), btn(BL.NOTE_NAMES[st.key], () => { st.key = (st.key + 1) % 12; render(); }, { title: 'Next key: moves everything now' }),
+        h('span.label', null, 'Scale'), btn(st.scale, () => { st.scale = scales[(scales.indexOf(st.scale) + 1) % scales.length]; toast(st.scale + ': press New to hear it'); render(); }, { title: 'Next scale: used by New' })),
+      h('div.row', null,
+        btn('New', () => { L.refresh(); afterLitterChange(); }, { big: true, title: 'Generate four new loops' }),
+        btn('Back', () => { if (L.back()) afterLitterChange(); else toast('Nothing to go back to'); }),
+        h('div.spread', null, h('span.label', null, 'Spread'), slider('spread', L.spread / 0.5, v => { L.setSpread(v * 0.5); spOut.textContent = L.spread.toFixed(2); }, 'Spread'), (spOut = h('output', null, L.spread.toFixed(2))))),
+      h('div.cards', null, L.items.map((s, i) => card(s, i)))),
+    g ? heardPanel(g) : null,
+    keepPanel());
+  draws.forEach(f => f());
+}
+let spOut;
+function afterLitterChange() { if (src.kind === 'litter') { fxShown = null; applyFx(); } render(); }
+function setBars(n) {
+  st.bars = n;
+  L.items = L.items.map(g => songResize(g, n));
+  fxShown = null; applyFx(); render();
+}
+function card(g, i) {
+  const isHear = sameSrc(src, { kind: 'litter', i }), isQ = sameSrc(queued, { kind: 'litter', i }), parent = L.parent === i;
+  const cv = h('canvas'), ph = h('i.ph', { hidden: true });
+  draws.push(() => drawSong(cv, g, false));
+  heads.push({ el: ph, src: { kind: 'litter', i }, beats: () => g.bars * 4 });
+  const pick = () => { L.hear = i; hear({ kind: 'litter', i }); };
+  return h('div.card' + (isHear ? '.hear' : ''), { role: 'button', tabindex: 0, 'aria-label': 'Hear loop ' + 'ABCD'[i], onclick: pick, onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } } },
+    h('div.card-top', null, h('b', null, 'ABCD'[i]), parent ? h('span.badge.parent', null, '★ parent') : null, h('span.grow', { style: 'flex:1' }), isHear ? h('span.badge', null, 'hearing') : isQ ? h('span.badge', null, 'next bar') : null),
+    h('div.view', null, cv, ph),
+    h('div.meta', null, g.prog.filter((d, k) => g.bars < 8 || k % 2 === 0).map(d => chordName(g, d)).join(' ') + ' · ' + zoneOf('keys', g) + ', ' + zoneOf('lead', g)),
+    h('div.btns3', null,
+      btn(parent ? 'Again' : 'Breed', () => { L.breed(i); src = { kind: 'litter', i }; afterLitterChange(); }, { small: true }),
+      btn('Cross', () => { L.cross(i); afterLitterChange(); }, { small: true, disabled: L.hear === i, title: 'Mate with the loop you hear' }),
+      btn('Keep', () => keep(i), { small: true })));
+}
+function heardPanel(g) {
+  const where = src.kind === 'litter' ? 'Hearing ' + 'ABCD'[src.i] : 'Hearing kept loop ' + (src.i + 1);
+  const cv = h('canvas', { 'aria-label': 'The heard loop, part by part' }), ph = h('i.ph', { hidden: true });
+  draws.push(() => drawSong(cv, g, true));
+  heads.push({ el: ph, src: { ...src }, beats: () => g.bars * 4 });
+  const desc = {
+    drums: g.beat.style + ' · swing ' + Math.round(g.beat.swing * 100) + '% · ' + g.beat.lanes.reduce((a, l) => a + l.hits.length, 0) + ' hits',
+    bass: g.bass.snd.zone + ' · ' + g.bass.loop.notes.length + ' notes',
+    keys: g.keys.snd.zone + ' · ' + g.keys.loop.notes.length + ' notes',
+    lead: g.lead.snd.zone + ' · ' + g.lead.loop.notes.length + ' notes',
+    fx: 'drums: ' + chainText(g.fxDrums) + ' · music: ' + chainText(g.fxMusic),
+  };
+  const parts = PARTS.map(p => {
+    const volOut = h('output', { style: 'font:11px var(--mono);color:var(--muted);width:34px;text-align:right' }, Math.round(vols[p] * 100) + '%');
+    return h('div.part', { style: '--pc: var(--' + p + ')' },
+      h('i'),
+      h('div.name', null, h('b', null, PART_NAMES[p]), h('span', { title: desc[p] }, desc[p])),
+      p === 'fx' ? h('div.vol', null, h('span.note', null, 'Mute bypasses both chains.')) :
+        h('div.vol', null, h('span.label', null, 'Vol'), slider('vol-' + p, vols[p], v => { vols[p] = v; bus[p].setVolume(v); volOut.textContent = Math.round(v * 100) + '%'; }, PART_NAMES[p] + ' volume'), volOut),
+      h('div.ctl', null,
+        btn(locks[p] ? 'Locked' : 'Lock', () => { locks[p] = !locks[p]; render(); }, { small: true, pressed: locks[p], style: '--pc: var(--lock)', title: 'Keep this part when breeding' }),
+        btn('Mute', () => { muted[p] = !muted[p]; applyMutes(); render(); }, { small: true, pressed: muted[p], style: '--pc: var(--faint)' }),
+        btn('New', () => { const c = BL.clone(g); freshPart(c, p); replaceCurrent(c); toast('New ' + PART_NAMES[p].toLowerCase()); }, { small: true, title: 'Generate this part again, keeping the rest' })));
+  });
+  return h('section.panel', { 'aria-label': 'Heard loop' },
+    h('div.heard-head', null, h('h2', null, where), h('span.note', null, g.mood + ' · ' + g.bars + ' bars · ' + BL.NOTE_NAMES[st.key] + ' ' + g.scale)),
+    h('div.prog', { 'aria-label': 'Chords, one a bar' }, g.prog.map(d => h('span', { title: rootName(g, d) }, chordName(g, d) + ' ' + rootName(g, d)))),
+    h('div.view.arr', null, cv, ph),
+    h('div.parts', null, parts));
+}
+function replaceCurrent(c) {
+  if (src.kind === 'litter') L.items[src.i] = c; else slots[src.i] = c;
+  fxShown = null; applyFx(); render();
+}
+function keep(i) {
+  let k = slots.findIndex(s => !s); if (k < 0) k = 7;
+  slots[k] = BL.clone(L.items[i]);
+  if (sameSrc(src, { kind: 'litter', i })) src = { kind: 'slot', i: k };
+  toast('Kept ' + 'ABCD'[i] + ' as loop ' + (k + 1));
+  render();
+}
+function keepPanel() {
+  const playingSlot = src.kind === 'slot' ? src.i : -1;
+  return h('section.panel', { 'aria-label': 'Kept loops' },
+    h('div.heard-head', null, h('h2', null, 'Kept'), h('span.note', null, 'Tap a kept loop to play it from the next bar. Breed from it to put it back in the litter.')),
+    h('div.slots', null, slots.map((g, k) => {
+      if (!g) return h('button.slot', { 'aria-label': 'Keep the heard litter loop here', onclick: () => { slots[k] = BL.clone(L.heard); toast('Kept ' + 'ABCD'[L.hear] + ' as loop ' + (k + 1)); render(); } }, h('span.n', null, k + 1));
+      const cv = h('canvas'); draws.push(() => drawSong(cv, g, false));
+      return h('div.slot.full' + (playingSlot === k ? '.playing' : '') + (sameSrc(queued, { kind: 'slot', i: k }) ? '.queued' : ''), { role: 'button', tabindex: 0, 'aria-label': 'Play kept loop ' + (k + 1), onclick: () => hear({ kind: 'slot', i: k }), onkeydown: e => { if (e.key === 'Enter') hear({ kind: 'slot', i: k }); } },
+        h('span.n', null, k + 1), cv,
+        h('button.x', { 'aria-label': 'Clear kept loop ' + (k + 1), onclick: e => { e.stopPropagation(); slots[k] = null; if (src.kind === 'slot' && src.i === k) src = { kind: 'litter', i: L.hear }; render(); } }, '×'));
+    })),
+    playingSlot >= 0 ? h('div.row', null, btn('Breed from loop ' + (playingSlot + 1), () => {
+      const g = slots[playingSlot];
+      L.items[L.hear] = BL.clone(st.bars === g.bars ? g : songResize(g, st.bars)); L.parent = -1; L.breed(L.hear);
+      src = { kind: 'litter', i: L.hear }; afterLitterChange();
+    })) : null);
+}
+
+// ---------- transport
+function renderTransport() {
+  const p = document.getElementById('play');
+  p.setAttribute('aria-pressed', String(T.playing));
+  p.innerHTML = (T.playing ? STOP_ICON : PLAY_ICON) + (T.playing ? 'Stop' : 'Play');
+  document.getElementById('bpm').textContent = T.bpm;
+}
+document.getElementById('play').addEventListener('click', () => { if (T.playing) { T.stop(); if (queued) { src = queued; queued = null; } launchAt = 0; } else { BL.audio(); applyFx(); T.start(); } render(); });
+document.getElementById('bpm-down').addEventListener('click', () => { T.setBpm(T.bpm - 2); renderTransport(); });
+document.getElementById('bpm-up').addEventListener('click', () => { T.setBpm(T.bpm + 2); renderTransport(); });
+document.addEventListener('keydown', e => { if (e.code === 'Space' && !e.target.closest('input,button,[tabindex]')) { e.preventDefault(); document.getElementById('play').click(); } });
+document.addEventListener('pointerdown', () => BL.audio(), { passive: true });
+let lastPos = '';
+function frame() {
+  const now = T.now();
+  const pos = T.playing ? (Math.floor(now / 4) + 1) + '.' + (Math.floor(BL.mod(now, 4)) + 1) : '1.1';
+  if (pos !== lastPos) { document.getElementById('pos').textContent = pos; lastPos = pos; }
+  for (const hd of heads) {
+    const active = T.playing && sameSrc(src, hd.src) && now >= launchAt;
+    hd.el.hidden = !active;
+    if (active) { const b = hd.beats(); hd.el.style.left = (BL.mod(now - launchAt, b) / b * 100) + '%'; }
+  }
+  requestAnimationFrame(frame);
+}
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 150); });
+render();
+requestAnimationFrame(frame);
+})();
+</script>

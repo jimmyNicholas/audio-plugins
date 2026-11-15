@@ -1,0 +1,76 @@
+name: Bloodline Breaks
+
+# PROTOTYPE: the Bloodline Breaks spike in plugins/bloodline-breaks. Kept apart from tests.yml so the Max for Live tests stay fast.
+on:
+  push:
+    paths:
+      - "plugins/bloodline-breaks/**"
+      - "plugins/shared/**"
+      - "plugins/bloodline-drums/core/**"
+      - ".github/workflows/bloodline-breaks.yml"
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JUCE's Linux packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libasound2-dev libjack-jackd2-dev ladspa-sdk \
+            libfreetype-dev libfontconfig1-dev libx11-dev libxcomposite-dev libxcursor-dev libxext-dev \
+            libxinerama-dev libxrandr-dev libxrender-dev libxi-dev libegl-dev libglu1-mesa-dev \
+            mesa-common-dev xvfb
+
+      - name: Configure
+        run: cmake -S plugins/bloodline-breaks -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j4
+
+      - name: Core tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: pluginval
+        run: |
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Linux.zip
+          unzip -q pluginval.zip
+          xvfb-run -a ./pluginval --strictness-level 10 --validate-in-process \
+            --validate "build/BloodlineBreaks_artefacts/Release/VST3/Bloodline Breaks.vst3"
+
+  mac:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      # A universal binary, so it runs on the Intel Mac (macOS 13) as well as Apple Silicon.
+      - name: Configure
+        run: >
+          cmake -S plugins/bloodline-breaks -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build
+        run: cmake --build build -j4 --target BloodlineBreaks_VST3 BloodlineBreaks_AU
+
+      - name: Validate the AU
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R "build/BloodlineBreaks_artefacts/Release/AU/Bloodline Breaks.component" ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          auval -v aumu Brks Jnic
+
+      # Everything inside one Bloodline-breaks folder, so unzipping several downloads never mixes them.
+      - name: Zip
+        run: |
+          mkdir -p "dist/Bloodline-breaks"
+          cp -R "build/BloodlineBreaks_artefacts/Release/VST3/Bloodline Breaks.vst3" "dist/Bloodline-breaks/"
+          cp -R "build/BloodlineBreaks_artefacts/Release/AU/Bloodline Breaks.component" "dist/Bloodline-breaks/"
+          cp plugins/bloodline-breaks/install-bloodline-breaks.sh "dist/Bloodline-breaks/"
+          cd dist && zip -qry ../Bloodline-breaks-mac.zip "Bloodline-breaks"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Bloodline-breaks-mac
+          path: Bloodline-breaks-mac.zip

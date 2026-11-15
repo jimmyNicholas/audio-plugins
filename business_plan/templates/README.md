@@ -1,6 +1,6 @@
 # Album and plugin templates
 
-What is needed to create an album, as templates to copy. These live here while the plugin codebase doesn't exist yet; when it does, `albums/` and `plugins/` move to its root.
+What is needed to create an album, as templates to copy. `albums/` now lives at the repo root (album 1 is [`albums/01-bloodline-breaks/`](../../albums/01-bloodline-breaks/)); `plugins/` joins it there with the first JUCE spike.
 
 ```
 albums/_template/              copy to albums/NN-<slug>/

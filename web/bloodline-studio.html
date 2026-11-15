@@ -1,0 +1,644 @@
+<title>Bloodline Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: a session view of three tracks (Breaks, Synth, Master) above a detail view for the selected track; side by side from 960px. One deliberate dark look, as in the plugins. */
+:root {
+  color-scheme: dark;
+  --bg: #15171c; --panel: #1e2128; --panel-2: #262a33; --line: #343945; --fg: #ece8e1; --muted: #8d929d; --faint: #5d626d;
+  --breaks: #ff8a65; --synth: #b48cff; --master: #5fd3c4; --keep: #f2c14e; --lock: #c9b8ff;
+  --kick: #ff6f61; --snare: #6cb6ff; --hat: #f2c94c; --perc: #7ddc8a;
+  --grid-bar: rgba(236, 232, 225, 0.22); --grid-beat: rgba(236, 232, 225, 0.07); --lock-band: rgba(201, 184, 255, 0.13);
+  --display: 'Space Grotesk', 'Avenir Next', system-ui, sans-serif;
+  --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --r: 8px;
+}
+html, body { background: var(--bg); color: var(--fg); }
+body { font: 14px/1.4 var(--body); -webkit-tap-highlight-color: transparent; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+button { font: inherit; color: inherit; }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top-in, .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding-block: 10px; max-width: 1400px; margin: 0 auto; }
+.brand { display: flex; align-items: baseline; gap: 8px; margin-right: auto; }
+.brand b { font: 700 18px/1 var(--display); letter-spacing: 0.01em; }
+.brand small { color: var(--muted); font: 11px var(--mono); }
+.transport { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.play { min-width: 74px; height: 38px; border-radius: 19px; border: 0; background: var(--fg); color: var(--bg); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.play[aria-pressed="true"] { background: var(--breaks); }
+.play svg { width: 12px; height: 12px; }
+.bpm { display: flex; align-items: center; background: var(--panel); border-radius: 19px; height: 38px; }
+.bpm button { width: 34px; height: 38px; border: 0; background: none; cursor: pointer; font-size: 17px; color: var(--muted); }
+.bpm span { font: 500 15px var(--mono); min-width: 30px; text-align: center; font-variant-numeric: tabular-nums; }
+.bpm small { color: var(--muted); font-size: 10px; letter-spacing: 0.08em; margin-left: 3px; }
+.pos { font: 500 15px var(--mono); color: var(--muted); min-width: 44px; font-variant-numeric: tabular-nums; }
+
+.wrap { max-width: 1400px; margin: 0 auto; padding-block: 16px 40px; display: grid; gap: 16px; }
+@media (min-width: 960px) { .wrap { grid-template-columns: minmax(340px, 420px) minmax(0, 1fr); align-items: start; } .tracks { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 74px); } }
+
+.label { font: 600 10px/1 var(--body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.seg { display: inline-flex; background: var(--panel); border-radius: 8px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button { border: 0; background: none; padding: 0 10px; height: 30px; border-radius: 6px; cursor: pointer; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--acc, var(--fg)); color: var(--bg); }
+.btn { border: 1px solid var(--line); background: var(--panel-2); height: 32px; padding: 0 12px; border-radius: 7px; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.btn:hover { border-color: var(--faint); }
+.btn[aria-pressed="true"] { background: var(--acc); color: var(--bg); border-color: transparent; }
+.btn.small { height: 26px; padding: 0 8px; font-size: 12px; }
+.btn:disabled { opacity: 0.35; cursor: default; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--acc, var(--fg)); outline-offset: 2px; }
+input[type=range] { -webkit-appearance: none; appearance: none; background: none; height: 22px; width: 100%; min-width: 0; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--acc, var(--fg)) var(--p, 50%), var(--line) var(--p, 50%)); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--acc, var(--fg)) var(--p, 50%), var(--line) var(--p, 50%)); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--fg); margin-top: -6px; border: 0; }
+input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--fg); border: 0; }
+
+/* session view */
+.tracks { display: flex; flex-direction: column; gap: 10px; }
+.track { background: var(--panel); border-radius: 10px; padding: 12px; display: grid; gap: 10px; cursor: pointer; border: 1px solid transparent; }
+.track.on { border-color: var(--acc); background: var(--panel-2); }
+.track-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dot { width: 10px; height: 10px; border-radius: 3px; background: var(--acc); flex: none; }
+.track-head b { font: 700 15px var(--display); }
+.track-head .sub { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.grow { flex: 1; }
+.ms { width: 28px; height: 26px; border-radius: 6px; border: 1px solid var(--line); background: none; cursor: pointer; font: 600 11px var(--mono); color: var(--muted); flex: none; }
+.ms[aria-pressed="true"].m { background: var(--faint); color: var(--fg); }
+.ms[aria-pressed="true"].s { background: var(--keep); color: var(--bg); border-color: transparent; }
+.view { position: relative; background: var(--bg); border-radius: 6px; overflow: hidden; }
+.view canvas { display: block; width: 100%; height: 100%; }
+.clip { height: 54px; }
+.ph { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--fg); opacity: 0.8; pointer-events: none; left: 0; }
+.slots { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+.slot { position: relative; height: 34px; border-radius: 5px; border: 1px dashed var(--line); background: none; cursor: pointer; padding: 0; overflow: hidden; font: 10px var(--mono); color: var(--faint); }
+.slot.full { border: 1px solid var(--line); background: var(--bg); }
+.slot.full canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.slot.playing { border-color: var(--acc); box-shadow: inset 0 0 0 1px var(--acc); }
+.slot.queued { animation: blink 0.5s steps(2) infinite; }
+@keyframes blink { 50% { border-color: var(--acc); } }
+.slot .n { position: absolute; left: 3px; top: 1px; z-index: 1; color: var(--muted); }
+.track-foot { display: flex; align-items: center; gap: 10px; }
+.track-foot input { flex: 1; }
+.meter { width: 64px; height: 6px; border-radius: 3px; background: var(--bg); overflow: hidden; flex: none; }
+.meter i { display: block; height: 100%; width: 0; background: var(--acc); transition: width 60ms linear; }
+.fxline { font: 12px var(--mono); color: var(--muted); }
+
+/* detail view */
+.device { background: var(--panel); border-radius: 12px; padding: 14px; display: grid; gap: 14px; min-width: 0; }
+.dev-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dev-head h2 { margin: 0; font: 700 20px/1 var(--display); }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.row .label { min-width: 52px; }
+.spread { display: flex; align-items: center; gap: 8px; flex: 1 1 200px; min-width: 0; }
+.spread output { font: 12px var(--mono); color: var(--muted); width: 34px; text-align: right; }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 640px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.tile { background: var(--panel-2); border-radius: 9px; padding: 8px; display: grid; gap: 6px; cursor: pointer; border: 1px solid transparent; min-width: 0; }
+.tile.hear { border-color: var(--acc); }
+.tile-top { display: flex; align-items: baseline; gap: 6px; }
+.tile-top b { font: 700 17px var(--display); }
+.badge { font: 600 10px var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--acc); }
+.badge.parent { color: var(--keep); }
+.tile .view { height: 64px; }
+.tile .meta { font: 11px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.tile-btns .btn { padding: 0 4px; height: 28px; font-size: 12px; }
+.chain { display: flex; flex-wrap: wrap; gap: 4px; min-height: 64px; align-content: flex-start; }
+.chip { font: 11px var(--mono); background: var(--bg); border-radius: 4px; padding: 3px 6px; color: var(--fg); }
+.chip.locked { box-shadow: inset 0 0 0 1px var(--lock); }
+.sec { display: grid; gap: 8px; }
+.sec-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sec-head h3 { margin: 0; font: 600 14px var(--display); }
+.sec-head .hint { color: var(--muted); font-size: 12px; }
+.settings { display: grid; gap: 4px 20px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .settings { grid-template-columns: 1fr 1fr; } }
+.group { font: 600 10px var(--body); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 6px; color: var(--muted); }
+.set { display: grid; grid-template-columns: 92px 66px minmax(0, 1fr) 52px; align-items: center; gap: 8px; }
+.set span { font-size: 12px; color: var(--muted); }
+.set output { font: 12px var(--mono); }
+.lockbtn { height: 24px; border-radius: 5px; border: 1px solid var(--line); background: none; cursor: pointer; font-size: 11px; color: var(--muted); }
+.lockbtn[aria-pressed="true"] { background: var(--lock); color: var(--bg); border-color: transparent; }
+.pads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.pad { position: relative; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px; cursor: pointer; text-align: left; display: grid; gap: 4px; min-width: 0; }
+.pad.sel { border-color: var(--keep); }
+.pad .view { height: 34px; background: none; }
+.pad b { font: 600 12px var(--body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pad small { font: 10px var(--mono); color: var(--muted); }
+.pad.empty b { color: var(--faint); font-weight: 500; }
+.editor { overflow-x: auto; border-radius: 6px; background: var(--bg); }
+.editor canvas { display: block; height: 100%; cursor: crosshair; touch-action: pan-x; }
+.lanes { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 6px; align-items: stretch; }
+.lane-heads { display: grid; grid-template-rows: repeat(4, 1fr); gap: 2px; }
+.lane-head { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+.lane-head i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.lane-head span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.traits { display: grid; gap: 6px 20px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .traits { grid-template-columns: 1fr 1fr; } }
+.trait { display: grid; grid-template-columns: 70px minmax(0, 1fr) 70px 52px; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.trait span:nth-of-type(2) { text-align: right; }
+.fxcards { display: grid; gap: 8px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .fxcards { grid-template-columns: 1fr 1fr; } }
+.fxcard { background: var(--panel-2); border-radius: 8px; padding: 10px; display: grid; gap: 4px; }
+.fxcard.locked { box-shadow: inset 0 0 0 1px var(--lock); }
+.fxcard header { display: flex; align-items: center; gap: 6px; }
+.fxcard header b { font: 600 13px var(--display); flex: 1; }
+.fxcard .set { grid-template-columns: 72px 70px minmax(0, 1fr); }
+.note { color: var(--muted); font-size: 12px; max-width: 65ch; }
+.empty-note { padding: 12px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); font-size: 13px; }
+.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 18px; font-weight: 500; font-size: 13px; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 20; }
+.toast.show { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .slot.queued { animation: none; } .toast, .meter i { transition: none; } }
+</style>
+
+<header class="top"><div class="top-in">
+  <div class="brand"><b>Bloodline Studio</b><small>breaks · synth · effects</small></div>
+  <div class="transport">
+    <button class="play" id="play" aria-pressed="false"></button>
+    <div class="bpm"><button id="bpm-down" aria-label="Slower">−</button><span id="bpm">90</span><small>BPM</small><button id="bpm-up" aria-label="Faster">+</button></div>
+    <div class="seg" id="bars" role="group" aria-label="Bars for new loops"></div>
+    <span class="pos" id="pos">1.1</span>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <section class="tracks" id="tracks" aria-label="Tracks"></section>
+  <section class="device" id="device" aria-label="Selected track"></section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="bloodline-engine.js"></script>
+<script>
+(function () {
+'use strict';
+const T = BL.transport;
+const css = getComputedStyle(document.documentElement);
+const C = n => css.getPropertyValue(n).trim();
+const COLORS = { lanes: [C('--kick'), C('--snare'), C('--hat'), C('--perc')], barLine: C('--grid-bar'), beatLine: C('--grid-beat'), lock: C('--lock-band') };
+const GROUP_COLORS = { Body: C('--kick'), Noise: C('--snare'), Grit: C('--hat'), Osc: C('--snare'), Filter: C('--kick'), Amp: C('--perc'), Motion: C('--synth') };
+const PLAY_ICON = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 1l9 5-9 5z" fill="currentColor"/></svg>';
+const STOP_ICON = '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="2" width="8" height="8" fill="currentColor"/></svg>';
+
+// ---------- DOM helper
+function h(sel, props, ...kids) {
+  const [tag, ...cls] = sel.split('.');
+  const el = document.createElement(tag || 'div');
+  if (cls.length) el.className = cls.join(' ');
+  if (props) for (const k in props) {
+    const v = props[k];
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'style') el.style.cssText = v;
+    else if (k === 'html') el.innerHTML = v;
+    else if (v === true) el.setAttribute(k, '');
+    else if (v !== false && v != null) el.setAttribute(k, v);
+  }
+  for (const k of kids.flat(9)) { if (k == null || k === false) continue; el.append(k.nodeType ? k : document.createTextNode(k)); }
+  return el;
+}
+let draws = [], heads = [];
+const later = f => draws.push(f);
+function canvasView(cls, draw, head) {
+  const cv = h('canvas');
+  const v = h('div.view.' + cls, null, cv);
+  later(() => draw(cv));
+  if (head) { const ph = h('i.ph', { hidden: true }); v.append(ph); heads.push({ el: ph, ...head }); }
+  return v;
+}
+function slider(id, value, onInput, opts = {}) {
+  const el = h('input', { type: 'range', id, min: 0, max: 1000, value: Math.round(value * 1000), 'aria-label': opts.label || id });
+  const paint = () => el.style.setProperty('--p', (el.value / 10) + '%');
+  paint();
+  el.addEventListener('input', () => { paint(); onInput(el.value / 1000, false); });
+  el.addEventListener('change', () => onInput(el.value / 1000, true));
+  el.addEventListener('pointerdown', e => e.stopPropagation());
+  el.addEventListener('click', e => e.stopPropagation());
+  return el;
+}
+function seg(options, current, onPick, label) {
+  return h('div.seg', { role: 'group', 'aria-label': label }, options.map(o => h('button', { 'aria-pressed': String(o === current), onclick: e => { e.stopPropagation(); onPick(o); } }, o)));
+}
+function btn(text, onclick, opts = {}) {
+  return h('button.btn' + (opts.small ? '.small' : ''), { onclick: e => { e.stopPropagation(); onclick(e); }, disabled: opts.disabled, 'aria-pressed': opts.pressed != null ? String(opts.pressed) : null, title: opts.title }, text);
+}
+let toastTimer;
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1600); }
+
+// ---------- state
+const st = { bars: 4, sel: 'breaks', tab: { breaks: 'Loops', synth: 'Loops', master: 'Effects' }, key: 0, scale: 'Minor', lo: 36, hi: 72 };
+T.bpm = 90;
+const cp = (bars) => ({ bars: bars || st.bars, scale: st.scale, lo: st.lo, hi: st.hi });
+function makeFx(char) {
+  const f = { char, wild: false, on: false, bypass: false };
+  f.litter = new BL.Litter({ fresh: () => BL.fxFresh(f.char), mutate: (g, s) => BL.fxMutate(g, s, f.wild), cross: BL.fxCross });
+  return f;
+}
+const master = { id: 'master', name: 'Master', color: '--master', vol: 0.9, muted: false, solo: false, fx: makeFx('Space') };
+master.bus = new BL.Bus();
+function named(g, tr, label) { tr.counts[label] = (tr.counts[label] || 0) + 1; g.name = label + ' ' + tr.counts[label]; return g; }
+
+const breaks = { id: 'breaks', name: 'Breaks', color: '--breaks', vol: 0.85, muted: false, solo: false,
+  zone: 'Kick', soundLocks: Array(10).fill(false), padSel: 0, inLoop: true, counts: {},
+  style: 'Boom bap', laneLocks: [false, false, false, false], slots: Array(8).fill(null), src: { kind: 'slot', i: 0 }, queued: null, queueAt: 0, launch: 0, fx: makeFx('Dirt') };
+breaks.sounds = new BL.Litter({ fresh: () => BL.soundFresh('drum', breaks.zone), mutate: (g, s) => BL.soundMutate(g, s, breaks.soundLocks), cross: (a, b) => BL.soundCross(a, b, breaks.soundLocks) });
+breaks.loops = new BL.Litter({ fresh: () => BL.drumFresh(breaks.style, st.bars), mutate: (g, s) => BL.drumMutate(g, s, breaks.laneLocks), cross: (a, b) => BL.drumCross(a, b, breaks.laneLocks) });
+breaks.pads = ['Kick', 'Snare', 'Hats', 'Perc'].map(z => named(BL.soundFresh('drum', z), breaks, z));
+breaks.slots[0] = BL.clone(breaks.loops.items[0]);
+breaks.bus = new BL.Bus(master.bus.input);
+
+const synth = { id: 'synth', name: 'Synth', color: '--synth', vol: 0.75, muted: false, solo: false,
+  zone: 'Bass', soundLocks: Array(17).fill(false), padSel: 0, inLoop: true, counts: {}, traitLocks: Array(8).fill(false),
+  slots: Array(8).fill(null), src: { kind: 'slot', i: 0 }, queued: null, queueAt: 0, launch: 0, fx: makeFx('Space') };
+synth.sounds = new BL.Litter({ fresh: () => BL.soundFresh('synth', synth.zone), mutate: (g, s) => BL.soundMutate(g, s, synth.soundLocks), cross: (a, b) => BL.soundCross(a, b, synth.soundLocks) });
+synth.loops = new BL.Litter({
+  fresh: () => BL.synthFresh(cp(), [[0, 0.25], [0, 0.25], [0.2, 0.8], null, null, null, [0.2, 0.55], null]),
+  mutate: (g, s) => BL.synthMutate(g, s, cp(g.bars), synth.traitLocks),
+  cross: (a, b) => BL.synthCross(a, b, cp(a.bars), synth.traitLocks) });
+synth.pads = [named(BL.soundFresh('synth', 'Bass'), synth, 'Bass'), named(BL.soundFresh('synth', 'Keys'), synth, 'Keys'), named(BL.soundFresh('synth', 'Pluck'), synth, 'Pluck'), null];
+synth.slots[0] = BL.clone(synth.loops.items[0]);
+synth.bus = new BL.Bus(master.bus.input);
+const TRACKS = [breaks, synth, master];
+TRACKS.forEach(tr => tr.bus.setVolume(tr.vol));
+const byId = id => TRACKS.find(t => t.id === id);
+
+const current = tr => tr.src.kind === 'litter' ? tr.loops.items[tr.src.i] : tr.slots[tr.src.i];
+function setCurrent(tr, g) { if (tr.src.kind === 'litter') tr.loops.items[tr.src.i] = g; else tr.slots[tr.src.i] = g; }
+const beatsOf = (tr, g) => tr === breaks ? g.len / 4 : g.bars * 4;
+const sameSrc = (a, b) => a && b && a.kind === b.kind && a.i === b.i;
+const auditioning = tr => tr.inLoop && st.sel === tr.id && st.tab[tr.id] === 'Sounds';
+function drumFor(li) { return auditioning(breaks) && breaks.padSel === li ? breaks.sounds.heard : breaks.pads[li]; }
+function synthSound() { return auditioning(synth) ? synth.sounds.heard : synth.pads[synth.padSel]; }
+function applyFx(tr) { tr.bus.setFx(tr.fx.on ? tr.fx.litter.heard : null, tr.fx.bypass); }
+function applyMutes() { const solo = TRACKS.some(t => t.solo && t !== master); [breaks, synth].forEach(t => t.bus.setMuted(t.muted || (solo && !t.solo))); master.bus.setMuted(master.muted); }
+
+// ---------- playing
+function launch(tr, src) {
+  BL.audio();
+  if (!T.playing) { tr.src = src; tr.launch = 0; tr.queued = null; startTransport(); }
+  else if (!sameSrc(src, tr.src)) { tr.queued = src; tr.queueAt = Math.ceil(T.next / 4) * 4; }
+  renderAll();
+}
+function applyQueue(tr, b0) {
+  if (tr.queued && b0 >= tr.queueAt) {
+    tr.src = tr.queued; tr.launch = tr.queueAt; tr.queued = null;
+    const wait = Math.max(0, (T.timeOf(tr.launch) - BL.ctx.currentTime) * 1000);
+    setTimeout(renderAll, wait);
+  }
+}
+T.sources.add((b0, b1) => {
+  applyQueue(breaks, b0);
+  const g = current(breaks);
+  if (g) {
+    const L = g.len / 4;
+    g.lanes.forEach((lane, li) => {
+      const snd = drumFor(li); if (!snd) return;
+      lane.hits.forEach(hit => { const a = T.inWindow(BL.swingWarp(hit.pos, g.swing) / 4 + breaks.launch, L, b0, b1); if (a >= 0) BL.playDrum(snd, T.timeOf(a), hit.vel, breaks.bus.input); });
+    });
+  }
+  applyQueue(synth, b0);
+  const s = current(synth), snd = synthSound();
+  if (s && snd) {
+    const L = s.bars * 4;
+    s.notes.forEach(n => { const a = T.inWindow(n.s + synth.launch, L, b0, b1); if (a >= 0) BL.playSynth(snd, n.p + st.key, T.timeOf(a), n.l * 60 / T.bpm, n.v, synth.bus.input); });
+  }
+});
+function startTransport() { BL.audio(); T.start(); renderTransport(); }
+function stopTransport() { T.stop(); [breaks, synth].forEach(tr => { if (tr.queued) { tr.src = tr.queued; tr.queued = null; } tr.launch = 0; }); renderAll(); }
+function previewSound(tr, g) {
+  BL.audio(); if (!g) return;
+  const t = BL.ctx.currentTime + 0.01;
+  if (tr === breaks) BL.playDrum(g, t, 0.9, breaks.bus.input);
+  else { const zone = g.zone; const root = (zone === 'Bass' ? 36 : 60) + st.key; BL.playSynth(g, root, t, zone === 'Pad' ? 1.4 : 0.45, 0.85, synth.bus.input); if (zone === 'Keys' || zone === 'Pad') { BL.playSynth(g, root + 3, t, zone === 'Pad' ? 1.4 : 0.45, 0.7, synth.bus.input); BL.playSynth(g, root + 7, t, zone === 'Pad' ? 1.4 : 0.45, 0.7, synth.bus.input); } }
+}
+
+// ---------- transport bar
+function renderTransport() {
+  const p = document.getElementById('play');
+  p.setAttribute('aria-pressed', String(T.playing));
+  p.innerHTML = (T.playing ? STOP_ICON : PLAY_ICON) + (T.playing ? 'Stop' : 'Play');
+  document.getElementById('bpm').textContent = T.bpm;
+  const bars = document.getElementById('bars');
+  bars.replaceChildren(...[2, 4, 8].map(n => h('button', { 'aria-pressed': String(n === st.bars), onclick: () => setBars(n) }, n + ' bars')));
+}
+document.getElementById('play').addEventListener('click', () => (T.playing ? stopTransport() : startTransport()));
+document.getElementById('bpm-down').addEventListener('click', () => { T.setBpm(T.bpm - 2); renderTransport(); });
+document.getElementById('bpm-up').addEventListener('click', () => { T.setBpm(T.bpm + 2); renderTransport(); });
+document.addEventListener('keydown', e => { if (e.code === 'Space' && !e.target.closest('input,button')) { e.preventDefault(); T.playing ? stopTransport() : startTransport(); } });
+document.addEventListener('pointerdown', () => BL.audio(), { passive: true });
+function setBars(n) {
+  st.bars = n;
+  breaks.loops.items = breaks.loops.items.map(g => BL.drumResize(g, n));
+  synth.loops.items = synth.loops.items.map(g => BL.synthResize(g, n, cp(n)));
+  toast('New and bred loops are ' + n + ' bars; kept clips keep their length');
+  renderAll();
+}
+
+// ---------- session view
+function renderTracks() {
+  const box = document.getElementById('tracks');
+  box.replaceChildren(...TRACKS.map(tr => {
+    const sel = st.sel === tr.id;
+    const head = h('div.track-head', null, h('span.dot'), h('b', null, tr.name), h('span.sub', null, trackSub(tr)), h('span.grow'),
+      tr !== master ? h('button.ms.m', { 'aria-pressed': String(tr.muted), 'aria-label': 'Mute ' + tr.name, onclick: e => { e.stopPropagation(); tr.muted = !tr.muted; applyMutes(); renderTracks(); } }, 'M') : null,
+      tr !== master ? h('button.ms.s', { 'aria-pressed': String(tr.solo), 'aria-label': 'Solo ' + tr.name, onclick: e => { e.stopPropagation(); tr.solo = !tr.solo; applyMutes(); renderTracks(); } }, 'S') : null);
+    const meter = h('div.meter', null, h('i'));
+    meters.set(tr, meter.firstChild);
+    const foot = h('div.track-foot', null, h('span.label', null, 'Vol'), slider('vol-' + tr.id, tr.vol, v => { tr.vol = v; tr.bus.setVolume(v); }, { label: tr.name + ' volume' }), meter);
+    let body;
+    if (tr === master) {
+      const chain = master.fx.on ? master.fx.litter.heard.fx.map(f => BL.FX_TYPES[f.type].name).join(' > ') : 'No effects';
+      body = h('div.fxline', null, 'Bus: ' + chain + (master.fx.bypass ? ' (bypassed)' : ''));
+    } else {
+      const g = current(tr);
+      body = [canvasView('clip', cv => drawLoop(tr, cv, g, true), { tr, src: () => tr.src, len: () => beatsOf(tr, current(tr)) }), renderSlots(tr)];
+    }
+    return h('article.track' + (sel ? '.on' : ''), { style: '--acc: var(' + tr.color + ')', onclick: () => { if (st.sel !== tr.id) { st.sel = tr.id; renderAll(); } } }, head, body, foot);
+  }));
+}
+function trackSub(tr) {
+  if (tr === master) return master.fx.on ? 'effects on' : '';
+  const where = tr.src.kind === 'slot' ? 'clip ' + (tr.src.i + 1) : 'litter ' + 'ABCD'[tr.src.i];
+  const g = current(tr);
+  return where + (g ? ' · ' + (tr === breaks ? g.len / 16 : g.bars) + ' bars' : '') + (tr.queued ? ' · next bar: ' + (tr.queued.kind === 'slot' ? 'clip ' + (tr.queued.i + 1) : 'ABCD'[tr.queued.i]) : '');
+}
+function renderSlots(tr) {
+  return h('div.slots', null, tr.slots.map((g, i) => {
+    const src = { kind: 'slot', i };
+    const playing = sameSrc(tr.src, src), queued = sameSrc(tr.queued, src);
+    if (!g) return h('button.slot', { 'aria-label': 'Keep the heard loop in clip ' + (i + 1), title: 'Keep the heard loop here', onclick: e => { e.stopPropagation(); keepLoop(tr, tr.loops.hear, i); } }, h('span.n', null, i + 1));
+    const cv = h('canvas');
+    later(() => drawLoop(tr, cv, g, false));
+    return h('button.slot.full' + (playing ? '.playing' : '') + (queued ? '.queued' : ''), { 'aria-label': 'Play clip ' + (i + 1), onclick: e => { e.stopPropagation(); launch(tr, src); } }, h('span.n', null, i + 1), cv);
+  }));
+}
+function drawLoop(tr, cv, g, big) {
+  if (!g) { BL.fitCanvas(cv); return; }
+  if (tr === breaks) BL.drawDrumLoop(cv, g, COLORS, big ? { locks: null } : {});
+  else BL.drawNotes(cv, g.notes, g.bars * 4, st.lo, st.hi, C('--synth'), { barLine: big ? COLORS.barLine : '', beatLine: big ? COLORS.beatLine : '' });
+}
+
+// ---------- detail view
+function renderDevice() {
+  const tr = byId(st.sel), dev = document.getElementById('device');
+  dev.style.setProperty('--acc', 'var(' + tr.color + ')');
+  const tabs = tr === master ? ['Effects'] : ['Sounds', 'Loops', 'Effects'];
+  const tab = st.tab[tr.id];
+  const head = h('div.dev-head', null, h('h2', null, tr.name), seg(tabs, tab, t => { st.tab[tr.id] = t; renderAll(); }, 'Panel'));
+  let body;
+  if (tab === 'Sounds') body = tr === breaks ? drumSounds() : synthSounds();
+  else if (tab === 'Loops') body = tr === breaks ? drumLoops() : synthLoops();
+  else body = effects(tr);
+  dev.replaceChildren(head, ...[body].flat());
+}
+function litterRow(L, tr, onRefresh) {
+  return h('div.row', null,
+    btn('Back', () => { if (L.back()) { onRefresh && onRefresh(); renderAll(); } else toast('Nothing to go back to'); }),
+    btn('New', () => { L.refresh(); onRefresh && onRefresh(); renderAll(); }),
+    h('div.spread', null, h('span.label', null, 'Spread'), slider('spread-' + tr.id + '-' + st.tab[tr.id], L.spread / 0.5, (v, done) => { L.setSpread(v * 0.5); spreadOut.textContent = L.spread.toFixed(2); }, { label: 'Spread' }),
+      (spreadOut = h('output', null, L.spread.toFixed(2)))));
+}
+let spreadOut;
+function tile(L, i, tr, view, meta, extra) {
+  const hear = L.hear === i, parent = L.parent === i;
+  return h('div.tile' + (hear ? '.hear' : ''), { role: 'button', tabindex: 0, 'aria-label': 'Hear ' + 'ABCD'[i], onclick: () => extra.hear(i), onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); extra.hear(i); } } },
+    h('div.tile-top', null, h('b', null, 'ABCD'[i]), parent ? h('span.badge.parent', null, '★ parent') : null, h('span.grow'), hear ? h('span.badge', null, 'hearing') : null),
+    view, h('div.meta', null, meta),
+    h('div.tile-btns', null,
+      btn(parent ? 'Again' : 'Breed', () => { L.breed(i); extra.after && extra.after(); renderAll(); }, { small: true }),
+      btn('Cross', () => { L.cross(i); extra.after && extra.after(); renderAll(); }, { small: true, disabled: hear, title: 'Mate with the one you hear' }),
+      extra.keep ? btn('Keep', () => extra.keep(i), { small: true }) : h('span')));
+}
+
+// Breaks: sounds
+function drawDrumSound(cv, g) {
+  const { c, w, h: H } = BL.fitCanvas(cv);
+  if (!g) return;
+  const v = i => BL.toReal(BL.DRUM[i], g.v[i]);
+  const dec = v(3), nd = v(6), noise = v(4), span = Math.max(dec, nd) * 1.1;
+  c.strokeStyle = C('--fg'); c.globalAlpha = 0.85; c.lineWidth = 1.5; c.beginPath();
+  for (let x = 0; x <= w; x += 2) { const t = x / w * span; const a = (1 - noise * 0.85) * Math.exp(-t / (dec / 5)) + noise * 0.8 * Math.exp(-t / (nd / 5)); const y = H * 0.58 - Math.min(1, a) * H * 0.52; x ? c.lineTo(x, y) : c.moveTo(x, y); }
+  c.stroke(); c.globalAlpha = 1;
+  const bw = w / g.v.length;
+  g.v.forEach((x, i) => { c.fillStyle = GROUP_COLORS[BL.DRUM[i].group]; const hh = Math.max(1, x * H * 0.36); c.fillRect(i * bw + 1, H - hh, bw - 2, hh); });
+}
+function drawSynthSound(cv, g) {
+  const { c, w, h: H } = BL.fitCanvas(cv);
+  if (!g) return;
+  const v = i => BL.toReal(BL.SYNTH[i], g.v[i]);
+  const at = v(10), de = v(11), su = v(12), re = v(13), total = at + de + 400 + re;
+  const X = t => t / total * w, top = H * 0.06, bot = H * 0.6;
+  c.strokeStyle = C('--fg'); c.globalAlpha = 0.85; c.lineWidth = 1.5; c.beginPath();
+  c.moveTo(0, bot); c.lineTo(X(at), top); c.lineTo(X(at + de), bot - su * (bot - top)); c.lineTo(X(at + de + 400), bot - su * (bot - top)); c.lineTo(w, bot); c.stroke(); c.globalAlpha = 1;
+  const bw = w / g.v.length;
+  g.v.forEach((x, i) => { c.fillStyle = GROUP_COLORS[BL.SYNTH[i].group]; const hh = Math.max(1, x * H * 0.34); c.fillRect(i * bw + 1, H - hh, bw - 2, hh); });
+}
+function soundMeta(tr, g) {
+  const list = tr === breaks ? BL.DRUM : BL.SYNTH;
+  if (tr === breaks) return BL.fmt(list[0], g.v[0]) + ' · ' + BL.fmt(list[3], g.v[3]);
+  return BL.fmt(list[0], g.v[0]) + '/' + BL.fmt(list[1], g.v[1]) + ' · ' + BL.fmt(list[6], g.v[6]);
+}
+function soundsPanel(tr) {
+  const L = tr.sounds, isDrum = tr === breaks;
+  const zones = Object.keys(isDrum ? BL.DRUM_ZONES : BL.SYNTH_ZONES);
+  const out = [];
+  out.push(h('div.row', null, h('span.label', null, 'Zone'), seg(zones, tr.zone, z => {
+    tr.zone = z;
+    if (isDrum && z !== 'None') tr.padSel = BL.LANE_ZONE.indexOf(z);
+    L.refresh(); renderAll();
+  }, 'Zone')));
+  out.push(litterRow(L, tr));
+  out.push(h('div.row', null, btn(tr.inLoop ? 'In loop: on' : 'In loop: off', () => { tr.inLoop = !tr.inLoop; renderDevice(); }, { pressed: tr.inLoop, small: true }),
+    h('span.note', null, tr.inLoop ? 'The heard ' + (isDrum ? 'drum plays in the loop in place of the selected pad.' : 'sound plays the loop in place of the selected pad.') : 'Tiles play on their own.')));
+  out.push(h('div.tiles', null, L.items.map((g, i) => tile(L, i, tr,
+    canvasView('snd', cv => (isDrum ? drawDrumSound : drawSynthSound)(cv, g)), soundMeta(tr, g),
+    { hear: k => { L.hear = k; previewSound(tr, L.items[k]); renderAll(); }, keep: k => keepSound(tr, k) }))));
+  // keep row
+  const laneNames = ['Kick', 'Snare', 'Hat', 'Perc'];
+  out.push(h('div.sec', null, h('div.sec-head', null, h('h3', null, 'Kept'), h('span.hint', null, isDrum ? 'Each pad plays one lane of the loops. Keep puts the tile on the selected pad.' : 'The selected pad plays the loops. Keep puts the tile on it.')),
+    h('div.pads', null, tr.pads.map((g, i) => h('button.pad' + (tr.padSel === i ? '.sel' : '') + (g ? '' : '.empty'), { 'aria-pressed': String(tr.padSel === i), onclick: () => { tr.padSel = i; previewSound(tr, g); renderAll(); } },
+      h('small', null, isDrum ? laneNames[i] : 'Pad ' + (i + 1)),
+      h('b', null, g ? g.name : 'empty'),
+      g ? canvasView('padv', cv => (isDrum ? drawDrumSound : drawSynthSound)(cv, g)) : null)))));
+  // settings of the heard
+  const heard = L.heard, list = isDrum ? BL.DRUM : BL.SYNTH, locks = tr.soundLocks;
+  const rows = []; let lastGroup = '';
+  list.forEach((s, i) => {
+    if (s.group !== lastGroup) { rows.push(h('div.group', null, s.group)); lastGroup = s.group; }
+    const out2 = h('output', null, BL.fmt(s, heard.v[i]));
+    rows.push(h('div.set', null, h('span', null, s.name), out2,
+      slider('set-' + tr.id + '-' + i, heard.v[i], (v, done) => { heard.v[i] = v; out2.textContent = BL.fmt(s, v); if (done && !T.playing) previewSound(tr, heard); }, { label: s.name }),
+      h('button.lockbtn', { 'aria-pressed': String(locks[i]), onclick: () => { locks[i] = !locks[i]; renderDevice(); } }, locks[i] ? 'Locked' : 'Lock')));
+  });
+  out.push(h('div.sec', null, h('div.sec-head', null, h('h3', null, 'Hearing ' + 'ABCD'[L.hear]), h('span.hint', null, 'Drag to change it. Locks keep a setting when breeding.')), h('div.settings', null, rows)));
+  return out;
+}
+const drumSounds = () => soundsPanel(breaks);
+const synthSounds = () => soundsPanel(synth);
+function keepSound(tr, i) {
+  const g = BL.clone(tr.sounds.items[i]);
+  const label = tr === breaks ? (g.zone === 'None' ? 'Drum' : g.zone) : (g.zone === 'None' ? 'Synth' : g.zone);
+  tr.pads[tr.padSel] = named(g, tr, label);
+  toast('Kept ' + g.name + (tr === breaks ? ' on the ' + ['kick', 'snare', 'hat', 'perc'][tr.padSel] + ' pad' : ' on pad ' + (tr.padSel + 1)));
+  renderAll();
+}
+function keepLoop(tr, i, slot) {
+  let idx = slot != null ? slot : tr.slots.findIndex(x => !x);
+  if (idx < 0) idx = 7;
+  tr.slots[idx] = BL.clone(tr.loops.items[i]);
+  if (sameSrc(tr.src, { kind: 'litter', i })) tr.src = { kind: 'slot', i: idx };
+  toast('Kept ' + 'ABCD'[i] + ' in clip ' + (idx + 1));
+  renderAll();
+}
+
+// Breaks: loops
+function drumLoops() {
+  const L = breaks.loops, out = [];
+  out.push(h('div.row', null, h('span.label', null, 'Style'), seg(Object.keys(BL.STYLES), breaks.style, s => { breaks.style = s; L.refresh(); const b = BL.STYLES[s].bpm; if (b) { T.setBpm(b); renderTransport(); } renderAll(); }, 'Style')));
+  out.push(litterRow(L, breaks));
+  out.push(h('div.tiles', null, L.items.map((g, i) => tile(L, i, breaks,
+    canvasView('loop', cv => BL.drawDrumLoop(cv, g, COLORS, { locks: breaks.laneLocks }), { tr: breaks, src: () => ({ kind: 'litter', i }), len: () => g.len / 4 }),
+    'swing ' + Math.round(g.swing * 100) + '% · ' + g.lanes.reduce((a, l) => a + l.hits.length, 0) + ' hits',
+    { hear: k => { L.hear = k; launch(breaks, { kind: 'litter', i: k }); }, keep: k => keepLoop(breaks, k) }))));
+  // editor of what plays
+  const g = current(breaks);
+  const where = breaks.src.kind === 'slot' ? 'clip ' + (breaks.src.i + 1) : 'litter ' + 'ABCD'[breaks.src.i];
+  if (!g) { out.push(h('div.empty-note', null, 'Tap a tile or a clip to edit its loop.')); return out; }
+  const laneNames = ['Kick', 'Snare', 'Hat', 'Perc'];
+  const heads = h('div.lane-heads', { style: 'height:132px' }, [3, 2, 1, 0].map(li => {
+    const snd = drumFor(li);
+    return h('div.lane-head', null, h('i', { style: 'background:' + COLORS.lanes[li] }), h('span', { title: snd ? snd.name : 'empty' }, snd ? snd.name : laneNames[li] + ': empty'),
+      h('button.lockbtn', { style: 'width:44px', 'aria-pressed': String(breaks.laneLocks[li]), 'aria-label': 'Lock ' + laneNames[li] + ' lane', onclick: () => { breaks.laneLocks[li] = !breaks.laneLocks[li]; renderAll(); } }, breaks.laneLocks[li] ? 'Held' : 'Lock'));
+  }));
+  const cv = h('canvas', { style: 'width:' + Math.max(g.len * 22, 300) + 'px', 'aria-label': 'Drum grid: tap to add or remove a hit' });
+  const ed = h('div.editor', { style: 'height:132px; position:relative' }, cv);
+  later(() => { cv.style.minWidth = '100%'; BL.drawDrumLoop(cv, g, COLORS, { locks: breaks.laneLocks }); });
+  cv.addEventListener('click', e => {
+    const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * g.len, li = 3 - Math.floor((e.clientY - r.top) / r.height * 4);
+    if (li < 0 || li > 3) return;
+    const lane = g.lanes[li];
+    const hit = lane.hits.findIndex(hh => Math.abs(BL.swingWarp(hh.pos, g.swing) - x) < 0.6);
+    if (hit >= 0) lane.hits.splice(hit, 1);
+    else { lane.hits.push({ pos: Math.min(g.len - 1, Math.round(x)), vel: 0.9 }); lane.hits.sort((a, b) => a.pos - b.pos); const s = drumFor(li); if (s && !T.playing) previewSound(breaks, s); }
+    renderAll();
+  });
+  const swOut = h('output', null, Math.round(g.swing * 100) + '%');
+  out.push(h('div.sec', null,
+    h('div.sec-head', null, h('h3', null, 'Playing ' + where), h('span.hint', null, 'Tap the grid to add or remove a hit. Locked lanes stay as they are when breeding.')),
+    h('div.lanes', null, heads, ed),
+    h('div.spread', null, h('span.label', null, 'Swing'), slider('swing', (g.swing - 0.5) / 0.25, v => { g.swing = 0.5 + v * 0.25; swOut.textContent = Math.round(g.swing * 100) + '%'; }, { label: 'Swing' }), swOut)));
+  return out;
+}
+
+// Synth: loops
+function synthLoops() {
+  const L = synth.loops, out = [];
+  const keyName = BL.NOTE_NAMES[st.key], scales = Object.keys(BL.SCALES);
+  const lo = h('input', { type: 'range', id: 'oct-lo', min: 0, max: 8, value: st.lo / 12 - 1, 'aria-label': 'Lowest octave' });
+  const hi = h('input', { type: 'range', id: 'oct-hi', min: 0, max: 8, value: st.hi / 12 - 1, 'aria-label': 'Highest octave' });
+  const octOut = h('output', { style: 'font:12px var(--mono);color:var(--muted)' }, 'C' + (st.lo / 12 - 1) + ' to C' + (st.hi / 12 - 1));
+  const paint = el => el.style.setProperty('--p', (el.value / 8 * 100) + '%');
+  [lo, hi].forEach(el => { paint(el); el.addEventListener('input', () => {
+    let a = +lo.value, b = +hi.value;
+    if (el === lo && a > b - 1) { a = b - 1; lo.value = a; } if (el === hi && b < a + 1) { b = a + 1; hi.value = b; }
+    if (a < 0) { a = 0; lo.value = 0; }
+    st.lo = (a + 1) * 12; st.hi = (b + 1) * 12; octOut.textContent = 'C' + a + ' to C' + b; paint(lo); paint(hi);
+  }); el.addEventListener('change', () => renderAll()); });
+  out.push(h('div.row', null,
+    h('span.label', null, 'Key'), btn(keyName, () => { st.key = (st.key + 1) % 12; renderAll(); }, { title: 'Next key' }),
+    h('span.label', null, 'Scale'), btn(st.scale, () => { st.scale = scales[(scales.indexOf(st.scale) + 1) % scales.length]; renderAll(); }, { title: 'Next scale' }),
+    h('span.note', null, 'Key moves what you hear now; scale and octaves steer the next breed or New.')));
+  out.push(h('div.row', null, h('span.label', null, 'Octaves'), h('div', { style: 'display:grid;gap:2px;flex:1 1 180px;min-width:0' }, lo, hi), octOut));
+  out.push(litterRow(L, synth));
+  out.push(h('div.tiles', null, L.items.map((g, i) => tile(L, i, synth,
+    canvasView('loop', cv => BL.drawNotes(cv, g.notes, g.bars * 4, st.lo, st.hi, C('--synth'), { barLine: COLORS.barLine, beatLine: '' }), { tr: synth, src: () => ({ kind: 'litter', i }), len: () => g.bars * 4 }),
+    g.bars + ' bars · ' + g.notes.length + ' notes',
+    { hear: k => { L.hear = k; launch(synth, { kind: 'litter', i: k }); }, keep: k => keepLoop(synth, k) }))));
+  const g = current(synth);
+  if (!g) { out.push(h('div.empty-note', null, 'Tap a tile or a clip to edit its loop.')); return out; }
+  const where = synth.src.kind === 'slot' ? 'clip ' + (synth.src.i + 1) : 'litter ' + 'ABCD'[synth.src.i];
+  const snd = synthSound();
+  const beats = g.bars * 4, rows = st.hi - st.lo + 1;
+  const cv = h('canvas', { style: 'width:' + Math.max(beats * 4 * 14, 300) + 'px;min-width:100%', 'aria-label': 'Piano roll: tap to add or remove a note' });
+  const ed = h('div.editor', { style: 'height:' + Math.min(260, Math.max(150, rows * 6)) + 'px' }, cv);
+  const sc = BL.SCALES[st.scale];
+  later(() => BL.drawNotes(cv, g.notes, beats, st.lo, st.hi, C('--synth'), { barLine: COLORS.barLine, beatLine: COLORS.beatLine, keyRows: m => sc.includes(BL.mod(m, 12)), keyFill: 'rgba(236,232,225,0.035)' }));
+  cv.addEventListener('click', e => {
+    const r = cv.getBoundingClientRect();
+    const s = Math.floor((e.clientX - r.left) / r.width * beats * 4) / 4, p = st.lo + Math.floor((r.bottom - e.clientY) / r.height * rows);
+    const k = g.notes.findIndex(n => n.p === p && s >= n.s - 0.01 && s < n.s + Math.max(n.l, 0.25));
+    if (k >= 0) g.notes.splice(k, 1);
+    else { g.notes.push({ s, l: 0.25, p, v: 0.8 }); g.notes.sort((a, b) => a.s - b.s); if (snd && !T.playing) BL.playSynth(snd, p + st.key, BL.ctx.currentTime + 0.01, 0.3, 0.8, synth.bus.input); }
+    renderAll();
+  });
+  const traitRows = BL.TRAITS.map(([a, b], i) => h('div.trait', null, h('span', null, a),
+    slider('trait-' + i, g.traits[i], (v, done) => { g.traits[i] = v; if (done) { setCurrent(synth, BL.synthRedraw(g, cp())); renderAll(); } }, { label: a + ' to ' + b }),
+    h('span', null, b),
+    h('button.lockbtn', { 'aria-pressed': String(synth.traitLocks[i]), onclick: () => { synth.traitLocks[i] = !synth.traitLocks[i]; renderDevice(); } }, synth.traitLocks[i] ? 'Locked' : 'Lock')));
+  out.push(h('div.sec', null,
+    h('div.sec-head', null, h('h3', null, 'Playing ' + where), h('span.chip', null, snd ? snd.name : 'no sound kept'), h('span.hint', null, 'Tap to add or remove a note.')),
+    snd ? null : h('div.empty-note', null, 'Keep a sound on the Sounds tab to hear the loops.'),
+    ed,
+    h('div.sec-head', null, h('h3', null, 'Traits'), h('span.hint', null, 'Let go of a slider to redraw this loop from its traits. Locked traits hold through breeding.')),
+    h('div.traits', null, traitRows)));
+  return out;
+}
+
+// Effects (any track)
+function effects(tr) {
+  const F = tr.fx, L = F.litter, out = [];
+  out.push(h('div.row', null, h('span.label', null, 'Character'), seg(Object.keys(BL.CHARACTERS), F.char, c => { F.char = c; L.refresh(); if (F.on) applyFx(tr); renderAll(); }, 'Character')));
+  out.push(h('div.row', null,
+    btn(F.on ? 'Effects on' : 'Effects off', () => { F.on = !F.on; applyFx(tr); renderAll(); }, { pressed: F.on }),
+    btn('Bypass', () => { F.bypass = !F.bypass; applyFx(tr); renderAll(); }, { pressed: F.bypass, disabled: !F.on }),
+    btn('Wild', () => { F.wild = !F.wild; renderDevice(); }, { pressed: F.wild, title: 'Breeding swaps, adds and removes effects more often' })));
+  out.push(litterRow(L, tr, () => F.on && applyFx(tr)));
+  out.push(h('div.tiles', null, L.items.map((g, i) => tile(L, i, tr,
+    h('div.chain', null, g.fx.map(f => h('span.chip' + (f.lock ? '.locked' : ''), null, BL.FX_TYPES[f.type].name))),
+    'mix ' + Math.round(g.mix * 100) + '%',
+    { hear: k => { L.hear = k; F.on = true; applyFx(tr); renderAll(); }, after: () => F.on && applyFx(tr) }))));
+  const g = L.heard;
+  let timer = null;
+  const rebuild = () => { clearTimeout(timer); timer = setTimeout(() => F.on && applyFx(tr), 120); };
+  const cards = g.fx.map((f, k) => {
+    const shown = BL.fxShow(f);
+    const outs = shown.map(s => h('output', null, s));
+    return h('div.fxcard' + (f.lock ? '.locked' : ''), null,
+      h('header', null, h('b', null, (k + 1) + '. ' + BL.FX_TYPES[f.type].name),
+        h('button.lockbtn', { style: 'width:52px', 'aria-pressed': String(f.lock), onclick: () => { f.lock = !f.lock; renderDevice(); } }, f.lock ? 'Locked' : 'Lock'),
+        h('button.lockbtn', { style: 'width:28px', 'aria-label': 'Remove ' + BL.FX_TYPES[f.type].name, onclick: () => { g.fx.splice(k, 1); applyFx(tr); renderAll(); } }, '×')),
+      BL.FX_TYPES[f.type].params.map((name, j) => h('div.set', null, h('span', null, name), outs[j],
+        slider('fx-' + tr.id + '-' + k + '-' + j, f.p[j], v => { f.p[j] = v; outs[j].textContent = BL.fxShow(f)[j]; rebuild(); }, { label: name }))));
+  });
+  const mixOut = h('output', null, Math.round(g.mix * 100) + '%');
+  out.push(h('div.sec', null,
+    h('div.sec-head', null, h('h3', null, 'Hearing ' + 'ABCD'[L.hear]), h('span.hint', null, F.on ? 'Applied to ' + tr.name + '. Locked effects are never changed, swapped or removed.' : 'Turn effects on, or tap a tile, to hear this chain on ' + tr.name + '.')),
+    h('div.spread', null, h('span.label', null, 'Mix'), slider('fx-mix-' + tr.id, g.mix, v => { g.mix = v; mixOut.textContent = Math.round(v * 100) + '%'; rebuild(); }, { label: 'Mix' }), mixOut),
+    g.fx.length ? h('div.fxcards', null, cards) : h('div.empty-note', null, 'This chain is empty. Breed or press New.')));
+  return out;
+}
+
+// ---------- render and animate
+const meters = new Map();
+function renderAll() {
+  draws = []; heads = [];
+  renderTransport(); renderTracks(); renderDevice();
+  draws.forEach(f => f());
+}
+let lastPos = '';
+function frame() {
+  const now = T.now();
+  const pos = T.playing ? (Math.floor(now / 4) + 1) + '.' + (Math.floor(BL.mod(now, 4)) + 1) : '1.1';
+  if (pos !== lastPos) { document.getElementById('pos').textContent = pos; lastPos = pos; }
+  for (const hd of heads) {
+    const active = T.playing && sameSrc(hd.tr.src, hd.src()) && now >= hd.tr.launch;
+    hd.el.hidden = !active;
+    if (active) { const L = hd.len(); hd.el.style.left = (BL.mod(now - hd.tr.launch, L) / L * 100) + '%'; }
+  }
+  meters.forEach((el, tr) => { const l = BL.ctx ? tr.bus.level() : 0; el.style.width = Math.min(100, l * 110) + '%'; });
+  requestAnimationFrame(frame);
+}
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderAll, 150); });
+renderAll();
+requestAnimationFrame(frame);
+})();
+</script>

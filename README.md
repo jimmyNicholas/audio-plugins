@@ -22,6 +22,7 @@ JUCE plugins, built with CMake. Each builds and tests on its own; see its README
 | [Bloodline Effects](plugins/bloodline-effects/) | Spike, mouse led. An audio effect that breeds whole chains of up to six effects (which, in what order, and their settings), for one drum or the bus, with a Wild switch. | [README](plugins/bloodline-effects/README.md) |
 | [Bloodline Breaks](plugins/bloodline-breaks/) | Prototype, mouse led. Breeds one-bar loops of up to four drums on pads 36 to 39, in Bloodline Synth's litter of eight, with soft-pull swing and hip hop styles, a taste learned from what you breed, and drag-out MIDI. | [README and checklist](plugins/bloodline-breaks/README.md) |
 | [Bloodline Drums 2](plugins/bloodline-drums-2/) | Prototype, mouse led. Bloodline Drums' voice bred in Bloodline Synth's litter of eight, with eight keep pads where the keyboard was: drag a sound onto a pad to keep it and start the next drum. | [README and checklist](plugins/bloodline-drums-2/README.md) |
+| [Bloodline Breaks 2](plugins/bloodline-breaks-2/) | Prototype, mouse led. Bloodline Drums 2 and Bloodline Breaks in one instrument, four tiles a side: breed and keep drums on the left, breed and keep loops that play them on the right. No MIDI between tracks needed, so it works as an AU. | [README and checklist](plugins/bloodline-breaks-2/README.md) |
 
 TAP started as part of the web app [next-annoying-piano](https://github.com/jimmyNicholas/next-annoying-piano) and moved here with its history on 2026-10-28.
 

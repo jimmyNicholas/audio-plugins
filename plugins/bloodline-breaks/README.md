@@ -11,9 +11,12 @@ What it guesses:
 
 ## Install on the Mac
 
-1. Open the [Bloodline Breaks workflow runs](https://github.com/jimmyNicholas/audio-plugins/actions/workflows/bloodline-breaks.yml), pick the latest green run on `claude/plugin-album-collection-5nvyi5`, and download **Bloodline-breaks-mac**.
-2. Unzip it (a zip inside a zip; unzip both). In Terminal, from inside the **Bloodline-breaks** folder: `sh install-bloodline-breaks.sh`.
-3. In Live: Preferences, Plug-Ins, Rescan. Load **Bloodline Breaks** (Plug-Ins, Jimmy Nicholas) on a MIDI track. Use the **VST3** if you want its MIDI out (Live does not take MIDI out of an AU).
+1. **Quick way**, once GitHub's command-line tool is set up ([see the root README](../../README.md#installing-plugins-on-the-mac)). In Terminal, from any folder:
+   ```
+   gh api -H "Accept: application/vnd.github.raw" "repos/jimmyNicholas/audio-plugins/contents/tools/install-plugin.sh?ref=claude/plugin-album-collection-5nvyi5" | sh -s bloodline-breaks
+   ```
+   It installs the latest green build on the branch. **By hand** instead: from the [Bloodline Breaks workflow runs](https://github.com/jimmyNicholas/audio-plugins/actions/workflows/bloodline-breaks.yml), download **Bloodline-breaks-mac** from the latest green run, unzip it twice, and run `sh install-bloodline-breaks.sh` from inside the **Bloodline-breaks** folder.
+2. In Live: Preferences, Plug-Ins, Rescan. Load **Bloodline Breaks** (Plug-Ins, Jimmy Nicholas) on a MIDI track. Use the **VST3** if you want its MIDI out (Live does not take MIDI out of an AU).
 
 ## How to play it
 

@@ -14,9 +14,12 @@ It breeds Bloodline Drums' 19-setting voice as it is, with the same zones (None,
 
 ## Install on the Mac
 
-1. Open the [Bloodline Drums 2 workflow runs](https://github.com/jimmyNicholas/audio-plugins/actions/workflows/bloodline-drums-2.yml), pick the latest green run on `claude/plugin-album-collection-5nvyi5`, and download **Bloodline-drums-2-mac**.
-2. Unzip it (a zip inside a zip; unzip both). In Terminal, from inside the **Bloodline-drums-2** folder: `sh install-bloodline-drums-2.sh`.
-3. In Live: Preferences, Plug-Ins, Rescan. Load **Bloodline Drums 2** (Plug-Ins, Jimmy Nicholas) on a MIDI track, VST3 or AU, not both. It has its own plugin ID, so it sits beside Bloodline Drums.
+1. **Quick way**, once GitHub's command-line tool is set up ([see the root README](../../README.md#installing-plugins-on-the-mac)). In Terminal, from any folder:
+   ```
+   gh api -H "Accept: application/vnd.github.raw" "repos/jimmyNicholas/audio-plugins/contents/tools/install-plugin.sh?ref=claude/plugin-album-collection-5nvyi5" | sh -s bloodline-drums-2
+   ```
+   It installs the latest green build on the branch. **By hand** instead: from the [Bloodline Drums 2 workflow runs](https://github.com/jimmyNicholas/audio-plugins/actions/workflows/bloodline-drums-2.yml), download **Bloodline-drums-2-mac** from the latest green run, unzip it twice, and run `sh install-bloodline-drums-2.sh` from inside the **Bloodline-drums-2** folder.
+2. In Live: Preferences, Plug-Ins, Rescan. Load **Bloodline Drums 2** (Plug-Ins, Jimmy Nicholas) on a MIDI track, VST3 or AU, not both. It has its own plugin ID, so it sits beside Bloodline Drums.
 
 ## How to play it
 

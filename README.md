@@ -24,6 +24,16 @@ JUCE plugins, built with CMake. Each builds and tests on its own; see its README
 | [Bloodline Drums 2](plugins/bloodline-drums-2/) | Prototype, mouse led. Bloodline Drums' voice bred in Bloodline Synth's litter of eight, with eight keep pads where the keyboard was: drag a sound onto a pad to keep it and start the next drum. | [README and checklist](plugins/bloodline-drums-2/README.md) |
 | [Bloodline Breaks 2](plugins/bloodline-breaks-2/) | Prototype, mouse led. Bloodline Drums 2 and Bloodline Breaks in one instrument, four tiles a side: breed and keep drums on the left, breed and keep loops that play them on the right. No MIDI between tracks needed, so it works as an AU. | [README and checklist](plugins/bloodline-breaks-2/README.md) |
 
+### Installing plugins on the Mac
+
+[`tools/install-plugin.sh`](tools/install-plugin.sh) installs the latest green Mac build of a plugin straight from CI: no browser, no zips, no quarantine flag. Once, install GitHub's command-line tool (on an Intel Mac, the `_macOS_universal.pkg` from [its releases](https://github.com/cli/cli/releases/latest); on Apple Silicon, `brew install gh` works too), then run `gh auth login`. After that, from any folder:
+
+```
+gh api -H "Accept: application/vnd.github.raw" "repos/jimmyNicholas/audio-plugins/contents/tools/install-plugin.sh?ref=claude/plugin-album-collection-5nvyi5" | sh -s bloodline-breaks-2
+```
+
+Swap the last word for `bloodline-breaks` or `bloodline-drums-2`. With a copy of the repo, `sh tools/install-plugin.sh bloodline-breaks-2` does the same. Then rescan in Live.
+
 TAP started as part of the web app [next-annoying-piano](https://github.com/jimmyNicholas/next-annoying-piano) and moved here with its history on 2026-10-28.
 
 ## Layout

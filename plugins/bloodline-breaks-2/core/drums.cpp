@@ -8,6 +8,44 @@ namespace bb2 {
 
 using namespace bloodline;
 
+namespace {
+// Perc: toms, rims, woodblocks, clicks. A first guess, to tune by ear. Real units, Body, Noise and
+// Click only (Grit and Out cover their full range in every zone, as in Bloodline Drums).
+struct RealRange { double lo, hi; };
+constexpr int kPercZoned = ClickTone + 1;
+const RealRange kPerc[kPercZoned] = {
+  { 200, 900 }, { 0, 6 }, { 0.005, 0.040 }, { 0, 0.002 }, { 0.020, 0.200 }, // Body
+  { 0.2, 0.6 }, { 1500, 8000 }, { 0.020, 0.150 }, { 0, 0.3 },              // Noise
+  { 0.2, 0.8 }, { 1500, 6000 },                                            // Click
+};
+} // namespace
+
+const char* zoneName(Zone z) {
+  switch (z) {
+    case Zone::Kick: return "Kick";
+    case Zone::Snare: return "Snare";
+    case Zone::Hats: return "Hats";
+    case Zone::Perc: return "Perc";
+    default: return "None";
+  }
+}
+
+const char* zoneLabel(Zone z) { return z == Zone::None ? "Drum" : zoneName(z); }
+
+Range zoneRange(Zone z, int s) {
+  switch (z) {
+    case Zone::Kick: return bloodline::zoneRange(bloodline::Zone::Kick, s);
+    case Zone::Snare: return bloodline::zoneRange(bloodline::Zone::Snare, s);
+    case Zone::Hats: return bloodline::zoneRange(bloodline::Zone::Hats, s);
+    case Zone::Perc: {
+      if (s < 0 || s >= kPercZoned) return { 0.0, 1.0 };
+      const double a = toNorm(s, kPerc[s].lo), b = toNorm(s, kPerc[s].hi);
+      return { std::min(a, b), std::max(a, b) };
+    }
+    default: return { 0.0, 1.0 };
+  }
+}
+
 Values DrumOps::fresh(breed::Rng& rng) const {
   Values v{};
   for (int i = 0; i < kNumSettings; ++i) {
@@ -50,7 +88,6 @@ breed::Litter<Values> makeLitter(std::uint32_t seed, DrumOps& ops) {
   return breed::Litter<Values>(Drums::kLitter, seed, ops, breed::Spread{ 0.25, 0.02, 0.5, 0.6, 1.6 });
 }
 bool validPad(int p) { return p >= 0 && p < Drums::kPads; }
-const char* label(Zone z) { return z == Zone::None ? "Other" : zoneName(z); }
 } // namespace
 
 Drums::Drums(std::uint32_t seed) : litter_(makeLitter(seed, ops_)) {}
@@ -68,8 +105,7 @@ void Drums::keep(int tile, int p) {
   pad.full = true;
   pad.sound = litter_.candidate(tile);
   pad.zone = ops_.zone;
-  pad.name = std::string(label(ops_.zone)) + " " + std::to_string(++kept_);
-  litter_.refresh(ops_);
+  pad.name = std::string(zoneLabel(ops_.zone)) + " " + std::to_string(++kept_);
 }
 
 void Drums::swapPads(int a, int b) {

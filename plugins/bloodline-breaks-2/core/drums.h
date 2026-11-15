@@ -1,6 +1,6 @@
 // PROTOTYPE (throwaway spike). Bloodline Breaks 2's left panel: Bloodline Drums 2's breeding, cut
 // to a litter of four, with eight keep pads. Each pad remembers the zone it was bred in, so the
-// right panel knows which pads are kicks, snares, hats or anything else. Plain C++17, no JUCE.
+// right panel knows which pads are kicks, snares, hats, percussion or wildcards. Plain C++17, no JUCE.
 #pragma once
 #include "../../shared/breed/litter.h"
 #include "settings.h"
@@ -12,7 +12,15 @@
 namespace bb2 {
 
 using bloodline::Values;
-using bloodline::Zone;
+using bloodline::Range;
+
+// This prototype's zones: Bloodline Drums' Kick, Snare and Hats, plus Perc, which lives only here.
+// None breeds anywhere; pads kept from it are wildcards ("Drum 1") that any lane may play.
+enum class Zone { None, Kick, Snare, Hats, Perc };
+constexpr int kNumZones = 5;
+const char* zoneName(Zone z);  // "None", "Kick", ... for the buttons
+const char* zoneLabel(Zone z); // "Drum", "Kick", ... for kept pads
+Range zoneRange(Zone z, int setting);
 
 // Bloodline Drums 2's rules, as they were: zones centre fresh draws and pull mutations back softly,
 // locks copy, Level is never bred; cross takes whole groups from one parent or the other.
@@ -50,12 +58,13 @@ public:
   void cross(int i, int j) { litter_.cross(i, j, ops_); }
   void fresh() { litter_.refresh(ops_); }
   bool back() { return litter_.back(); }
+  void setSpread(double s) { litter_.setSpread(s); }
   void setZone(Zone z) { ops_.zone = z; }
   void setLock(int s, bool on) { if (s >= 0 && s < bloodline::kNumSettings) ops_.locks[(size_t) s] = on; }
   void setValue(int s, double norm);
 
-  // Keeps candidate `tile` on pad `p` (replacing what was there), labelled with the zone, then
-  // draws a fresh litter. Back brings the old litter back; the pad stays kept.
+  // Keeps candidate `tile` on pad `p` (replacing what was there), labelled with the zone. The
+  // litter stays as it is, so the same tile or a sibling can be kept again.
   void keep(int tile, int p);
   void swapPads(int a, int b);
   void clearPad(int p);

@@ -1,15 +1,18 @@
 # Bloodline Breaks 2 (JUCE prototype)
 
-**Throwaway.** Bloodline Drums 2 and Bloodline Breaks in one instrument. An Audio Unit can't send MIDI to another track, so the loops now play the drums inside the same plugin. It answers: is breeding drums on the left and loops that play them on the right a good way to build a beat from nothing?
+**Throwaway.** Bloodline Drums 2 and Bloodline Breaks in one instrument. An Audio Unit can't send MIDI to another track, so the loops play the drums inside the same plugin. This is the second pass ([SPEC.md](SPEC.md)): the user's notes from the first pass fixed. It answers: with those fixed, does breeding a kit and loops that play it, in one window, feel like one instrument?
 
 ```
- LEFT: drums                         RIGHT: loops
- [zone][back][new]                   [style][back][new]
- [loop][spread]                      [playing][midi][swing][pull]
- [A][B][C][D]                        [A][B][C][D]
- [selected settings]                 [selected settings]
- [keep: 8 pads, 36 to 43]            [keep: 8 loops, 48 to 55]
+ LEFT: drums                                   RIGHT: loops
+ [ZONE None Kick Snare Hats Perc][back][new]   [STYLE None Boom bap Lo-fi Strung Neo soul][back][new]
+ [LOOP Off Quarters Boom bap 16ths In break]   [Playing][Drag MIDI][swing][pull][spread]
+   [SPREAD ----- 0.25]                         [A][B][C][D]
+ [A][B][C][D]                                  settings: four lanes [sound | sound][One/Stack/Flam][Lock],
+ settings: 19 settings, two columns              the free grid, this loop's swing
+ [keep: 8 pads, 36 to 43]                      [keep: 8 loops, 48 to 55]
 ```
+
+Saved sets from the first pass do not load (the state is now `bloodline-breaks-2 2`); the plugin starts fresh.
 
 ## Install on the Mac
 
@@ -23,32 +26,40 @@
 ## How to play it
 
 **Left: build a kit.**
-- **Zone** (Kick, Snare, Hats, Other) centres breeding. Other breeds anywhere.
+- **Zone:** None, Kick, Snare, Hats or Perc (toms, rims, woodblocks, clicks; a first guess at its ranges). None breeds anywhere.
 - Click a tile (A to D) to hear it. **Breed**, **Cross**, **Back** and **New** work as in Bloodline Drums 2.
-- **Loop** plays the heard drum in a rhythm. **In break** is new: it plays the heard drum inside the right panel's loop, on its own lane (a snare candidate replaces the snare lane), so you hear it in the beat. It starts the loop if nothing else is.
-- **Keep:** drag a tile onto a pad. The pad is labelled with the zone (such as "Snare 3") and the litter starts fresh. Drag pads to swap them, back onto the litter to breed from them; **x** clears.
+- **Spread** is a slider now: drag it to breed wider or narrower. Breeding still moves it (Again narrows, a new tile twice in a row widens), and **New** resets it.
+- **Loop** plays the heard drum in a rhythm. **In break** plays it inside the right panel's loop, on its own lane (a snare candidate replaces the snare lane), and turns Playing on.
+- **Keep:** drag a tile onto a pad. The pad is labelled with the zone ("Snare 3"; "Drum 2" from None, a wildcard any lane may use). **The litter stays as it is**, so you can keep the same tile or a sibling on another pad (two similar hats). Drag pads to swap them, back onto the litter to breed from them; **x** clears.
 
 **Right: breed loops that play the kit.**
-- **Style:** Boom bap, Lo-fi, Strung (loose and drunk, kicks pushed about, snares late) or Neo soul (slow, swung, ghost snares). A soft pull, never a rule. Choosing one moves the swing dial.
-- **Play** loops at Live's tempo when Live is stopped; when Live plays, it follows Live's bar. **Drag MIDI** drags what is playing into a clip slot. **Swing** and **Pull** steer the next breed or New.
-- Four lanes, bottom up: kick, snare, hat, perc. Each lane plays kept pads with its label; perc plays Other pads, or any kept drum if there are none. **Which pad, and whether to layer two, is the breeder's choice**, and it changes as you breed. A lane with no kept pad to play uses a built-in sound.
-- Click a loop tile to play it. Its settings show below: click a step (hit, ghost, rest), click a lane's sound to choose another (one pad at a time, then built-in), **Lock** holds a lane when breeding.
-- **Keep:** drag a loop onto a slot. Unlike the drums, the litter stays, so you can keep variations. Click a slot (or play 48 to 55) to switch to it; edits then change the kept loop. Drag slots to swap them or back onto the litter to breed from them.
+- **Style:** None (flat odds, no lean, no scatter, no rolls), Boom bap, Lo-fi, Strung (loose and drunk, kicks pushed about, snares late) or Neo soul (slow, swung, ghost snares). A soft pull, never a rule. Choosing a style moves the swing dial; None leaves it.
+- **Playing is a switch, off to start.** Off, the right panel is silent whatever Live does. On, it follows Live's bar while Live plays, and runs at Live's tempo from the top of the bar while Live is stopped.
+- **Drag MIDI** drags what is playing into a clip slot and **turns Playing off**, so the clip on the track plays the kit instead ("Playing off: the clip plays the kit" shows under the handle).
+- **Swing**, **Pull** and **Spread** steer the next breed or New. Spread works as on the left.
+- Four lanes, bottom up: kick, snare, hat, perc. **Every sound is a kept pad from the left; there are no built-in sounds.** A lane plays pads with its label first, then Drum pads, and now and then (more often for perc) a pad from another lane. With nothing kept, loops still breed but are silent.
+- **Breeding always changes unlocked lanes:** each child makes at least one change you can see on every unlocked lane (a hit added, removed or moved more than half a sixteenth), and more as the spread grows.
+- Click a loop tile to hear it. Its settings show below:
+  - **The grid is a guide, not a cage.** Click empty space to add a hit on the nearest sixteenth. Drag a hit sideways to move it freely, up and down for its velocity (drawn as its height); hold **Shift** to snap to sixteenths; past either end it wraps round. Click a hit without moving to remove it. Swing bends time smoothly, so hits off the grid swing too.
+  - **Each lane's head:** `[first sound | second sound][One/Stack/Flam][Lock]`. Click the first sound to cycle through the lane's choices (then none). **Drag a kept pad from the left onto either half** to set that sound. **+** adds a second sound (click to cycle), **x** clears it. The layer button cycles One, Stack (both at once) and Flam (the second follows 8 to 40 ms later, softer); in Flam it shows the ms, and dragging sideways on it changes them. With no second sound, Flam flams the first with itself.
+  - **Lock** holds a lane when breeding; locked lanes get a faint lavender band here and on every tile.
+- **Keep:** drag a loop onto a slot; the litter stays, so you can keep variations. Click a slot (or play 48 to 55) to switch to it; edits then change the kept loop. Drag slots to swap them or back onto the litter to breed from them.
 
-**MIDI in:** 36 to 43 play the pads, 44 to 47 the built-in kick, snare, hat and perc, 48 to 55 switch to a kept loop. A dragged-out clip uses the same notes, so it plays back through this plugin as it sounded.
+**MIDI in:** 36 to 43 always play the pads, whatever Playing is. 48 to 55 switch to a kept loop. A dragged-out clip uses 36 to 43 only (a flam's second note at its delay and level), so it plays back through this plugin as it sounded.
 
-**Saved with the set:** both litters, pads and their labels, kept loops, zone, locks, style, dial, pull, Loop and Play. Back's history is not.
+**Saved with the set:** both litters, pads and their labels, kept loops, zone, locks, style, dial, pull, Loop and Playing. Back's history is not.
 
 ## Checklist
 
-1. Does breeding a kit then breeding loops on it, in one window, feel like one instrument or two stuck together?
-2. Did **In break** help you choose drums? Did you want it on by default?
-3. Four tiles a side: enough, or did you miss the eight?
-4. The breeder picks which kick and whether to layer snares. Did its choices sound right? Too much layering, too little? Did you change sounds by hand often?
-5. Are the four styles right? Which is furthest off? Is Strung strung enough?
-6. Keeping loops without a fresh litter: right, or should it start fresh like the drums?
-7. Did switching kept loops from 48 to 55 (or a clip) work as a way to arrange?
-8. One thing to keep exactly, one to cut, one to add.
+1. With the notes fixed, does breeding a kit and loops that play it, in one window, feel like one instrument?
+2. **Free placement:** did dragging hits off the grid feel easy? Did Shift to snap get used? Is click to remove too easy to hit by accident?
+3. **Flam:** did the bred flams sound right? Were 8 to 40 ms and 40 to 80% the right ranges? Did you set layers by hand by dragging pads?
+4. **Keeping leaves the litter:** did keeping two similar hats work? Did you miss the fresh litter?
+5. **Unlocking:** after unlocking a lane, did breeding visibly change it now? Too much at a low spread?
+6. **Playing switch:** did Drag MIDI turning Playing off do what you wanted? Did In break turning it on?
+7. **No built-ins:** did it matter that loops are silent until you keep a drum? Did the breeder borrow pads across lanes too often, or not enough?
+8. **None and Perc:** are None style loops a useful blank? Does the Perc zone give toms, rims and clicks?
+9. One thing to keep exactly, one to cut, one to add.
 
 ## Building and testing here
 
@@ -62,4 +73,4 @@ cmake -S plugins/bloodline-breaks-2 -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
 CI runs the tests and pluginval at strictness 10, and builds the universal Mac VST3 and AU ([workflow](../../.github/workflows/bloodline-breaks-2.yml)).
 
-Known shortcuts: 4/4 and one bar only; no taste learning (Bloodline Breaks' taste had no room); Back after swapping pads can bring back loops pointing at the old pad order; the style numbers are a first guess by ear.
+Known shortcuts: 4/4 and one bar only; no triplet grid; no taste learning; Back after swapping pads can bring back loops pointing at the old pad order; the style numbers and the Perc ranges are a first guess by ear; a flam's second note that falls past the bar's end wraps to the top in the dragged-out clip; Stack with no second sound does nothing until one is added; first-pass sets do not load.

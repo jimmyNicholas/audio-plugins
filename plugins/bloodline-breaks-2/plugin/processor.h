@@ -1,7 +1,7 @@
 // PROTOTYPE (throwaway spike). The JUCE layer: one instrument that breeds drums (left) and loops
 // that play them (right), so nothing has to send MIDI to another track. Notes 36 to 43 play the
-// keep pads, 44 to 47 the built-in lane sounds, and 48 to 55 switch to a kept loop. The Studio is
-// saved with the set.
+// keep pads (always, whatever Playing is) and 48 to 55 switch to a kept loop. The right panel
+// sounds only while Playing is on. The Studio is saved with the set.
 #pragma once
 #include "studio.h"
 #include "voice.h"
@@ -53,7 +53,7 @@ public:
     bb2::Pattern playing;
     int loopSelected = 0, loopParent = -1, loopGeneration = 0, playingSlot = -1;
     double loopSpread = 0.2, beat = 0.0, bpm = 90.0;
-    bool loopBack = false, play = false, running = false, hostPlaying = false;
+    bool loopBack = false, play = false, running = false, hostPlaying = false, anyKept = false;
     bb2::PatternOps ops;
   };
   View view();
@@ -64,23 +64,23 @@ public:
   void setPlay(bool on);
   void hearDrum(int i); // selects and plays it
   void playPad(int p);
-  // What the loop is playing, as a one-bar MIDI file on 36 to 47, for dragging into Live.
+  // What the loop is playing, as a one-bar MIDI file on 36 to 43, for dragging into Live.
   juce::File writeMidiFile() const;
 
 private:
   bb2::Studio studio_;
   bb2::Audition audition_;
   bb2::Player player_;
-  std::array<bloodline::Voice, bb2::Drums::kPads> padVoices_;
-  std::array<bloodline::Voice, bb2::kLanes> builtInVoices_;
-  std::array<bb2::Values, bb2::kLanes> builtIn_;
+  // Two voices a pad, used in turn, so a flam never cuts its own first hit.
+  std::array<std::array<bloodline::Voice, 2>, bb2::Drums::kPads> padVoices_;
+  std::array<int, bb2::Drums::kPads> nextVoice_{};
   bloodline::Voice tileVoice_;
   bool play_ = false, hostPlaying_ = false;
   double bpm_ = 90.0;
   juce::CriticalSection lock_;
 
-  enum Kind { PadHit, BuiltInHit, LoopHit, AuditionHit, SlotSwitch };
-  struct Event { int at; Kind kind; int index; float vel; };
+  enum Kind { PadHit, LoopHit, AuditionHit, SlotSwitch };
+  struct Event { int at; Kind kind; int index; float vel; int lane = -1; bool primary = true; };
   std::vector<Event> events_;
   std::vector<bb2::Audition::Hit> auditionHits_;
   std::vector<bb2::Player::Event> loopHits_;

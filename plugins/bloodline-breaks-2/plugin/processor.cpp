@@ -1,13 +1,13 @@
 #include "processor.h"
 #include "editor.h"
 #include <algorithm>
+#include <cmath>
 
 using namespace bb2;
 
 BloodlineBreaks2Processor::BloodlineBreaks2Processor()
     : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       studio_(static_cast<std::uint32_t>(juce::Random::getSystemRandom().nextInt())) {
-  for (int l = 0; l < kLanes; ++l) builtIn_[(size_t) l] = builtIn(l);
   events_.reserve(kMaxHits * 4 + 256);
   auditionHits_.reserve(64);
   loopHits_.reserve(kMaxHits * 2);
@@ -16,8 +16,8 @@ BloodlineBreaks2Processor::BloodlineBreaks2Processor()
 
 void BloodlineBreaks2Processor::prepareToPlay(double sampleRate, int) {
   const juce::ScopedLock sl(lock_);
-  for (auto& v : padVoices_) v.prepare(sampleRate);
-  for (auto& v : builtInVoices_) v.prepare(sampleRate);
+  for (auto& pair : padVoices_)
+    for (auto& v : pair) v.prepare(sampleRate);
   tileVoice_.prepare(sampleRate);
   audition_.prepare(sampleRate);
   player_.prepare(sampleRate);
@@ -48,8 +48,8 @@ void BloodlineBreaks2Processor::processBlock(juce::AudioBuffer<float>& buffer, j
   int done = 0;
   auto renderTo = [&](int at) {
     if (at <= done) return;
-    for (auto& v : padVoices_) v.render(l + done, r + done, at - done);
-    for (auto& v : builtInVoices_) v.render(l + done, r + done, at - done);
+    for (auto& pair : padVoices_)
+      for (auto& v : pair) v.render(l + done, r + done, at - done);
     tileVoice_.render(l + done, r + done, at - done);
     done = at;
   };
@@ -64,7 +64,11 @@ void BloodlineBreaks2Processor::processBlock(juce::AudioBuffer<float>& buffer, j
   for (int p = 0; p < Drums::kPads; ++p)
     if (pendingPad_[(size_t) p]) {
       pendingPad_[(size_t) p] = false;
-      if (studio_.drums.pad(p).full) { padVoices_[(size_t) p].trigger(studio_.drums.pad(p).sound, 0.9f); padFlash_[(size_t) p] = 0; }
+      if (studio_.drums.pad(p).full) {
+        padVoices_[(size_t) p][(size_t) nextVoice_[(size_t) p]].trigger(studio_.drums.pad(p).sound, 0.9f);
+        nextVoice_[(size_t) p] ^= 1;
+        padFlash_[(size_t) p] = 0;
+      }
     }
 
   // MIDI in, the audition rhythm and the loop, merged in time order.
@@ -75,21 +79,21 @@ void BloodlineBreaks2Processor::processBlock(juce::AudioBuffer<float>& buffer, j
     const int at = juce::jlimit(0, juce::jmax(0, n - 1), meta.samplePosition), note = msg.getNoteNumber();
     const float vel = msg.getFloatVelocity();
     if (note >= kFirstPadNote && note < kFirstPadNote + Drums::kPads) events_.push_back({ at, PadHit, note - kFirstPadNote, vel });
-    else if (note >= kFirstBuiltInNote && note < kFirstBuiltInNote + kLanes) events_.push_back({ at, BuiltInHit, note - kFirstBuiltInNote, vel });
     else if (note >= kFirstSlotNote && note < kFirstSlotNote + Loops::kSlots) events_.push_back({ at, SlotSwitch, note - kFirstSlotNote, vel });
   }
   auditionHits_.clear();
   audition_.advance(n, bpm, auditionHits_);
   for (const auto& h : auditionHits_) events_.push_back({ h.offset, AuditionHit, 0, h.velocity });
   loopHits_.clear();
-  player_.advance(studio_.loops.playing(), n, bpm, hostBeat, play_ || audition_.inBreak(), loopHits_);
-  for (const auto& h : loopHits_) events_.push_back({ h.offset, LoopHit, h.lane, h.velocity });
+  player_.advance(studio_.loops.playing(), studio_.loops.ops(), n, bpm, hostBeat, play_, loopHits_);
+  for (const auto& h : loopHits_) events_.push_back({ h.offset, LoopHit, h.pad, h.velocity, h.lane, h.primary });
   std::stable_sort(events_.begin(), events_.end(), [](const Event& a, const Event& b) { return a.at < b.at; });
 
   const int standIn = audition_.inBreak() ? laneFor(studio_.drums.zone()) : -1;
   auto playPadNow = [&](int p, float vel) {
     if (!studio_.drums.pad(p).full) return false;
-    padVoices_[(size_t) p].trigger(studio_.drums.pad(p).sound, vel);
+    padVoices_[(size_t) p][(size_t) nextVoice_[(size_t) p]].trigger(studio_.drums.pad(p).sound, vel);
+    nextVoice_[(size_t) p] ^= 1;
     padFlash_[(size_t) p] = 0;
     return true;
   };
@@ -97,18 +101,15 @@ void BloodlineBreaks2Processor::processBlock(juce::AudioBuffer<float>& buffer, j
     renderTo(e.at);
     switch (e.kind) {
       case PadHit: playPadNow(e.index, e.vel); break;
-      case BuiltInHit: builtInVoices_[(size_t) e.index].trigger(builtIn_[(size_t) e.index], e.vel); break;
       case SlotSwitch: studio_.loops.playSlot(e.index); break;
       case AuditionHit: tileVoice_.trigger(studio_.drums.heard(), e.vel); tileFlash_ = 0; break;
-      case LoopHit: {
-        if (e.index == standIn) { tileVoice_.trigger(studio_.drums.heard(), e.vel); tileFlash_ = 0; break; }
-        const std::uint8_t mask = studio_.loops.playing().sound[(size_t) e.index];
-        bool played = false;
-        for (int p = 0; p < Drums::kPads; ++p)
-          if ((mask >> p) & 1) played |= playPadNow(p, e.vel);
-        if (!played) builtInVoices_[(size_t) e.index].trigger(builtIn_[(size_t) e.index], e.vel);
+      case LoopHit:
+        if (e.lane == standIn) {
+          if (e.primary) { tileVoice_.trigger(studio_.drums.heard(), e.vel); tileFlash_ = 0; }
+          break;
+        }
+        if (e.index >= 0) playPadNow(e.index, e.vel);
         break;
-      }
     }
   }
   renderTo(n);
@@ -176,6 +177,7 @@ BloodlineBreaks2Processor::View BloodlineBreaks2Processor::view() {
   v.loopSpread = ll.spread();
   v.loopBack = ll.canGoBack();
   v.ops = lo.ops();
+  v.anyKept = lo.ops().anyKept();
   v.play = play_;
   v.running = player_.running();
   v.hostPlaying = hostPlaying_;
@@ -189,10 +191,12 @@ void BloodlineBreaks2Processor::edit(const std::function<void(Studio&)>& change)
   change(studio_);
 }
 
+// Choosing In break turns Playing on, so the candidate is heard in the beat.
 void BloodlineBreaks2Processor::setAudition(bool on, int pattern) {
   const juce::ScopedLock sl(lock_);
   audition_.setPattern(pattern);
   audition_.setOn(on);
+  if (audition_.inBreak()) play_ = true;
 }
 
 void BloodlineBreaks2Processor::setPlay(bool on) { const juce::ScopedLock sl(lock_); play_ = on; }
@@ -208,35 +212,35 @@ void BloodlineBreaks2Processor::playPad(int p) {
   if (p >= 0 && p < Drums::kPads) pendingPad_[(size_t) p] = true;
 }
 
-// Each hit goes on the notes of the pads its lane plays (layers too), or on the lane's built-in
-// note, so the clip plays back through this plugin as it sounded.
+// Each hit goes on the notes of the pads its lane plays (a stack on both, a flam's second note at
+// its delay and level), so the clip plays back through this plugin as it sounded. Lanes with no
+// kept pad are left out.
 juce::File BloodlineBreaks2Processor::writeMidiFile() const {
   Pattern p;
-  std::array<bool, Drums::kPads> full{};
+  PatternOps ops;
+  double bpm = 90.0;
   juce::String name;
   {
     const juce::ScopedLock sl(lock_);
     p = studio_.loops.playing();
-    for (int k = 0; k < Drums::kPads; ++k) full[(size_t) k] = studio_.drums.pad(k).full;
+    ops = studio_.loops.ops();
+    bpm = bpm_;
     const int slot = studio_.loops.playingSlot();
     name = slot >= 0 ? "slot " + juce::String(slot + 1) : juce::String::charToString((juce::juce_wchar) ('A' + studio_.loops.litter().selected()));
   }
   constexpr int kTicks = 960;
   juce::MidiMessageSequence seq;
-  std::array<Hit, kMaxHits> hits{};
-  const int count = hitsOf(p, hits.data(), kMaxHits);
+  std::vector<Hit> hits((size_t) kMaxHits);
+  const int count = hitsOf(p, ops, hits.data(), kMaxHits);
   auto add = [&](int note, double on, float vel) {
     seq.addEvent(juce::MidiMessage::noteOn(1, note, juce::jlimit(0.01f, 1.0f, vel)), on);
     seq.addEvent(juce::MidiMessage::noteOff(1, note), std::min(on + kTicks / 16.0, 4.0 * kTicks - 1));
   };
   for (int i = 0; i < count; ++i) {
     const Hit& h = hits[(size_t) i];
-    const double on = h.beat * kTicks;
-    const std::uint8_t mask = p.sound[(size_t) h.lane];
-    bool any = false;
-    for (int k = 0; k < Drums::kPads; ++k)
-      if (((mask >> k) & 1) && full[(size_t) k]) { add(kFirstPadNote + k, on, h.velocity); any = true; }
-    if (!any) add(kFirstBuiltInNote + h.lane, on, h.velocity);
+    if (h.pad < 0) continue;
+    const double beat = std::fmod(h.beat + h.delayMs * 0.001 * juce::jlimit(20.0, 400.0, bpm) / 60.0, 4.0);
+    add(kFirstPadNote + h.pad, beat * kTicks, h.velocity);
   }
   seq.updateMatchedPairs();
   juce::MidiFile file;

@@ -12,7 +12,7 @@ SLUG=$1
 
 if [ -z "$SLUG" ]; then
   echo "Which plugin? For example: sh install-plugin.sh bloodline-breaks-2"
-  echo "Plugins with Mac builds: bloodline-breaks, bloodline-drums-2, bloodline-breaks-2"
+  echo "Plugins with Mac builds: bloodline-breaks, bloodline-drums-2, bloodline-breaks-2, bloodline-synth-2"
   exit 1
 fi
 command -v gh >/dev/null || { echo "GitHub's command-line tool (gh) is not installed."; exit 1; }

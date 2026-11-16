@@ -225,6 +225,8 @@ details.grp[open] summary::after { content: "−"; }
 .barpick button[aria-pressed="true"] { border-color: var(--accent); color: var(--fg); }
 
 /* pitched */
+.dtwhy { margin: -6px 0 2px 84px; font-size: 11px; }
+@media (max-width: 440px) { .dtwhy { margin-left: 0; } }
 .roll { display: block; width: 100%; height: 150px; border-radius: 8px; background: var(--bg); }
 
 /* tabs */
@@ -284,6 +286,16 @@ const LCOL = { Kick: 'var(--kick)', Snare: 'var(--snare)', Hats: 'var(--hat)', P
 const ROLE = { Kick: 'kick', Snare: 'snare', Hats: 'hat', Perc: 'perc', None: 'drum' };
 const KCOL = { drums: 'var(--accent)', bass: 'var(--bass)', synth: 'var(--synth)' };
 const ZONES = { bass: ['Sub', 'Pluck', 'Round', 'Growl'], synth: ['Pad', 'Pluck', 'Lead', 'Keys'] };
+const DTRAITS = [ // name, what it steers
+  ['Tight', 'How closely hits sit on the groove. Low drifts loose, high locks to the grid and swing.'],
+  ['Dynamic', 'Accent range: loud beats against soft off-beats.'],
+  ['Ghosts', 'Quiet notes between the main hits.'],
+  ['Dense', 'How many hits a bar.'],
+  ['Off beat', 'Hits away from the beat: syncopation.'],
+  ['Repeat', 'How much later bars copy the first. Low changes every bar.'],
+  ['Fills', 'Variation in the last beat before the loop comes round.'],
+  ['Anchored', 'Keeps beat 1 and the backbeat fixed. Low lets them move.'],
+];
 const TRAITS = ['Tonal', 'Poly', 'Rhythmic', 'Off beat', 'Dynamic', 'Open', 'Dense', 'Long'];
 const CHARS = ['Warm', 'Dusty', 'Wide', 'Bright', 'Dark', 'Wet'];
 const FX = { Warm: ['Tape sat', 'Low shelf +2', 'Glue comp'], Dusty: ['Bitcrush 12', 'Vinyl hiss', 'Low-pass 7k'], Wide: ['Chorus', 'Haas 12 ms', 'Room 0.8 s'], Bright: ['Exciter', 'High shelf +3', 'Delay 1/8'], Dark: ['Low-pass 3k', 'Plate 1.6 s', 'Comp slow'], Wet: ['Delay 3/16', 'Hall 2.4 s', 'Gate 1/4'] };
@@ -316,7 +328,7 @@ function drumLane(name, padsIn, chosen) {
   const p = clone(padsIn), rows = chosen.map(i => part(p[i] ? ROLE[p[i].label] : 'drum', 2));
   return { id: ++laneN, name, kind: 'drums', level: 0.78, pan: 0, mute: false, solo: false, feel: 'on', followSwing: true, levelLocked: false, fx: null,
     sound: { zone: 'Kick', hear: 0, items: [0, 1, 2, 3].map(drumVals), pads: p },
-    pattern: { chosen, hear: 0, items: [0, 1, 2, 3].map(() => chosen.map((i, r) => part(p[i] ? ROLE[p[i].label] : 'drum', 2))), rows, writtenAs: chosen.map(i => p[i] && p[i].label), rowLocks: [false, false, false, false], rowFeel: ['on', 'behind', 'on', 'ahead'], kept: [null, null, null, null] } };
+    pattern: { chosen, hear: 0, items: [0, 1, 2, 3].map(() => chosen.map((i, r) => part(p[i] ? ROLE[p[i].label] : 'drum', 2))), rows, writtenAs: chosen.map(i => p[i] && p[i].label), traits: [0.7, 0.55, 0.35, 0.45, 0.4, 0.75, 0.3, 0.9], rowTraits: [null, null, null, null], traitScope: -1, traitLocks: [false, false, false, false, false, false, false, false], rowLocks: [false, false, false, false], rowFeel: ['on', 'behind', 'on', 'ahead'], kept: [null, null, null, null] } };
 }
 function pitchedLane(kind, name) {
   return { id: ++laneN, name, kind, level: kind === 'bass' ? 0.7 : 0.55, pan: kind === 'synth' ? -0.2 : 0, mute: false, solo: false, feel: kind === 'bass' ? 'behind' : 'on', followSwing: true, levelLocked: false, fx: null,
@@ -479,8 +491,18 @@ function drumPattern(l) {
     '<div class="row between"><span class="lab">Plays · left to right</span><span class="hint">pad 1 → bottom row</span></div><div class="plays">' + plays + '</div>' +
     (state.bars > 1 ? '<div class="barpick" style="grid-template-columns:repeat(' + state.bars + ',minmax(0,1fr))">' + Array.from({ length: state.bars }, (_, b) => '<button aria-pressed="' + (b === 0) + '">Bar ' + (b + 1) + '</button>').join('') + '</div>' : '') +
     '<div class="gridbox">' + heads + '<div class="steps">' + counts + lanes + '</div></div>' + rewrites + '</div>' +
-    '<div class="card mk moved"><div class="row between"><span class="lab">Feel per row, top down</span>' + mark('moved', 'from Groove tab') + '</div>' + feel + '<p class="hint">Kick rows stay on time whatever the groove\'s drift. The lane\'s own feel is on its Track card.</p></div>' +
+    drumTraits(l) + '<div class="card mk moved"><div class="row between"><span class="lab">Feel per row, top down</span>' + mark('moved', 'from Groove tab') + '</div>' + feel + '<p class="hint">Kick rows stay on time whatever the groove\'s drift. The lane\'s own feel is on its Track card.</p></div>' +
     '<div class="card"><div class="row between"><span class="lab">Keep loops · 48 to 51</span></div><div class="keep">' + P.kept.map((k, i) => k ? '<div class="pad full" style="--kc:var(--accent)"><span class="no">' + (i + 1) + '</span>' + drumPic(k, labels, 30) + '</div>' : '<button class="pad target" data-act="keeploop" data-id="' + l.id + '" data-i="' + i + '"><span class="no">' + (48 + i) + '</span><span class="dr">Keep ' + L[P.hear] + '</span></button>').join('') + '</div></div>';
+}
+function drumTraits(l) {
+  const P = l.pattern, S = l.sound, sc = P.traitScope, own = sc >= 0 && P.rowTraits[sc], vals = own || P.traits;
+  const scope = '<div class="chips">' + chip('All rows', sc < 0, 'tscope', -1, 'var(--accent)') + [0, 1, 2, 3].map(r => { const p = S.pads[P.chosen[r]]; return p ? '<button class="chip" data-act="tscope" data-v="' + r + '" aria-pressed="' + (sc === r) + '" style="--on:' + LCOL[p.label] + '">' + (r + 1) + ' ' + p.label + (P.rowTraits[r] ? ' ·' : '') + '</button>' : ''; }).join('') + '</div>';
+  const col = sc >= 0 && !own ? 'var(--faint)' : sc >= 0 ? LCOL[S.pads[P.chosen[sc]].label] : 'var(--accent)';
+  const sl = DTRAITS.map(([n, why], i) => slider('dt-' + i, n, vals[i], Math.round(vals[i] * 100), 'data-dtrait="' + i + '"', '<button class="lock" data-act="dtlock" data-i="' + i + '" aria-pressed="' + P.traitLocks[i] + '">' + (P.traitLocks[i] ? 'Locked' : 'Lock') + '</button>', col) + '<p class="hint dtwhy">' + why + '</p>').join('');
+  const p = sc >= 0 ? S.pads[P.chosen[sc]] : null;
+  return '<div class="card mk new"><div class="row between"><span class="row"><span class="lab">Traits</span>' + mark('new') + '</span><span class="hint">Like Bass and Synth. Steer the next Breed or New.</span></div>' + scope +
+    (sc >= 0 ? '<div class="row between"><span class="hint">' + (own ? 'Row ' + (sc + 1) + ' (' + esc(p.name) + ') has its own traits.' : 'Row ' + (sc + 1) + ' follows All rows. Move a slider to give it its own.') + '</span>' + (own ? '<button class="btn small" data-act="tfollow">Follow All rows</button>' : '') + '</div>' : '') +
+    sl + '<p class="hint">Starting values come from the groove: Complexity sets Dense and Off beat, Groove sets Tight and Dynamic. Moving a slider here overrides them for this lane only, so one groove can drive a sparse kit and a busy one.</p></div>';
 }
 function pitchSound(l) {
   const S = l.sound, c = KCOL[l.kind];
@@ -535,6 +557,7 @@ function changesSheet() {
     item('new', 'Master', 'level, effects and the −1 dB limiter with a readout; Auto level; Undo for mixing edits.') +
     item('new', 'Add part', 'in two steps, Sound then Pattern, with Cancel, Back to Sound and Add to track. The draft plays in the Track or alone.') +
     item('new', 'Labels on kept pads', 'Kick, Snare, Hats, Perc or None, from the pad or from its row. Rewrite row applies a new label to the current loop.') +
+    item('new', 'Drum traits', 'under the break grid: Tight, Dynamic, Ghosts, Dense, Off beat, Repeat, Fills and Anchored, for all rows or one row, with locks.') +
     item('new', 'Bass and synth', 'voices bred from zones with a phrase in the Track\'s key, then note loops from traits. A bass can follow a drum lane\'s kick.') +
     item('new', 'Effects', 'a litter of four chains bred from a character, with bypass and locks, on every lane and the master.') +
     item('new', 'Key and scale', 'set once in the Track.') +
@@ -627,6 +650,9 @@ document.addEventListener('click', e => {
     case 'relabel': relabelSheet(l, +d.i); return;
     case 'setlabel': { const sh = document.querySelector('.sheet'), ln = laneById(+sh.dataset.lane), p = ln.sound.pads[+sh.dataset.pad]; if (p.label === d.v) return; snapshot('relabel'); p.label = d.v; closeSheet(); draw(); toast(p.name + ' plays as ' + d.v + ' from the next Breed or New.'); return; }
     case 'rewrite': { const r = +d.r, P = l.pattern, p = l.sound.pads[P.chosen[r]]; snapshot('rewrite row'); P.rows[r] = part(ROLE[p.label], state.bars); P.writtenAs[r] = p.label; draw(); toast('Row ' + (r + 1) + ' rewritten as ' + p.label + '.'); return; }
+    case 'tscope': l.pattern.traitScope = +d.v; draw(); return;
+    case 'tfollow': l.pattern.rowTraits[l.pattern.traitScope] = null; draw(); return;
+    case 'dtlock': l.pattern.traitLocks[+d.i] = !l.pattern.traitLocks[+d.i]; draw(); return;
     case 'rowlock': l.pattern.rowLocks[+d.r] = !l.pattern.rowLocks[+d.r]; draw(); return;
     case 'rowfeel': l.pattern.rowFeel[+d.r] = d.v; draw(); return;
     case 'choose': { const S = l.sound, slot = +d.i; sheet('<h3>Row ' + (slot + 1) + ' plays</h3><div class="keep">' + S.pads.map((p, i) => p ? '<button class="pad full" data-act="pick" data-id="' + l.id + '" data-slot="' + slot + '" data-i="' + i + '" style="--kc:' + LCOL[p.label] + '"><span class="no">' + (36 + i) + '</span><span class="nm">' + esc(p.name) + '</span><span class="labelbtn" style="pointer-events:none">' + p.label + '</span></button>' : '<div class="pad"><span class="no">' + (36 + i) + '</span><span class="dr">empty</span></div>').join('') + '</div>'); return; }
@@ -650,6 +676,7 @@ document.addEventListener('input', e => {
   if (d.pan) { const l = laneById(+d.pan); l.pan = n * 2 - 1; document.getElementById('pno-' + l.id).textContent = panTxt(l.pan); }
   if (d.mlevel) { state.master.level = n; t.parentElement.querySelector('output').textContent = db(n * 0.78) + ' dB'; }
   if (d.gset) { state.groove.items[state.groove.hear][d.gset] = n * 100; t.parentElement.querySelector('output').textContent = Math.round(n * 100); }
+  if (d.dtrait) { const l = openLane(), P = l.pattern, sc = P.traitScope; if (sc >= 0 && !P.rowTraits[sc]) P.rowTraits[sc] = P.traits.slice(); const arr = sc >= 0 ? P.rowTraits[sc] : P.traits; arr[+d.dtrait] = n; t.parentElement.querySelector('output').textContent = Math.round(n * 100); }
   if (d.trait) { const l = openLane(); l.pattern.traits[+d.trait] = n; t.parentElement.querySelector('output').textContent = Math.round(n * 100); }
   if (d.fxamt) { const id = document.querySelector('.sheet').dataset.fx, tgt = id === 'master' ? state.master : laneById(+id); tgt.fx.chain[+d.fxamt].amt = n; t.parentElement.querySelector('output').textContent = Math.round(n * 100) + '%'; }
 });
@@ -659,7 +686,7 @@ document.addEventListener('change', e => {
   if (d.act === 'ease') { state.ease = t.checked; draw(); return; }
   if (d.act === 'followswing') { const l = laneById(+d.id); snapshot('swing'); l.followSwing = t.checked; draw(); toast(l.name + (t.checked ? ' follows the groove\'s swing.' : ' plays straight.')); return; }
   if (d.rename) { const l = laneById(+d.rename); if (t.value.trim()) { snapshot('rename'); l.name = t.value.trim(); draw(); } return; }
-  if (d.level || d.pan || d.mlevel || d.gset) draw();
+  if (d.level || d.pan || d.mlevel || d.gset || d.dtrait) draw();
 });
 window.trackMockGo = function (fn) { fn(state); draw(); }; // screenshots set up states through this
 draw();

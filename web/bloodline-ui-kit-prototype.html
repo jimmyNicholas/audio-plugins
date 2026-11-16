@@ -1,0 +1,394 @@
+<title>Bloodline UI Kit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* PROTOTYPE, throwaway. Layout: a palette of every Bloodline UI piece on the left, a 12-column board on the right to drag them into; stacked under 1000px. One deliberate dark look, matching the plugins. UI only: nothing makes sound. */
+:root {
+  color-scheme: dark;
+  --bg: #15171c; --panel: #1e2128; --panel-2: #262a33; --line: #343945; --fg: #ece8e1; --muted: #8d929d; --faint: #5d626d;
+  --kick: #ff6f61; --snare: #6cb6ff; --hat: #f2c94c; --keep: #f2c14e; --lock: #c9b8ff; --warn: #ff8a65;
+  --p-bd: #ff8a65; --p-bd2: #ffb38a; --p-bb: #f2c94c; --p-bb2: #e6d77a; --p-be: #b48cff; --p-bs: #6cb6ff; --p-bs2: #8fd0ff; --p-gr: #5fd3c4; --p-sh: #a9b0bc;
+  --display: 'Space Grotesk', 'Avenir Next', system-ui, sans-serif;
+  --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --cw: 80px; --rh: 66px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { background: var(--bg); color: var(--fg); margin: 0; }
+body { font: 14px/1.4 var(--body); -webkit-tap-highlight-color: transparent; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg); }
+button, input, textarea { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.pad-x { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding-block: 10px; max-width: 1600px; margin: 0 auto; }
+.brand { display: flex; align-items: baseline; gap: 8px; margin-right: auto; }
+.brand b { font: 700 18px/1 var(--display); }
+.brand small { color: var(--muted); font: 11px var(--mono); }
+.btn { border: 1px solid var(--line); background: var(--panel-2); height: 32px; padding: 0 11px; border-radius: 7px; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.btn:hover { border-color: var(--faint); }
+.btn.small { height: 24px; padding: 0 7px; font-size: 11px; }
+.btn.primary { background: var(--fg); color: var(--bg); border-color: transparent; }
+.hint { color: var(--muted); font-size: 12px; }
+
+.wrap { max-width: 1600px; margin: 0 auto; padding-block: 14px 48px; display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1000px) { .wrap { grid-template-columns: 360px minmax(0, 1fr); } .palette { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 64px); max-height: calc(100vh - 80px); overflow: auto; } }
+
+/* palette */
+.palette { display: grid; gap: 10px; min-width: 0; padding-right: 4px; }
+.filters { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { border: 1px solid var(--line); background: none; border-radius: 999px; height: 26px; padding: 0 10px; font-size: 12px; cursor: pointer; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.chip[aria-pressed="true"] { color: var(--fg); border-color: var(--c); background: var(--panel); }
+.search { height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); padding: 0 10px; width: 100%; }
+.group { display: grid; gap: 8px; }
+.group h3 { margin: 6px 0 0; font: 700 14px var(--display); display: flex; align-items: center; gap: 8px; }
+.group h3 i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.group h3 small { font: 11px var(--mono); color: var(--faint); font-weight: 400; }
+.piece { background: var(--panel); border-radius: 10px; padding: 8px; display: grid; gap: 6px; border-left: 3px solid var(--c); cursor: grab; touch-action: none; user-select: none; }
+.piece:hover { background: var(--panel-2); }
+.piece .head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.piece .name { font: 600 13px var(--body); flex: 1; min-width: 0; }
+.piece .desc { font-size: 11px; color: var(--muted); }
+.ident { font: 11px var(--mono); color: var(--c); background: var(--bg); border-radius: 5px; padding: 3px 6px; user-select: all; cursor: text; overflow-wrap: anywhere; }
+.preview { height: 64px; background: var(--bg); border-radius: 6px; padding: 5px; overflow: hidden; pointer-events: none; }
+.new { font: 600 9px var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--bg); background: var(--p-gr); border-radius: 3px; padding: 1px 4px; }
+
+/* board */
+.boardcol { display: grid; gap: 10px; min-width: 0; }
+.bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bar h2 { margin: 0; font: 700 20px/1 var(--display); margin-right: auto; }
+.scroller { overflow-x: auto; border-radius: 10px; }
+.board { position: relative; min-width: 720px; background-color: var(--panel); border-radius: 10px;
+  background-image: linear-gradient(to right, rgba(236,232,225,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(236,232,225,0.06) 1px, transparent 1px);
+  background-size: var(--cw) var(--rh); }
+.board.over { box-shadow: inset 0 0 0 2px var(--p-gr); }
+.drop { position: absolute; border: 2px dashed var(--p-gr); border-radius: 8px; background: rgba(95,211,196,0.08); pointer-events: none; }
+.placed { position: absolute; padding: 3px; touch-action: none; }
+.placed .inner { height: 100%; background: var(--panel-2); border-radius: 8px; border-top: 3px solid var(--c); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.25); }
+.placed.clash .inner { box-shadow: 0 0 0 2px var(--warn); }
+.placed.dragging { opacity: 0.85; z-index: 10; }
+.placed .ph { display: flex; align-items: center; gap: 6px; padding: 3px 5px; cursor: grab; flex: none; min-width: 0; }
+.placed .ph .ident { user-select: none; cursor: grab; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 2px 5px; }
+.placed .ph button { flex: none; }
+.placed .body { flex: 1; min-height: 0; padding: 0 6px 6px; overflow: hidden; pointer-events: none; }
+.placed .rs { position: absolute; right: 3px; bottom: 3px; width: 16px; height: 16px; cursor: nwse-resize; border-right: 3px solid var(--muted); border-bottom: 3px solid var(--muted); border-bottom-right-radius: 6px; touch-action: none; }
+.ghost { position: fixed; z-index: 50; pointer-events: none; background: var(--panel-2); border-left: 3px solid var(--c); border-radius: 8px; padding: 6px 10px; font: 600 12px var(--body); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+details.io { background: var(--panel); border-radius: 10px; padding: 8px 12px; }
+details.io summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+details.io textarea { width: 100%; min-height: 140px; margin-top: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 11px/1.45 var(--mono); color: var(--fg); }
+.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; font-size: 13px; z-index: 60; max-width: calc(100% - 32px); }
+
+/* mock controls: static look-alikes, scaled by their container */
+.m { display: flex; flex-direction: column; gap: 4px; height: 100%; min-height: 0; font-size: 10px; color: var(--muted); }
+.m-row { display: flex; gap: 3px; flex: 1; min-height: 14px; }
+.m-row.fixed { flex: none; }
+.m-pad { flex: 1; border: 1px solid var(--line); background: var(--bg); border-radius: 4px; display: flex; align-items: center; justify-content: center; font: 600 10px var(--display); color: var(--fg); min-width: 0; overflow: hidden; white-space: nowrap; }
+.m-pad.on { border-color: var(--keep); }
+.m-pad.act { background: var(--panel); color: var(--muted); font: 500 9px var(--body); }
+.m-pad.empty { border-style: dashed; color: var(--faint); }
+.m-seg { display: flex; gap: 2px; background: var(--bg); border-radius: 4px; padding: 2px; flex: none; flex-wrap: wrap; }
+.m-seg span { padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+.m-seg span.on { background: var(--c, var(--fg)); color: var(--bg); }
+.m-sl { display: grid; grid-template-columns: 52px 1fr 34px; gap: 4px; align-items: center; flex: none; }
+.m-sl b { font-weight: 400; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.m-sl em { height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--c, var(--fg)) var(--v), var(--line) var(--v)); font-style: normal; }
+.m-sl u { text-decoration: none; font-family: var(--mono); text-align: right; color: var(--fg); }
+.m-sl.lk { grid-template-columns: 52px 1fr 34px 12px; }
+.m-sl s { width: 12px; height: 10px; border: 1px solid var(--line); border-radius: 2px; text-decoration: none; }
+.m-sl s.on { background: var(--lock); border-color: transparent; }
+.m-tiles { display: grid; gap: 3px; flex: 1; min-height: 0; }
+.m-tile { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; display: flex; flex-direction: column; padding: 2px; gap: 2px; min-width: 0; min-height: 0; }
+.m-tile.on { border-color: var(--c, var(--fg)); }
+.m-tile b { font: 700 9px var(--display); color: var(--fg); }
+.m-tile svg { flex: 1; width: 100%; min-height: 0; }
+.m-btns { display: flex; gap: 3px; flex: none; flex-wrap: wrap; }
+.m-btn { border: 1px solid var(--line); background: var(--panel); border-radius: 3px; padding: 1px 6px; white-space: nowrap; color: var(--fg); }
+.m-btn.on { background: var(--c, var(--fg)); color: var(--bg); border-color: transparent; }
+.m-svg { flex: 1; min-height: 0; width: 100%; background: var(--bg); border-radius: 4px; }
+.m-dial { display: flex; align-items: center; gap: 6px; flex: none; }
+.m-dial i { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--c, var(--fg)); border-right-color: var(--c, var(--fg)); flex: none; }
+.m-dial b { color: var(--fg); font-weight: 600; }
+.m-label { font: 600 8px var(--body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); flex: none; }
+.m-text { color: var(--muted); flex: none; }
+.m-keys { display: flex; flex: 1; min-height: 0; position: relative; }
+.m-keys i { flex: 1; background: #d9d4cb; border: 1px solid var(--bg); border-radius: 0 0 2px 2px; }
+.m-unit { background: var(--bg); border-radius: 4px; padding: 3px; display: flex; flex-direction: column; gap: 2px; flex: none; }
+</style>
+<header class="top"><div class="top-in pad-x">
+  <div class="brand"><b>Bloodline UI Kit</b><small>prototype · UI only, no sound</small></div>
+  <button class="btn" id="copy-layout">Copy layout</button>
+  <button class="btn" id="example">Example layout</button>
+  <button class="btn" id="clear">Clear board</button>
+</div></header>
+<main class="wrap pad-x">
+  <aside class="palette" id="palette" aria-label="Pieces"></aside>
+  <section class="boardcol">
+    <div class="bar"><h2>Board</h2><span class="hint">Drag a piece from the palette onto the board, or use its Add button. Drag a piece's header to move it, its corner to resize it. 12 columns.</span></div>
+    <div class="scroller"><div class="board" id="board" aria-label="Layout board"></div></div>
+    <details class="io" id="io"><summary>Paste a layout</summary><textarea id="paste" aria-label="Paste a copied layout here" placeholder="Paste text from Copy layout, then press Load."></textarea><div class="bar" style="margin-top:6px"><button class="btn" id="load">Load</button><span class="hint" id="load-msg"></span></div></details>
+  </section>
+</main>
+<script>
+/* PROTOTYPE, wipe me. Bloodline UI Kit: every UI piece from the Bloodline plugins as a static look-alike,
+   labelled with the plugin it comes from, and a board to arrange them on. No audio engine: once a layout
+   is approved, the engine gets hooked up. Sources are each plugin's README (plugins/<name>/README.md),
+   plugins/bloodline-breaks-2/SPEC.md and docs/research/groove-and-drum-feel.md. */
+(function () {
+'use strict';
+const COLS = 12, RH = 66;
+const PLUG = {
+  bd:  { name: 'Bloodline Drums', c: 'var(--p-bd)', src: 'plugins/bloodline-drums' },
+  bd2: { name: 'Bloodline Drums 2', c: 'var(--p-bd2)', src: 'plugins/bloodline-drums-2' },
+  bb:  { name: 'Bloodline Breaks', c: 'var(--p-bb)', src: 'plugins/bloodline-breaks' },
+  bb2: { name: 'Bloodline Breaks 2', c: 'var(--p-bb2)', src: 'plugins/bloodline-breaks-2' },
+  be:  { name: 'Bloodline Effects', c: 'var(--p-be)', src: 'plugins/bloodline-effects' },
+  bs:  { name: 'Bloodline Synth', c: 'var(--p-bs)', src: 'plugins/bloodline-synth' },
+  bs2: { name: 'Bloodline Synth 2', c: 'var(--p-bs2)', src: 'plugins/bloodline-synth-2' },
+  gr:  { name: 'Groove research', c: 'var(--p-gr)', src: 'docs/research/groove-and-drum-feel.md' },
+  sh:  { name: 'Shared', c: 'var(--p-sh)', src: 'every plugin and web sketch' },
+};
+
+// ---------- mock helpers (static HTML)
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const m = (...xs) => '<div class="m">' + xs.join('') + '</div>';
+const row = (xs, fixed) => '<div class="m-row' + (fixed ? ' fixed' : '') + '">' + xs.join('') + '</div>';
+const pad = (t, cls) => '<span class="m-pad ' + (cls || '') + '">' + esc(t) + '</span>';
+const pads = (labels, opts = {}) => row(labels.map((t, i) => pad(t, (opts.on === i ? 'on ' : '') + (opts.act && opts.act.includes(i) ? 'act ' : '') + (opts.empty ? 'empty' : ''))), opts.fixed);
+const seg = (labels, on = 0) => '<div class="m-seg">' + labels.map((t, i) => '<span class="' + (i === on ? 'on' : '') + '">' + esc(t) + '</span>').join('') + '</div>';
+const sl = (label, v, out, lock) => '<div class="m-sl' + (lock !== undefined ? ' lk' : '') + '"><b>' + esc(label) + '</b><em style="--v:' + v + '%"></em><u>' + esc(out) + '</u>' + (lock !== undefined ? '<s class="' + (lock ? 'on' : '') + '"></s>' : '') + '</div>';
+const btns = (labels, on = -1) => '<div class="m-btns">' + labels.map((t, i) => '<span class="m-btn' + (i === on ? ' on' : '') + '">' + esc(t) + '</span>').join('') + '</div>';
+const label = t => '<div class="m-label">' + esc(t) + '</div>';
+const text = t => '<div class="m-text">' + esc(t) + '</div>';
+const dial = (t, v) => '<div class="m-dial"><i></i><span>' + esc(t) + ' <b>' + esc(v) + '</b></span></div>';
+let seedN = 7; const rnd = () => { seedN = (seedN * 16807) % 2147483647; return seedN / 2147483647; };
+function loopSvg(lanes = 3, steps = 16, dense = 0.4, free) {
+  const cols = ['var(--kick)', 'var(--snare)', 'var(--hat)', '#7ddc8a'];
+  let s = '<svg viewBox="0 0 160 ' + lanes * 10 + '" preserveAspectRatio="none" aria-hidden="true">';
+  for (let b = 0; b <= steps; b += 4) s += '<rect x="' + (b / steps * 160) + '" y="0" width="0.6" height="' + lanes * 10 + '" fill="rgba(236,232,225,0.15)"/>';
+  for (let l = 0; l < lanes; l++) for (let k = 0; k < steps; k++) {
+    const on = (l === 0 && k % 8 === 0) || (l === 1 && k % 8 === 4) || (l === 2 && k % 2 === 0 && rnd() < 0.9) || rnd() < dense * (l === 2 ? 0.6 : 0.25);
+    if (!on) continue; const hgt = 3 + rnd() * 6, x = (k + (free ? (rnd() - 0.5) * 0.6 : 0)) / steps * 160 + 1;
+    s += '<rect x="' + x.toFixed(1) + '" y="' + ((lanes - l) * 10 - hgt - 0.5).toFixed(1) + '" width="3" height="' + hgt.toFixed(1) + '" fill="' + cols[l % 4] + '"/>';
+  }
+  return s + '</svg>';
+}
+function waveSvg() { let d = 'M0 10'; for (let x = 0; x <= 160; x += 2) d += ' L' + x + ' ' + (10 + Math.sin(x / 6) * 7 * Math.exp(-x / 70)).toFixed(1); return '<svg viewBox="0 0 160 20" preserveAspectRatio="none" aria-hidden="true"><path d="' + d + '" stroke="var(--c, #ece8e1)" fill="none" stroke-width="1.2"/></svg>'; }
+function chainSvg(n) { let s = '<svg viewBox="0 0 160 20" preserveAspectRatio="none" aria-hidden="true">'; const cs = ['#e4572e', '#f2c14e', '#6cc3d5', '#b48cff', '#9be564', '#ff5d8f']; for (let i = 0; i < n; i++) s += '<rect x="' + (i * 160 / n + 2) + '" y="4" width="' + (160 / n - 6) + '" height="12" rx="2" fill="' + cs[(i * 3 + n) % 6] + '"/>'; return s + '</svg>'; }
+function rollSvg() { let s = '<svg class="m-svg" viewBox="0 0 160 60" preserveAspectRatio="none" aria-hidden="true">'; for (let b = 0; b <= 16; b += 4) s += '<rect x="' + b * 10 + '" y="0" width="0.6" height="60" fill="rgba(236,232,225,0.15)"/>'; for (let k = 0; k < 14; k++) s += '<rect x="' + (rnd() * 150).toFixed(1) + '" y="' + (5 + rnd() * 50).toFixed(1) + '" width="' + (4 + rnd() * 18).toFixed(1) + '" height="3" rx="1" fill="var(--p-bs2)"/>'; return s + '</svg>'; }
+function bigLoopSvg(free) { return '<svg class="m-svg" viewBox="0 0 320 60" preserveAspectRatio="none" aria-hidden="true">' + loopSvg(3, 32, 0.45, free).replace(/^<svg[^>]*>|<\/svg>$/g, '').replace(/160/g, '320') + '</svg>'; }
+const tiles = (n, cols, kind, on = 0, extra = '') => '<div class="m-tiles" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))">' + Array.from({ length: n }, (_, i) => '<div class="m-tile' + (i === on ? ' on' : '') + '"><b>' + 'ABCDEFGH'[i] + (i === 1 ? ' ★' : '') + '</b>' + (kind === 'loop' ? loopSvg(kind === 'loop' ? 3 : 4, 16, 0.4) : kind === 'chain' ? chainSvg(2 + (i * 5) % 4) : waveSvg()) + extra + '</div>').join('') + '</div>';
+const keys = () => '<div class="m-keys">' + '<i></i>'.repeat(14) + '</div>';
+
+// ---------- the pieces
+// w, h in board cells (12 columns, 52px rows)
+const PIECES = [
+  // Bloodline Drums
+  { id: 'bd-workbench', p: 'bd', name: 'Workbench row', desc: '[A][B][C][Choose] on pads 36 to 39. Hear a pad, Choose breeds the other two from it.', w: 5, h: 2, mock: () => m(pads(['A', 'B ★', 'C', 'Choose'], { on: 1, act: [3] }), text('Kick · spread 0.25')) },
+  { id: 'bd-slot', p: 'bd', name: 'Kit slot, placed', desc: '[A][B][C][Random], with Open, move up and down, Clear. Pads 40 to 51.', w: 5, h: 2, mock: () => m(row([text('Slot 1 · made as Kick'), btns(['Open', '↑', '↓', 'Clear'])], true), pads(['A', 'B', 'C', 'Random'], { act: [3] })) },
+  { id: 'bd-slot-open', p: 'bd', name: 'Kit slot, opened to breed', desc: 'An open row: the fourth pad becomes Choose again, with Reset.', w: 5, h: 2, mock: () => m(row([text('Slot 2 · open'), btns(['Close', 'Reset'])], true), pads(['A', 'B', 'C ★', 'Choose'], { on: 2, act: [3] })) },
+  { id: 'bd-slot-blank', p: 'bd', name: 'Blank slot', desc: '[ ][ ][ ][Place]: puts the workbench row here and refreshes the workbench.', w: 5, h: 1, mock: () => m(pads(['', '', '', 'Place'], { empty: true })) },
+  { id: 'bd-zone', p: 'bd', name: 'Zone switch', desc: 'None, Kick, Snare, Hats: centres Body, Noise and Click while breeding.', w: 3, h: 1, mock: () => m(seg(['None', 'Kick', 'Snare', 'Hats'], 1)) },
+  { id: 'bd-inspector', p: 'bd', name: 'Inspector, 19 settings', desc: 'The last played pad: Body, Noise, Click, Grit and Out groups, each setting with Lock.', w: 4, h: 6, mock: () => m(label('Body'), sl('Pitch', 30, '52 Hz', false), sl('Sweep', 40, '8 st', true), sl('Sweep time', 35, '25 ms', false), sl('Attack', 5, '1 ms', false), sl('Decay', 55, '320 ms', false), label('Noise'), sl('Body / Noise', 20, '20%', false), sl('Noise tone', 60, '2 kHz', false), label('Click ▸ Grit ▸ Out')) },
+  { id: 'bd-rowmix', p: 'bd', name: 'Row Pan, Level and Mono', desc: 'Mixer controls for a row: pan and level offsets and Mono.', w: 4, h: 1, mock: () => m(sl('Level', 60, '0.0 dB'), sl('Pan', 50, 'C'), text('☑ Mono')) },
+  { id: 'bd-start-again', p: 'bd', name: 'Start again', desc: 'Empties the kit and refreshes the workbench. Click twice.', w: 2, h: 1, mock: () => m(btns(['Start again'])) },
+  // Bloodline Drums 2
+  { id: 'bd2-litter', p: 'bd2', name: 'Sound litter, eight tiles', desc: 'A to H, each with Breed and Cross. Click a tile to hear it.', w: 6, h: 3, mock: () => m(tiles(8, 4, 'wave', 2)) },
+  { id: 'bd2-keep', p: 'bd2', name: 'Keep pads, eight', desc: 'Pads 36 to 43. Drag a tile on to keep it, named after its zone ("Kick 3").', w: 6, h: 1, mock: () => m(pads(['Kick 1', 'Snare 1', 'Hats 1', 'Kick 2', '', '', '', ''], {})) },
+  { id: 'bd2-loop', p: 'bd2', name: 'Loop audition', desc: 'Plays the heard sound in a rhythm: Quarters, Boom bap or 16ths.', w: 3, h: 1, mock: () => m(seg(['Off', 'Quarters', 'Boom bap', '16ths'], 2)) },
+  { id: 'bd2-breedbar', p: 'bd2', name: 'Breed bar', desc: 'Back, Fresh litter and the zone above the litter.', w: 4, h: 1, mock: () => m(row([seg(['None', 'Kick', 'Snare', 'Hats']), btns(['Back', 'Fresh litter'])], true)) },
+  // Bloodline Breaks
+  { id: 'bb-litter', p: 'bb', name: 'Loop litter, eight one-bar tiles', desc: 'A to H, each with Breed and Cross. The heard bar loops.', w: 8, h: 3, mock: () => m(tiles(8, 4, 'loop', 0)) },
+  { id: 'bb-swing', p: 'bb', name: 'Swing dial', desc: '50% to 75%, MPC style. Pulls each bar\'s swing towards it.', w: 2, h: 1, mock: () => m(dial('Swing', '58%')) },
+  { id: 'bb-style', p: 'bb', name: 'Style', desc: 'Boom bap, Lo-fi, Dilla, Trap, Drill, West coast or Free: a soft pull on hits, level, lateness, rolls.', w: 5, h: 1, mock: () => m(seg(['Boom bap', 'Lo-fi', 'Dilla', 'Trap', 'Drill', 'West coast', 'Free'])) },
+  { id: 'bb-pull', p: 'bb', name: 'Pull', desc: 'Loose, soft, firm or tight: how hard style and swing pull.', w: 3, h: 1, mock: () => m(seg(['Loose', 'Soft', 'Firm', 'Tight'], 2)) },
+  { id: 'bb-taste', p: 'bb', name: 'Taste and Forget taste', desc: 'What it has learned from your Breeds; Forget wipes it.', w: 3, h: 1, mock: () => m(row([text('Taste: 14 choices'), btns(['Forget taste'])], true)) },
+  { id: 'bb-inspector', p: 'bb', name: 'Step inspector', desc: 'The heard bar, big: click a step for hit, ghost or rest. Lane roles and Lock on the left.', w: 8, h: 3, mock: () => m(row([text('Kick · Snare · Hat · Perc'), btns(['Lock'])], true), bigLoopSvg(false)) },
+  { id: 'bb-roles', p: 'bb', name: 'Lane role', desc: 'Kick, Snare, Hat, Perc or Off per lane. Steers breeding and the built-in sound.', w: 4, h: 1, mock: () => m(seg(['Kick', 'Snare', 'Hat', 'Perc', 'Off'])) },
+  { id: 'bb-barswing', p: 'bb', name: 'This bar\'s swing', desc: 'Changes just the heard bar.', w: 3, h: 1, mock: () => m(sl('This bar', 40, '57%')) },
+  { id: 'bb-dragmidi', p: 'bb', name: 'Drag MIDI', desc: 'Drag the heard bar into a clip slot in Live.', w: 2, h: 1, mock: () => m(btns(['⇲ Drag MIDI'])) },
+  { id: 'bb-play', p: 'bb', name: 'Play and Kit', desc: 'Play with Live stopped; Kit on plays the built-in voice, off is MIDI only.', w: 2, h: 1, mock: () => m(btns(['Play', 'Kit'], 1)) },
+  // Bloodline Breaks 2
+  { id: 'bb2-drumlitter', p: 'bb2', name: 'Drum litter, four tiles', desc: 'A to D with Breed and Cross, zone None, Kick, Snare, Hats or Perc.', w: 5, h: 2, mock: () => m(seg(['None', 'Kick', 'Snare', 'Hats', 'Perc'], 4), tiles(4, 4, 'wave', 1)) },
+  { id: 'bb2-spread', p: 'bb2', name: 'Spread slider', desc: 'Drag to breed wider or closer. New resets it.', w: 3, h: 1, mock: () => m(sl('Spread', 25, '0.25')) },
+  { id: 'bb2-inbreak', p: 'bb2', name: 'Loop and In break', desc: 'Off, Quarters, Boom bap, 16ths, or In break: the candidate plays inside the loop on its own lane.', w: 4, h: 1, mock: () => m(seg(['Off', 'Quarters', 'Boom bap', '16ths', 'In break'], 4)) },
+  { id: 'bb2-keepdrums', p: 'bb2', name: 'Keep pads, drums', desc: 'Eight pads, 36 to 43. The litter stays when you keep.', w: 6, h: 1, mock: () => m(pads(['Kick 1', 'Snare 1', 'Hats 1', 'Drum 1', 'Perc 1', '', '', ''])) },
+  { id: 'bb2-looplitter', p: 'bb2', name: 'Loop litter, four tiles', desc: 'A to D loops that play the kept pads. Breed, Cross, Back, New.', w: 6, h: 2, mock: () => m(tiles(4, 4, 'loop', 0)) },
+  { id: 'bb2-playing', p: 'bb2', name: 'Playing switch', desc: 'Off by default and silent; on follows Live\'s bar.', w: 2, h: 1, mock: () => m(btns(['Playing'], 0)) },
+  { id: 'bb2-dials', p: 'bb2', name: 'Swing, Pull and Spread', desc: 'Steer the next breed or New.', w: 4, h: 1, mock: () => m(row([dial('Swing', '58%'), dial('Pull', 'firm'), dial('Spread', '0.25')], true)) },
+  { id: 'bb2-style', p: 'bb2', name: 'Style', desc: 'None, Boom bap, Lo-fi, Strung, Neo soul.', w: 4, h: 1, mock: () => m(seg(['None', 'Boom bap', 'Lo-fi', 'Strung', 'Neo soul'], 1)) },
+  { id: 'bb2-freegrid', p: 'bb2', name: 'Free grid', desc: 'Hits anywhere: drag sideways freely, up and down for velocity; Shift snaps.', w: 8, h: 3, mock: () => m(bigLoopSvg(true)) },
+  { id: 'bb2-lanehead', p: 'bb2', name: 'Lane head', desc: '[first sound | second sound][One/Stack/Flam][Lock] for each lane.', w: 4, h: 1, mock: () => m(row([pad('Kick 1'), pad('+'), seg(['One', 'Stack', 'Flam 18 ms'], 2), btns(['Lock'])], true)) },
+  { id: 'bb2-keeploops', p: 'bb2', name: 'Keep slots, loops', desc: 'Eight loops on 48 to 55. Click to switch; drag back to breed.', w: 6, h: 1, mock: () => m(pads(['Loop 1', 'Loop 2', 'Loop 3', '', '', '', '', ''])) },
+  // Bloodline Effects
+  { id: 'be-litter', p: 'be', name: 'Chain litter, six cards', desc: 'A to F, each a chain of up to six effects, with Breed and Cross.', w: 6, h: 2, mock: () => m(tiles(6, 6, 'chain', 0)) },
+  { id: 'be-character', p: 'be', name: 'Character', desc: 'None, Space, Dirt, Motion, Glitch: centres which effects appear.', w: 4, h: 1, mock: () => m(seg(['None', 'Space', 'Dirt', 'Motion', 'Glitch'], 2)) },
+  { id: 'be-wild', p: 'be', name: 'Wild', desc: 'Makes structural jumps three times as likely.', w: 1, h: 1, mock: () => m(btns(['Wild'], 0)) },
+  { id: 'be-unit', p: 'be', name: 'Effect in the heard chain', desc: 'One effect with its four settings, Lock and ×.', w: 4, h: 2, mock: () => m('<div class="m-unit">' + row([text('■ Reverb'), btns(['Lock', '×'])], true) + sl('Size', 50, 'x1.2') + sl('Decay', 70, '72%') + sl('Damping', 30, '30%') + sl('Mix', 40, '40%') + '</div>') },
+  { id: 'be-out', p: 'be', name: 'Mix, Bypass, Out and limiter', desc: 'Chain dry/wet, a fading bypass, output level, and the limiter light.', w: 4, h: 1, mock: () => m(row([sl('Mix', 60, '60%'), btns(['Bypass', 'Limiting'])], true)) },
+  { id: 'be-input', p: 'be', name: 'Loop is input', desc: 'Feeds a built-in boom bap loop to audition without a clip.', w: 2, h: 1, mock: () => m(btns(['Loop is input'], 0)) },
+  { id: 'be-stack', p: 'be', name: 'Instance chain with +', desc: 'A drum or bus holds a chain of Bloodline Effects instances, none at first; + adds another. (Your note on the last pass.)', w: 4, h: 2, isNew: true, mock: () => m(row([label('Bloodline Effects'), btns(['+'])], true), '<div class="m-unit">' + text('▾ 1 · Dirt · Drive → Crush · mix 64%') + '</div>', '<div class="m-unit">' + text('▸ 2 · Space · Reverb → Width · mix 40%') + '</div>') },
+  // Bloodline Synth
+  { id: 'bs-litter', p: 'bs', name: 'Sound litter, eight tiles', desc: 'A to H with Breed and Cross. The heard tile plays at once.', w: 6, h: 3, mock: () => m(tiles(8, 4, 'wave', 3)) },
+  { id: 'bs-keys', p: 'bs', name: 'On-screen keys', desc: 'Play the heard sound by mouse.', w: 6, h: 2, mock: () => m(keys()) },
+  { id: 'bs-riff', p: 'bs', name: 'Riff', desc: 'Bass, Chords or Arp at Live\'s tempo, to keep something playing.', w: 3, h: 1, mock: () => m(seg(['Off', 'Bass', 'Chords', 'Arp'], 1)) },
+  { id: 'bs-zone', p: 'bs', name: 'Zone', desc: 'None, Bass, Keys, Lead, Pad, Pluck.', w: 4, h: 1, mock: () => m(seg(['None', 'Bass', 'Keys', 'Lead', 'Pad', 'Pluck'], 1)) },
+  { id: 'bs-inspector', p: 'bs', name: 'Inspector', desc: 'Every setting of the heard tile; drag to change, Lock for breeding.', w: 4, h: 5, mock: () => m(label('Osc'), sl('Shape A', 70, 'saw', false), sl('Detune', 30, '12 ct', true), label('Filter'), sl('Cutoff', 45, '1.2 kHz', false), sl('Resonance', 30, '3.1', false), label('Amp'), sl('Attack', 10, '4 ms', false), sl('Release', 40, '220 ms', false)) },
+  // Bloodline Synth 2
+  { id: 'bs2-loopbar', p: 'bs2', name: 'Bars, Key and Scale', desc: '2, 4 or 8 bars; key and scale cycle on click.', w: 4, h: 1, mock: () => m(row([seg(['2', '4', '8'], 1), btns(['Key: A', 'Scale: Dorian'])], true)) },
+  { id: 'bs2-octaves', p: 'bs2', name: 'Octave range', desc: 'Two handles, C0 to C8, at least an octave apart.', w: 4, h: 1, mock: () => m(sl('Octaves', 45, 'C2 to C4')) },
+  { id: 'bs2-roll', p: 'bs2', name: 'Piano roll', desc: 'Add, move, lengthen and remove notes; Shift snaps.', w: 8, h: 3, mock: () => m(rollSvg()) },
+  { id: 'bs2-lockstrip', p: 'bs2', name: 'Lock strip', desc: 'Drag along it to lock a stretch of time through breeding.', w: 8, h: 1, mock: () => m('<svg class="m-svg" viewBox="0 0 160 8" preserveAspectRatio="none" aria-hidden="true"><rect x="40" y="0" width="30" height="8" fill="var(--lock)" opacity="0.6"/></svg>') },
+  { id: 'bs2-traits', p: 'bs2', name: 'Eight traits', desc: 'Tonal/Atonal, Mono/Poly, Melodic/Rhythmic, On/Off beat, Even/Dynamic, Clustered/Open, Sparse/Dense, Short/Long, each with Lock.', w: 4, h: 4, mock: () => m(sl('Tonal', 20, 'Atonal', false), sl('Mono', 30, 'Poly', false), sl('Melodic', 60, 'Rhythmic', true), sl('On beat', 40, 'Off beat', false), sl('Even', 50, 'Dynamic', false), sl('Clustered', 35, 'Open', false), sl('Sparse', 45, 'Dense', false), sl('Short', 25, 'Long', false)) },
+  { id: 'bs2-soundchip', p: 'bs2', name: 'Sound chip', desc: 'Which kept sound plays the loop; click to cycle or drop a pad on it.', w: 2, h: 1, mock: () => m(btns(['♪ Bass 2'], 0)) },
+  { id: 'bs2-keep', p: 'bs2', name: 'Keep pads and loops', desc: 'Eight kept sounds and eight kept loops.', w: 6, h: 2, mock: () => m(pads(['Bass 1', 'Keys 1', 'Lead 1', '', '', '', '', '']), pads(['Loop 1', 'Loop 2', '', '', '', '', '', ''])) },
+  { id: 'bs2-riff', p: 'bs2', name: 'Riff with In loop', desc: 'Off, Bass, Chords, Arp, or In loop: the candidate plays the right panel\'s loop.', w: 4, h: 1, mock: () => m(seg(['Off', 'Bass', 'Chords', 'Arp', 'In loop'], 4)) },
+  // Groove research
+  { id: 'gr-dials', p: 'gr', name: 'Groove, Complexity, Forward, Behind', desc: 'The four pattern settings. Groove: swing that eases with tempo, accents, drift. Complexity: a syncopation target. Forward and Behind: early or late lanes, up to 30 ms.', w: 8, h: 2, isNew: true, mock: () => m(row([dial('Groove', '45'), dial('Complexity', '40'), dial('Forward', '10'), dial('Behind', '35')], true), text('Swing near 57% at 90 BPM · off-beats 3 dB under the beat')) },
+  { id: 'gr-dial', p: 'gr', name: 'One pattern dial', desc: 'A single Groove, Complexity, Forward or Behind dial with its readout.', w: 3, h: 2, isNew: true, mock: () => m(dial('Complexity', '40'), sl('', 40, '40'), text('Medium: some off-beat kicks and ghosts')) },
+  { id: 'gr-feel', p: 'gr', name: 'Lane feel', desc: 'Forward, On or Behind for one lane. Behind is later, louder and longer together.', w: 3, h: 1, isNew: true, mock: () => m(seg(['Forward', 'On', 'Behind'], 2)) },
+  { id: 'gr-sync', p: 'gr', name: 'Syncopation meter', desc: 'Weighted kick over snare over hat, against a medium band.', w: 5, h: 1, isNew: true, mock: () => m('<svg class="m-svg" viewBox="0 0 160 10" preserveAspectRatio="none" aria-hidden="true"><rect x="35" y="0" width="58" height="10" fill="rgba(95,211,196,0.2)"/><rect x="62" y="1" width="3" height="8" fill="var(--p-gr)"/></svg>', text('square · medium · busy')) },
+  { id: 'gr-tempo', p: 'gr', name: 'Swing eases with tempo', desc: 'A switch: less swing at faster tempos, or MPC-style fixed.', w: 3, h: 1, isNew: true, mock: () => m(text('☑ Less swing at faster tempos')) },
+  { id: 'gr-writing', p: 'gr', name: 'What the pattern is writing', desc: 'A line saying which parts it writes for which slots, and why (no snare, so the kick takes 2 and 4).', w: 8, h: 1, isNew: true, mock: () => m(text('Writing a kick part for slot 1 and a hat part for slot 3. No snare, so the kick may land on 2 and 4.')) },
+  // Shared
+  { id: 'sh-transport', p: 'sh', name: 'Transport', desc: 'Play or Stop, BPM, position.', w: 4, h: 1, mock: () => m(row([btns(['Play'], 0), btns(['− 90 BPM +']), text('1.3.2')], true)) },
+  { id: 'sh-breedbar', p: 'sh', name: 'Breed, Cross, Back, Fresh', desc: 'The litter controls every Bloodline plugin shares.', w: 4, h: 1, mock: () => m(btns(['Breed', 'Cross', 'Back', 'Fresh litter'])) },
+  { id: 'sh-downloads', p: 'sh', name: 'Downloads', desc: 'Loop and stems as a zip, and this page as HTML.', w: 4, h: 1, mock: () => m(btns(['Loop and stems .zip', 'This page .html'])) },
+  { id: 'sh-heading', p: 'sh', name: 'Section heading', desc: 'A numbered heading to mark a stage, such as "1 Bloodline Drums".', w: 12, h: 1, mock: () => m(text('1   Bloodline Drums  ·  2   Bloodline Breaks')) },
+];
+const BY_ID = Object.fromEntries(PIECES.map(p => [p.id, p]));
+PIECES.forEach(p => { seedN = 7 + p.id.length * 13; p.html = p.mock(); });
+const ident = p => PLUG[p.p].name + ' · ' + p.name;
+
+// ---------- state
+const KEY = 'bloodline-ui-kit-layout';
+let layout = [], uid = 1, filter = new Set(Object.keys(PLUG)), query = '';
+const EXAMPLE = [
+  ['sh-transport', 0, 0, 5, 1], ['sh-downloads', 7, 0, 5, 1],
+  ['sh-heading', 0, 1, 12, 1],
+  ['bd-slot', 0, 2, 6, 2], ['bd-inspector', 6, 2, 6, 6],
+  ['be-stack', 0, 4, 6, 2], ['bd-slot-blank', 0, 6, 6, 1], ['bd-workbench', 0, 7, 6, 2], ['bd-zone', 0, 9, 4, 1],
+  ['sh-heading', 0, 10, 12, 1],
+  ['gr-dials', 0, 11, 12, 2], ['gr-writing', 0, 13, 12, 1],
+  ['bb-litter', 0, 14, 12, 3], ['bb2-freegrid', 0, 17, 8, 3], ['gr-sync', 8, 17, 4, 1], ['gr-feel', 8, 18, 4, 1], ['bb2-lanehead', 8, 19, 4, 1],
+];
+function loadExample() { layout = EXAMPLE.map(([id, x, y, w, h]) => ({ uid: uid++, id, x, y, w, h })); }
+try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (Array.isArray(s) && s.length) { layout = s.filter(it => BY_ID[it.id]); uid = Math.max(0, ...layout.map(it => it.uid)) + 1; } } catch (e) { /* storage blocked */ }
+if (!layout.length) loadExample();
+function save() { try { localStorage.setItem(KEY, JSON.stringify(layout)); } catch (e) { /* storage blocked */ } }
+
+// ---------- palette
+const pal = document.getElementById('palette');
+function drawPalette() {
+  let html = '<input class="search" id="q" type="search" placeholder="Search pieces" aria-label="Search pieces" value="' + esc(query) + '"><div class="filters">' +
+    Object.entries(PLUG).map(([k, v]) => '<button class="chip" data-f="' + k + '" style="--c:' + v.c + '" aria-pressed="' + filter.has(k) + '"><i></i>' + esc(v.name) + '</button>').join('') + '</div>';
+  Object.entries(PLUG).forEach(([k, v]) => {
+    if (!filter.has(k)) return;
+    const list = PIECES.filter(p => p.p === k && (!query || (ident(p) + ' ' + p.desc).toLowerCase().includes(query)));
+    if (!list.length) return;
+    html += '<div class="group" style="--c:' + v.c + '"><h3><i></i>' + esc(v.name) + ' <small>' + esc(v.src) + '</small></h3>' +
+      list.map(p => '<div class="piece" data-piece="' + p.id + '" style="--c:' + v.c + '"><div class="head"><span class="name">' + esc(p.name) + '</span>' + (p.isNew ? '<span class="new">new</span>' : '') +
+        '<button class="btn small" data-copy="' + p.id + '">Copy</button><button class="btn small" data-add="' + p.id + '">Add</button></div>' +
+        '<div class="ident">' + esc(ident(p)) + '</div><div class="preview" style="--c:' + v.c + '">' + p.html + '</div><div class="desc">' + esc(p.desc) + '</div></div>').join('') + '</div>';
+  });
+  pal.innerHTML = html;
+}
+pal.addEventListener('input', e => { if (e.target.id === 'q') { query = e.target.value.trim().toLowerCase(); const pos = e.target.selectionStart; drawPalette(); const q = document.getElementById('q'); q.focus(); q.setSelectionRange(pos, pos); } });
+pal.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.f) { const k = b.dataset.f; if (filter.has(k) && filter.size === Object.keys(PLUG).length) { filter = new Set([k]); } else if (filter.has(k)) { filter.delete(k); if (!filter.size) filter = new Set(Object.keys(PLUG)); } else filter.add(k); drawPalette(); }
+  if (b.dataset.copy) copy(ident(BY_ID[b.dataset.copy]));
+  if (b.dataset.add) { const p = BY_ID[b.dataset.add], y = layout.reduce((a, it) => Math.max(a, it.y + it.h), 0); layout.push({ uid: uid++, id: p.id, x: 0, y, w: p.w, h: p.h }); save(); drawBoard(); toast('Added ' + ident(p)); }
+});
+
+// ---------- board
+const board = document.getElementById('board');
+function cellW() { return board.clientWidth / COLS; }
+function overlaps(a, b) { return a.uid !== b.uid && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h; }
+function drawBoard() {
+  const cw = cellW(), rows = Math.max(14, layout.reduce((a, it) => Math.max(a, it.y + it.h), 0) + 3);
+  board.style.setProperty('--cw', cw + 'px'); board.style.setProperty('--rh', RH + 'px'); board.style.height = rows * RH + 'px';
+  board.innerHTML = layout.map(it => {
+    const p = BY_ID[it.id], c = PLUG[p.p].c, clash = layout.some(o => overlaps(it, o));
+    return '<div class="placed' + (clash ? ' clash' : '') + '" data-uid="' + it.uid + '" style="--c:' + c + ';left:' + it.x * cw + 'px;top:' + it.y * RH + 'px;width:' + it.w * cw + 'px;height:' + it.h * RH + 'px">' +
+      '<div class="inner"><div class="ph" data-move="' + it.uid + '"><span class="ident" title="' + esc(p.desc) + '">' + esc(ident(p)) + '</span><button class="btn small" data-copy="' + it.uid + '">Copy</button><button class="btn small" data-del="' + it.uid + '" aria-label="Remove ' + esc(ident(p)) + '">×</button></div>' +
+      '<div class="body">' + p.html + '</div></div><div class="rs" data-resize="' + it.uid + '" aria-hidden="true"></div></div>';
+  }).join('');
+}
+board.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.del) { layout = layout.filter(it => it.uid !== +b.dataset.del); save(); drawBoard(); }
+  if (b.dataset.copy) { const it = layout.find(x => x.uid === +b.dataset.copy); copy(ident(BY_ID[it.id])); }
+});
+
+// ---------- dragging (pointer events, so it works with touch too)
+let drag = null;
+function cellAt(clientX, clientY) { const r = board.getBoundingClientRect(), cw = r.width / COLS; return { x: Math.floor((clientX - r.left) / cw), y: Math.floor((clientY - r.top) / RH), inside: clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom }; }
+function showDrop(x, y, w, h) { let d = board.querySelector('.drop'); if (!d) { d = document.createElement('div'); d.className = 'drop'; board.appendChild(d); } const cw = cellW(); Object.assign(d.style, { left: x * cw + 'px', top: y * RH + 'px', width: w * cw + 'px', height: h * RH + 'px' }); }
+function hideDrop() { const d = board.querySelector('.drop'); if (d) d.remove(); board.classList.remove('over'); }
+document.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || e.target.closest('button, input, textarea') || e.target.closest('.piece .ident')) return;
+  const pc = e.target.closest('.piece'), mv = e.target.closest('[data-move]'), rs = e.target.closest('[data-resize]');
+  if (pc) drag = { kind: 'new', id: pc.dataset.piece, sx: e.clientX, sy: e.clientY, started: false };
+  else if (mv) { const it = layout.find(x => x.uid === +mv.dataset.move), c = cellAt(e.clientX, e.clientY); drag = { kind: 'move', it, ox: c.x - it.x, oy: c.y - it.y, sx: e.clientX, sy: e.clientY, started: false }; }
+  else if (rs) { const it = layout.find(x => x.uid === +rs.dataset.resize); drag = { kind: 'resize', it, sx: e.clientX, sy: e.clientY, w: it.w, h: it.h, started: true }; }
+  if (drag) { e.preventDefault(); }
+});
+document.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.started && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 5) return;
+  drag.started = true;
+  const c = cellAt(e.clientX, e.clientY), cw = cellW();
+  if (drag.kind === 'new') {
+    const p = BY_ID[drag.id];
+    if (!drag.ghost) { drag.ghost = document.createElement('div'); drag.ghost.className = 'ghost'; drag.ghost.style.setProperty('--c', PLUG[p.p].c); drag.ghost.textContent = ident(p); document.body.appendChild(drag.ghost); }
+    drag.ghost.style.left = e.clientX + 12 + 'px'; drag.ghost.style.top = e.clientY + 12 + 'px';
+    if (c.inside) { board.classList.add('over'); drag.x = Math.max(0, Math.min(COLS - p.w, c.x)); drag.y = Math.max(0, c.y); showDrop(drag.x, drag.y, p.w, p.h); } else { hideDrop(); drag.x = null; }
+  } else if (drag.kind === 'move') {
+    const it = drag.it; it.x = Math.max(0, Math.min(COLS - it.w, c.x - drag.ox)); it.y = Math.max(0, c.y - drag.oy);
+    const el = board.querySelector('[data-uid="' + it.uid + '"]'); el.classList.add('dragging'); el.style.left = it.x * cw + 'px'; el.style.top = it.y * RH + 'px';
+  } else if (drag.kind === 'resize') {
+    const it = drag.it; it.w = Math.max(1, Math.min(COLS - it.x, drag.w + Math.round((e.clientX - drag.sx) / cw))); it.h = Math.max(1, drag.h + Math.round((e.clientY - drag.sy) / RH));
+    const el = board.querySelector('[data-uid="' + it.uid + '"]'); el.style.width = it.w * cw + 'px'; el.style.height = it.h * RH + 'px';
+  }
+});
+document.addEventListener('pointerup', () => {
+  if (!drag) return;
+  if (drag.kind === 'new') { if (drag.ghost) drag.ghost.remove(); if (drag.started && drag.x != null) { const p = BY_ID[drag.id]; layout.push({ uid: uid++, id: p.id, x: drag.x, y: drag.y, w: p.w, h: p.h }); } hideDrop(); }
+  if (drag.started) { save(); drawBoard(); }
+  drag = null;
+});
+window.addEventListener('resize', drawBoard);
+
+// ---------- copy, export, import
+function layoutText() {
+  const items = layout.slice().sort((a, b) => a.y - b.y || a.x - b.x);
+  const lines = items.map(it => 'Row ' + (it.y + 1) + (it.h > 1 ? ' to ' + (it.y + it.h) : '') + ', columns ' + (it.x + 1) + ' to ' + (it.x + it.w) + ': ' + ident(BY_ID[it.id]));
+  return 'Bloodline UI Kit layout (12 columns, ' + items.length + ' pieces)\n' + lines.join('\n') + '\n\nLayout data: ' + JSON.stringify(items.map(it => [it.id, it.x, it.y, it.w, it.h]));
+}
+async function copy(t) {
+  try { await navigator.clipboard.writeText(t); toast('Copied: ' + (t.length > 70 ? t.slice(0, 70) + '…' : t)); }
+  catch (e) { const ta = document.getElementById('paste'); document.getElementById('io').open = true; ta.value = t; ta.select(); toast('Copying is blocked here. The text is selected below: copy it by hand.'); }
+}
+document.getElementById('copy-layout').addEventListener('click', () => copy(layoutText()));
+document.getElementById('example').addEventListener('click', () => { loadExample(); save(); drawBoard(); toast('Example layout loaded.'); });
+let clearArm = 0;
+document.getElementById('clear').addEventListener('click', e => {
+  if (Date.now() - clearArm > 3000) { clearArm = Date.now(); e.target.textContent = 'Click again to clear'; setTimeout(() => { e.target.textContent = 'Clear board'; }, 3000); return; }
+  layout = []; save(); drawBoard(); e.target.textContent = 'Clear board'; clearArm = 0;
+});
+document.getElementById('load').addEventListener('click', () => {
+  const t = document.getElementById('paste').value, msg = document.getElementById('load-msg'), i = t.indexOf('[[');
+  try {
+    const data = JSON.parse(t.slice(i, t.lastIndexOf(']]') + 2)), ok = data.filter(d => BY_ID[d[0]]);
+    layout = ok.map(([id, x, y, w, h]) => ({ uid: uid++, id, x, y, w, h })); save(); drawBoard();
+    msg.textContent = 'Loaded ' + ok.length + ' pieces' + (ok.length < data.length ? ', skipped ' + (data.length - ok.length) + ' unknown' : '') + '.';
+  } catch (e) { msg.textContent = 'No layout found. Paste the whole text from Copy layout, including the "Layout data" line.'; }
+});
+let toastT = 0;
+function toast(msg) { let t = document.querySelector('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2400); }
+
+drawPalette(); drawBoard();
+})();
+</script>

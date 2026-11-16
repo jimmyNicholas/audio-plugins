@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* PROTOTYPE, throwaway. Phase 1 of issue #51: a silent UI mock, no sound. Track is home; a part opens in two steps
+/* PROTOTYPE, throwaway. Issue #51, phase 2: the Track with sound. Track is home; a part opens in two steps
    (Sound, then Pattern). Phones: tabs Track / Sound / Pattern at the bottom. From 1000px: Track left, open part right.
    One dark look, colours from the Bloodline Breaks 2 editor, same as the Breaks mobile prototype. */
 :root {
@@ -119,6 +119,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 
 /* track: globals */
 .globals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .gbox { background: var(--tile); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; min-width: 0; }
+.gbox > * { min-width: 0; }
 .gbox select { flex: 1 1 0; min-width: 0; height: 30px; border-radius: 6px; border: 1px solid var(--edge); background: var(--panel); padding: 0 6px; min-width: 0; }
 .gbox .seg { justify-self: start; }
 .seedpill { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 6px 12px; border-radius: 12px; border: 1.5px solid var(--groove); background: var(--tile); font-weight: 700; font-size: 13px; color: var(--groove); text-align: left; }
@@ -256,316 +257,361 @@ details.grp[open] summary::after { content: "−"; }
 .fxparams { display: grid; gap: 4px; }
 .toast { position: fixed; left: 50%; bottom: calc(var(--tabh) + env(safe-area-inset-bottom, 0px) + 12px); transform: translateX(-50%); background: var(--tile); border: 1px solid var(--edge); border-radius: 8px; padding: 8px 14px; font-size: 13px; z-index: 60; max-width: calc(100% - 32px); }
 @media (min-width: 1000px) { .toast { bottom: 20px; } }
+
+/* phase 2 additions */
+.meter i { transition: width 60ms linear; }
+.meter.idle i { opacity: 0.45; }
+.chain { display: grid; gap: 6px; }
+.fxrow { display: flex; align-items: center; gap: 6px; background: var(--tile); border-radius: 8px; padding: 4px 4px 4px 10px; min-width: 0; }
+.fxrow b { font-size: 12.5px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fxrow small { font: 10.5px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 0; }
+.fxrow button { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--edge); background: var(--panel); font-size: 12px; padding: 0; flex: none; }
+.fxrow button[aria-pressed="true"] { background: var(--lock); border-color: var(--lock); color: var(--bg); }
+.fxedit { display: grid; gap: 4px; background: var(--tile); border-radius: 10px; padding: 8px 10px; }
+.fxedit .row b { font-size: 13px; margin-right: auto; }
+.fxedit .sl { grid-template-columns: 74px minmax(0, 1fr) 70px; }
+.addfx { display: flex; flex-wrap: wrap; gap: 6px; }
+.addfx .chip { height: 30px; padding: 0 10px; font-size: 12px; }
+.labelbtn.stale { box-shadow: 0 0 0 2px var(--parent); }
+.pad .x { position: absolute; top: 2px; right: 3px; width: 24px; height: 24px; border: 0; background: none; color: var(--muted); font-size: 14px; }
+.pad .hearzone { display: contents; }
+.pad.live { box-shadow: inset 0 0 0 2px var(--accent); }
+.tile .th em.par { color: var(--parent); }
+.sl.lockable.fx { grid-template-columns: 74px minmax(0, 1fr) 70px 58px; }
+.busy { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px); right: max(16px, env(safe-area-inset-right, 0px)); font: 10px var(--mono); color: var(--muted); z-index: 31; pointer-events: none; }
+.cell.dimbar { opacity: 0.5; }
 </style>
+
 <header class="top"><div class="top-in gut" id="top"></div><div class="status gut" id="status"></div></header>
 <main class="gut"><div class="panes" id="panes"></div></main>
 <nav class="tabs" aria-label="Sections"><div class="tabs-in" role="tablist" id="tabs"></div></nav>
 <div id="sheet-root"></div>
+<script src="bloodline-engine.js"></script>
+<script src="bloodline-track-core.js"></script>
 <script>
-/* PROTOTYPE, wipe me. Bloodline Track, phase 1 (issue #51): every screen, no sound.
-   Track: lanes with level, pan, mute, solo, meter, feel, swing, effects; globals (bars, key, scale, groove,
-   less swing at faster tempos); master with level, effects, limiter readout, Auto level, Undo.
-   Add part: Sound then Pattern. Drums reuse the Drums and Break panes (no Notes per bar card) and add labels
-   on kept pads. Bass and Synth breed a voice from zones, then a note loop from traits.
-   The Changes button marks what is new, what moved and what was removed against the Breaks mobile prototype.
-   All litters and meters are made-up pictures from a seeded random; the engine comes in phase 2. */
+/* PROTOTYPE, wipe me. Bloodline Track, phase 2 (issue #51): the page over bloodline-track-core.js.
+   The core holds the Track and renders it offline to stems and a mix; this page draws it, sends taps to the
+   core's actions, plays the rendered loop (changes swap in at the same position) and exports it.
+   Effects run through the shared engine's chains on an OfflineAudioContext. */
 (function () {
 'use strict';
-const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
-function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-let rnd = mulberry32(51);
-const R = () => rnd();
-const clone = o => JSON.parse(JSON.stringify(o));
+const T = window.BTrack, SR = T.SR, clamp = T.clamp;
+const R = Math.random;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const L = 'ABCD';
 const mark = (kind, text) => '<span class="mark ' + kind + '">' + (text || (kind === 'gone' ? 'removed' : kind)) + '</span>';
-
-// ---------- made-up content
-const LABELS = ['Kick', 'Snare', 'Hats', 'Perc', 'None'];
 const LCOL = { Kick: 'var(--kick)', Snare: 'var(--snare)', Hats: 'var(--hat)', Perc: 'var(--perc)', None: 'var(--wild)' };
-const ROLE = { Kick: 'kick', Snare: 'snare', Hats: 'hat', Perc: 'perc', None: 'drum' };
 const KCOL = { drums: 'var(--accent)', bass: 'var(--bass)', synth: 'var(--synth)' };
-const ZONES = { bass: ['Sub', 'Pluck', 'Round', 'Growl'], synth: ['Pad', 'Pluck', 'Lead', 'Keys'] };
-const DTRAITS = [ // name, what it steers
-  ['Tight', 'How closely hits sit on the groove. Low drifts loose, high locks to the grid and swing.'],
-  ['Dynamic', 'Accent range: loud beats against soft off-beats.'],
-  ['Ghosts', 'Quiet notes between the main hits.'],
-  ['Dense', 'How many hits a bar.'],
-  ['Off beat', 'Hits away from the beat: syncopation.'],
-  ['Repeat', 'How much later bars copy the first. Low changes every bar.'],
-  ['Fills', 'Variation in the last beat before the loop comes round.'],
-  ['Anchored', 'Keeps beat 1 and the backbeat fixed. Low lets them move.'],
-];
-const TRAITS = ['Tonal', 'Poly', 'Rhythmic', 'Off beat', 'Dynamic', 'Open', 'Dense', 'Long'];
-const CHARS = ['Warm', 'Dusty', 'Wide', 'Bright', 'Dark', 'Wet'];
-const FX = { Warm: ['Tape sat', 'Low shelf +2', 'Glue comp'], Dusty: ['Bitcrush 12', 'Vinyl hiss', 'Low-pass 7k'], Wide: ['Chorus', 'Haas 12 ms', 'Room 0.8 s'], Bright: ['Exciter', 'High shelf +3', 'Delay 1/8'], Dark: ['Low-pass 3k', 'Plate 1.6 s', 'Comp slow'], Wet: ['Delay 3/16', 'Hall 2.4 s', 'Gate 1/4'] };
-function part(role, bars) { // 16 steps a bar, drawn the way the break writer leans
-  const N = bars * 16, g = new Array(N).fill(0);
-  for (let s = 0; s < N; s++) { const b = s % 16, r = R();
-    if (role === 'kick') g[s] = b === 0 ? 1 : (b === 8 && r < 0.7) || (b === 10 && r < 0.4) || (b === 7 && r < 0.2) ? 0.85 : 0;
-    else if (role === 'snare') g[s] = b === 4 || b === 12 ? 1 : (b === 7 || b === 15 || b === 9) && r < 0.35 ? 0.3 : 0;
-    else if (role === 'hat') g[s] = b % 2 === 0 ? (b % 4 === 0 ? 0.85 : 0.6) : r < 0.25 ? 0.42 : 0;
-    else g[s] = (b === 3 || b === 6 || b === 11 || b === 14) && r < 0.55 ? 0.6 : r < 0.05 ? 0.5 : 0; }
-  return g;
-}
-function notes(kind, bars) { const out = [], N = bars * 16; let s = 0;
-  while (s < N) { const len = kind === 'bass' ? [2, 2, 3, 4, 1][Math.floor(R() * 5)] : [2, 4, 4, 6, 8][Math.floor(R() * 5)];
-    if (R() < (kind === 'bass' ? 0.7 : 0.6)) { const p = kind === 'bass' ? [0, 0, 3, 5, 7, 10, 12][Math.floor(R() * 7)] : [0, 3, 7, 10, 12, 15, 14][Math.floor(R() * 7)]; out.push({ s, len: Math.min(len, N - s), p, v: 0.5 + R() * 0.5 }); if (kind === 'synth' && R() < 0.5) out.push({ s, len: Math.min(len, N - s), p: p + 4 + Math.floor(R() * 3), v: 0.5 }); }
-    s += len; }
-  return out; }
-function drumVals() { return Array.from({ length: 19 }, () => R()); }
-function grooveItem() { return { groove: 30 + R() * 40, complexity: 25 + R() * 45, forward: R() * 30, behind: 15 + R() * 40 }; }
-function fxChain(ch) { const base = FX[ch]; return base.map(n => ({ n, amt: 0.3 + R() * 0.5 })); }
-const swingPct = g => 50 + g.groove / 100 * 16.7 * (state.ease ? clamp(90 / state.bpm, 0.45, 1.25) : 1);
+const GC = ['var(--g1)', 'var(--g2)', 'var(--g3)', 'var(--g4)', 'var(--g5)'];
+const PTRAITS = BL.TRAITS.map(p => p[1] === 'Atonal' ? 'Atonal' : p[1]);
+const SYG = [...new Set(BL.SYNTH.map(s => s.group))];
+const FEELS = [['ahead', 'Fwd'], ['on', 'On'], ['behind', 'Bhd']];
 
-// ---------- state (the sketch from the spec, trimmed)
-let laneN = 0;
-const pads = [
-  { name: 'Kick 1', zone: 'Kick', label: 'Kick', v: drumVals() }, { name: 'Snare 1', zone: 'Snare', label: 'Snare', v: drumVals() },
-  { name: 'Hats 1', zone: 'Hats', label: 'Hats', v: drumVals() }, { name: 'Drum 1', zone: 'None', label: 'None', v: drumVals() },
-  { name: 'Perc 1', zone: 'Perc', label: 'Perc', v: drumVals() }, null, null, null];
-function drumLane(name, padsIn, chosen) {
-  const p = clone(padsIn), rows = chosen.map(i => part(p[i] ? ROLE[p[i].label] : 'drum', 2));
-  return { id: ++laneN, name, kind: 'drums', level: 0.78, pan: 0, mute: false, solo: false, feel: 'on', followSwing: true, levelLocked: false, fx: null,
-    sound: { zone: 'Kick', hear: 0, items: [0, 1, 2, 3].map(drumVals), pads: p },
-    pattern: { chosen, hear: 0, items: [0, 1, 2, 3].map(() => chosen.map((i, r) => part(p[i] ? ROLE[p[i].label] : 'drum', 2))), rows, writtenAs: chosen.map(i => p[i] && p[i].label), traits: [0.7, 0.55, 0.35, 0.45, 0.4, 0.75, 0.3, 0.9], rowTraits: [null, null, null, null], traitScope: -1, traitLocks: [false, false, false, false, false, false, false, false], rowLocks: [false, false, false, false], rowFeel: ['on', 'behind', 'on', 'ahead'], kept: [null, null, null, null] } };
-}
-function pitchedLane(kind, name) {
-  return { id: ++laneN, name, kind, level: kind === 'bass' ? 0.7 : 0.55, pan: kind === 'synth' ? -0.2 : 0, mute: false, solo: false, feel: kind === 'bass' ? 'behind' : 'on', followSwing: true, levelLocked: false, fx: null,
-    sound: { zone: ZONES[kind][0], hear: 0, items: [0, 1, 2, 3].map(() => Array.from({ length: 8 }, () => R())), kept: [null, null, null, null], phrase: 'Root and fifth' },
-    pattern: { hear: 0, items: [0, 1, 2, 3].map(() => notes(kind, 2)), traits: TRAITS.map(() => 0.3 + R() * 0.5), follow: kind === 'bass' ? 1 : 0, kept: [null, null, null, null] } };
-}
-const state = {
-  diff: true, playing: false, bpm: 92, bars: 2, key: 'A', scale: 'Minor', ease: true, tab: 'track',
-  groove: { open: false, hear: 1, seed: 'B', items: [0, 1, 2, 3].map(grooveItem), locks: { groove: false, complexity: false, forward: false, behind: false }, kept: [{ name: 'Groove 1', g: grooveItem() }, null, null, null] },
-  master: { level: 0.85, fx: { ch: 'Warm', chain: fxChain('Warm'), bypass: false } },
-  lanes: [], sel: null, step: 'sound', adding: null, draftAlone: false, undo: [],
-};
-state.lanes.push(drumLane('Break', pads, [0, 1, 2, 3]));
-state.lanes.push(pitchedLane('bass', 'Sub line'));
-state.lanes[1].fx = { ch: 'Warm', chain: fxChain('Warm'), bypass: false };
-state.lanes.push(pitchedLane('synth', 'Keys'));
-state.lanes[2].fx = { ch: 'Wide', chain: fxChain('Wide'), bypass: false };
-state.sel = state.lanes[0].id; state.step = 'pattern';
-window.trackMock = state; // for screenshots and later tests
+const t = T.createTrack();
+const ui = { tab: 'track', step: 'pattern', sel: t.lanes[0].id, diff: false, playing: false, grooveOpen: false, open: {}, viewBar: 0, fxFor: null, fxEdit: 0 };
+window.track = { t, T, ui, render: () => rerender() }; // for screenshots and checks
 
-const laneById = id => state.lanes.find(l => l.id === id) || (state.adding && state.adding.draft.id === id ? state.adding.draft : null);
-const openLane = () => state.adding ? state.adding.draft : laneById(state.sel);
-function snapshot(what) { state.undo.push({ what, lanes: clone(state.lanes), master: clone(state.master) }); if (state.undo.length > 40) state.undo.shift(); }
-function meterOf(l) { const anySolo = state.lanes.some(x => x.solo); if (l.mute || (anySolo && !l.solo)) return 0; return clamp(l.level * (l.kind === 'drums' ? 0.95 : 0.8) + (R() - 0.5) * 0.04, 0, 1); }
-function masterPeakDb() { const anySolo = state.lanes.some(x => x.solo); let s = 0; state.lanes.forEach(l => { if (!l.mute && (!anySolo || l.solo)) s += l.level * (l.kind === 'drums' ? 0.62 : 0.42); }); s *= state.master.level; return s > 0 ? 20 * Math.log10(s) : -Infinity; }
+const laneById = id => T.laneById(t, id);
+const openLane = () => t.adding ? t.adding.draft : laneById(ui.sel);
+BL.transport.bpm = t.bpm;
 
-// ---------- pictures
-function drumPic(rows, labels, h) { const N = rows[0].length, cw = 160 / N;
+// =====================================================================================
+// Audio: render offline, loop the mix, swap in changes at the same position
+// =====================================================================================
+const canFx = typeof OfflineAudioContext !== 'undefined' || typeof webkitOfflineAudioContext !== 'undefined';
+const fxFn = canFx ? (chain, bypass, l, r, sr, bpm) => BL.offlineChain(chain, bypass, l, r, sr, bpm) : null;
+let booted = false, res = null, rgen = 0, rtimer = 0, actx = null, cur = null;
+function ctx() { if (!actx) { try { actx = new AudioContext({ sampleRate: SR }); } catch (e) { actx = new AudioContext(); } } if (actx.state !== 'running') actx.resume(); return actx; }
+function position() { if (!cur) return 0; const p = (actx.currentTime - cur.startAt) / cur.dur; return ((p % 1) + 1) % 1; }
+function startSource(frac) {
+  if (!res) return; ctx();
+  const dur = res.L / SR, tt = actx.currentTime + 0.03, src = actx.createBufferSource(), gain = actx.createGain(), b = actx.createBuffer(2, res.L, SR);
+  b.copyToChannel(res.left, 0); b.copyToChannel(res.right, 1); src.buffer = b; src.loop = true; src.connect(gain).connect(actx.destination);
+  gain.gain.setValueAtTime(0, tt); gain.gain.linearRampToValueAtTime(1, tt + 0.008); src.start(tt, (frac % 1) * dur);
+  if (cur) { cur.gain.gain.setValueAtTime(1, tt); cur.gain.gain.linearRampToValueAtTime(0, tt + 0.008); cur.src.stop(tt + 0.02); }
+  cur = { src, gain, startAt: tt - frac * dur, dur };
+}
+function stopAudio() { if (cur) { try { cur.src.stop(); } catch (e) { /* stopped */ } cur = null; } ui.playing = false; }
+async function rerender() {
+  const my = ++rgen;
+  let r; try { r = await T.render(t, { fx: fxFn }); } catch (e) { console.error(e); toast('Render failed: ' + e.message); return; }
+  if (my !== rgen) return;
+  const f = position(); res = r;
+  if (!booted) { booted = true; await autoLevelAll(r); t.undo = []; return; } // open balanced, with the limiter idle
+  if (ui.playing) startSource(cur ? f : 0); drawReadouts();
+}
+async function autoLevelAll(r) { // Auto level, then up to four more passes while the limiter still works
+  const n = T.autoLevel(t, r || res || await T.render(t, { fx: fxFn }));
+  for (let k = 0; k < 4 && n; k++) { const r2 = await T.render(t, { fx: fxFn }); if (r2.cut > 0.985) break; T.autoLevel(t, r2, true); }
+  draw(); await rerender(); return n;
+}
+function schedule() { clearTimeout(rtimer); rtimer = setTimeout(rerender, 50); }
+function changed() { draw(); schedule(); }
+function playBuf(l, r) { ctx(); const b = actx.createBuffer(2, l.length, SR); b.copyToChannel(l, 0); b.copyToChannel(r || l, 1); const s = actx.createBufferSource(); s.buffer = b; s.connect(actx.destination); s.start(); }
+function oneShot(v) { const s = T.drumVoice(v, { vel: 0.95, dm: 1, br: 1, levelDb: T.real(T.LEVEL, v[T.LEVEL]) }, Math.floor(R() * 1e9), 5 * SR), pan = T.real(T.PAN, v[T.PAN]); playBuf(s.map(x => x * Math.min(1, 1 - pan)), s.map(x => x * Math.min(1, 1 + pan))); }
+function playPhrase(lane, vn) { const s = T.phrase(t, lane, vn, lane.sound.phrase); playBuf(s); }
+
+// =====================================================================================
+// Pictures
+// =====================================================================================
+function drumPic(lp, lane, h) { const N = lp.rows[0].length, cw = 160 / N, labels = lane.pattern.chosen.map(i => lane.sound.pads[i] && lane.sound.pads[i].label);
   let s = '<svg viewBox="0 0 160 ' + h + '" preserveAspectRatio="none" aria-hidden="true"><rect width="160" height="' + h + '" rx="3" fill="rgba(21,23,28,0.55)"/>';
   for (let k = 0; k < N; k += 4) s += '<rect x="' + (k * cw).toFixed(2) + '" y="0" width="' + (cw * 4 - 0.5).toFixed(2) + '" height="' + h + '" fill="rgba(58,63,75,' + (k % 16 === 0 ? 0.5 : 0.22) + ')"/>';
-  const rh = h / 4; rows.forEach((row, r) => { const col = labels[r] ? LCOL[labels[r]] : 'var(--faint)', y0 = h - (r + 1) * rh;
+  const rh = h / 4; lp.rows.forEach((row, r) => { const col = labels[r] ? LCOL[labels[r]] : 'var(--faint)', y0 = h - (r + 1) * rh;
+    if (lane.pattern.rowLocks[r]) s += '<rect x="0" y="' + y0 + '" width="160" height="' + rh + '" fill="var(--lock)" opacity="0.16"/>';
     row.forEach((v, k) => { if (!v) return; const hh = (rh - 3) * (0.35 + 0.65 * v); s += '<rect x="' + (k * cw + 0.3).toFixed(2) + '" y="' + (y0 + (rh - hh) / 2).toFixed(1) + '" width="' + Math.max(1.2, cw * 0.72).toFixed(2) + '" height="' + hh.toFixed(1) + '" rx="0.6" fill="' + col + '" opacity="' + (0.55 + 0.45 * v).toFixed(2) + '"/>'; }); });
   return s + '</svg>'; }
-function notePic(ns, kind, bars, h) { const N = bars * 16, cw = 160 / N, col = KCOL[kind];
+function notePic(g, kind, h) { const beats = g.bars * 4, [lo, hi] = T.PRANGE[kind], col = KCOL[kind], span = hi - lo + 1;
   let s = '<svg viewBox="0 0 160 ' + h + '" preserveAspectRatio="none" aria-hidden="true"><rect width="160" height="' + h + '" rx="3" fill="rgba(21,23,28,0.55)"/>';
-  for (let k = 0; k < N; k += 4) s += '<rect x="' + (k * cw).toFixed(2) + '" y="0" width="0.5" height="' + h + '" fill="rgba(58,63,75,' + (k % 16 === 0 ? 0.9 : 0.45) + ')"/>';
-  const rowH = (h - 4) / 20; ns.forEach(n => { const y = h - 2 - (n.p + 1) * rowH; s += '<rect x="' + (n.s * cw + 0.4).toFixed(2) + '" y="' + y.toFixed(1) + '" width="' + Math.max(1.5, n.len * cw - 0.8).toFixed(2) + '" height="' + Math.max(1.6, rowH * 0.9).toFixed(1) + '" rx="0.6" fill="' + col + '" opacity="' + (0.5 + 0.5 * n.v).toFixed(2) + '"/>'; });
+  for (let k = 0; k < beats; k++) s += '<rect x="' + (k / beats * 160).toFixed(2) + '" y="0" width="0.5" height="' + h + '" fill="rgba(58,63,75,' + (k % 4 === 0 ? 0.9 : 0.4) + ')"/>';
+  const rowH = (h - 4) / span; g.notes.forEach(n => { const y = h - 2 - (n.p - lo + 1) * rowH; s += '<rect x="' + (n.s / beats * 160 + 0.3).toFixed(2) + '" y="' + y.toFixed(1) + '" width="' + Math.max(1.4, n.l / beats * 160 - 0.6).toFixed(2) + '" height="' + Math.max(1.6, rowH * 0.9).toFixed(1) + '" rx="0.6" fill="' + col + '" opacity="' + (0.5 + 0.5 * n.v).toFixed(2) + '"/>'; });
   return s + '</svg>'; }
-function lanePic(l) { const h = 34;
-  if (l.kind === 'drums') return drumPic(l.pattern.rows, l.pattern.chosen.map(i => l.sound.pads[i] && l.sound.pads[i].label), h);
-  return notePic(l.pattern.items[l.pattern.hear], l.kind, state.bars, h); }
-function grooveSvg(g, h) { const sw = (swingPct(g) - 50) / 50, depth = g.groove / 100;
+function lanePic(l) { return l.kind === 'drums' ? drumPic(T.curLoop(l), l, 34) : notePic(T.curLoop(l), l.kind, 34); }
+function grooveSvg(g, h) { const sw = (T.swingPct(t, g) - 50) / 50, depth = g.groove / 100;
   let s = '<svg viewBox="0 0 160 ' + h + '" preserveAspectRatio="none" aria-hidden="true"><rect width="160" height="' + h + '" rx="3" fill="rgba(21,23,28,0.55)"/>';
   for (let k = 0; k < 16; k++) { const x = (k + (k % 2 ? sw : 0)) * 10 + 2, acc = k % 4 === 0 ? 1 : k % 2 === 0 ? 1 - depth * 0.35 : 1 - depth * 0.6, hh = (h - 6) * (0.3 + acc * 0.7); s += '<rect x="' + x.toFixed(1) + '" y="' + (h - 3 - hh).toFixed(1) + '" width="2.6" height="' + hh.toFixed(1) + '" fill="var(--groove)" opacity="' + (0.35 + acc * 0.6).toFixed(2) + '"/>'; }
   return s + '</svg>'; }
-function envSvg(v) { let s = '<svg viewBox="0 0 100 56" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="28" rx="3" fill="rgba(21,23,28,0.5)"/>'; let pb = '';
-  for (let x = 0; x <= 100; x += 4) pb += (x ? 'L' : 'M') + x + ' ' + (27 - Math.pow(0.001, x / 100 / (0.15 + v[4] * 0.8)) * 24).toFixed(1);
-  s += '<path d="' + pb + '" stroke="var(--g1)" stroke-width="1.3" fill="none" vector-effect="non-scaling-stroke"/>';
-  const bw = 100 / 19; v.forEach((x, i) => { const hh = Math.max(1, x * 26); s += '<rect x="' + (i * bw).toFixed(2) + '" y="' + (56 - hh).toFixed(1) + '" width="' + (bw - 0.8).toFixed(2) + '" height="' + hh.toFixed(1) + '" fill="var(--g' + (1 + Math.min(4, Math.floor(i / 4))) + ')" opacity="0.85"/>'; });
+function envSvg(v) { const dec = T.real(4, v[4]), nd = T.real(7, v[7]), mix = v[5]; let pb = '', pn = '';
+  for (let x = 0; x <= 100; x += 3) { const tt = 0.5 * x / 100; pb += (x ? 'L' : 'M') + x + ' ' + (28 - (1 - mix) * Math.pow(0.001, tt / dec) * 25).toFixed(1); pn += (x ? 'L' : 'M') + x + ' ' + (28 - mix * Math.pow(0.001, tt / nd) * 25).toFixed(1); }
+  let s = '<svg viewBox="0 0 100 56" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="29" rx="3" fill="rgba(21,23,28,0.5)"/><path d="' + pb + '" stroke="var(--g1)" stroke-width="1.3" fill="none" vector-effect="non-scaling-stroke"/><path d="' + pn + '" stroke="var(--g2)" stroke-width="1.3" fill="none" vector-effect="non-scaling-stroke"/>';
+  const bw = 100 / 19; v.forEach((x, i) => { const hh = Math.max(1, x * 25); s += '<rect x="' + (i * bw).toFixed(2) + '" y="' + (56 - hh).toFixed(1) + '" width="' + (bw - 0.8).toFixed(2) + '" height="' + hh.toFixed(1) + '" fill="' + GC[T.SET[i][1]] + '" opacity="0.85"/>'; });
   return s + '</svg>'; }
-function waveSvg(v, kind) { const col = KCOL[kind]; let p = '';
-  for (let x = 0; x <= 100; x += 1) { const t = x / 100 * Math.PI * 2 * (2 + v[0] * 3), y = Math.sin(t) * (1 - v[1] * 0.5) + Math.sin(t * 2) * v[2] * 0.4 + Math.sign(Math.sin(t * 3)) * v[3] * 0.25; p += (x ? 'L' : 'M') + x + ' ' + (16 - y * 11).toFixed(1); }
-  let s = '<svg viewBox="0 0 100 56" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="32" rx="3" fill="rgba(21,23,28,0.5)"/><path d="' + p + '" stroke="' + col + '" stroke-width="1.4" fill="none" vector-effect="non-scaling-stroke"/>';
-  let e = 'M0 56'; const a = 2 + v[4] * 20, d = 20 + v[5] * 50; e += ' L' + a.toFixed(1) + ' 36 L' + (a + d).toFixed(1) + ' ' + (36 + v[6] * 16).toFixed(1) + ' L100 56';
-  return s + '<path d="' + e + '" stroke="' + col + '" stroke-width="1.2" fill="none" opacity="0.7" vector-effect="non-scaling-stroke"/></svg>'; }
+function padSvg(v) { let s = '<svg viewBox="0 0 100 22" preserveAspectRatio="none" aria-hidden="true" style="display:block;width:100%;height:18px;margin-top:auto">'; const bw = 100 / 19; v.forEach((x, i) => { const hh = Math.max(1, x * 20); s += '<rect x="' + (i * bw).toFixed(2) + '" y="' + (22 - hh).toFixed(1) + '" width="' + (bw - 0.8).toFixed(2) + '" height="' + hh.toFixed(1) + '" fill="' + GC[T.SET[i][1]] + '" opacity="0.8"/>'; }); return s + '</svg>'; }
+function waveSvg(vn, kind) { const col = KCOL[kind], wa = Math.min(3, Math.floor(vn[0] * 4)); let p = '';
+  for (let x = 0; x <= 100; x++) { const ph = (x / 100 * 3) % 1, y = wa === 0 ? Math.sin(2 * Math.PI * ph) : wa === 1 ? 1 - 4 * Math.abs(ph - 0.5) : wa === 2 ? 2 * ph - 1 : ph < 0.5 ? 1 : -1; p += (x ? 'L' : 'M') + x + ' ' + (15 - y * 10 * (0.4 + vn[6] * 0.6)).toFixed(1); }
+  const at = 2 + vn[10] * 30, de = 10 + vn[11] * 40, su = vn[12];
+  return '<svg viewBox="0 0 100 56" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="30" rx="3" fill="rgba(21,23,28,0.5)"/><path d="' + p + '" stroke="' + col + '" stroke-width="1.3" fill="none" vector-effect="non-scaling-stroke"/><path d="M0 56 L' + at.toFixed(1) + ' 34 L' + (at + de).toFixed(1) + ' ' + (56 - su * 22).toFixed(1) + ' L85 ' + (56 - su * 22).toFixed(1) + ' L100 56" stroke="' + col + '" stroke-width="1.2" fill="none" opacity="0.7" vector-effect="non-scaling-stroke"/></svg>'; }
 
-// ---------- small builders
-const chip = (label, on, act, val, color) => '<button class="chip" data-act="' + act + '" data-v="' + esc(val) + '" aria-pressed="' + on + '"' + (color ? ' style="--on:' + color + '"' : '') + '>' + esc(label) + '</button>';
-const slider = (id, name, v, out, attrs, lock, color) => '<div class="sl' + (lock !== undefined ? ' lockable' : '') + '"' + (color ? ' style="--sc:' + color + '"' : '') + '><span><label for="' + id + '">' + esc(name) + '</label></span><input id="' + id + '" type="range" min="0" max="1000" value="' + Math.round(v * 1000) + '" style="--p:' + (v * 100).toFixed(1) + '%" ' + attrs + '><output>' + esc(out) + '</output>' + (lock !== undefined ? lock : '') + '</div>';
-const seg = (opts, cur, act, extra, color) => '<span class="seg" role="group"' + (color ? ' style="--sg:' + color + '"' : '') + '>' + opts.map(([v, t]) => '<button data-act="' + act + '" data-v="' + esc(v) + '"' + (extra || '') + ' aria-pressed="' + (String(cur) === String(v)) + '">' + esc(t) + '</button>').join('') + '</span>';
-function tile(i, inner, meta, o, kind, accent, word) { const hear = i === o.hear;
-  return '<div class="tile' + (hear ? ' hear' : '') + '"' + (accent ? ' style="--ta:' + accent + '"' : '') + '><button class="hearzone" data-act="hear" data-k="' + kind + '" data-i="' + i + '" aria-label="Hear ' + L[i] + '"><div class="th"><b>' + L[i] + '</b>' + (hear ? '<em>' + (word || 'hearing') + '</em>' : '') + '</div>' + inner + '<div class="meta">' + esc(meta) + '</div></button>' +
-    '<div class="acts"><button class="btn" data-act="breed" data-k="' + kind + '" data-i="' + i + '">Breed</button><button class="btn" data-act="cross" data-k="' + kind + '" data-i="' + i + '"' + (hear ? ' disabled' : '') + '>Cross</button></div></div>'; }
-const backNew = k => '<span class="row"><button class="btn small" data-act="back" data-k="' + k + '">Back</button><button class="btn small" data-act="new" data-k="' + k + '">New</button></span>';
-const db = x => x <= 0.001 ? '−∞' : (20 * Math.log10(x / 0.78) ).toFixed(1);
+// =====================================================================================
+// Small builders
+// =====================================================================================
+const chip = (label, on, act, val, color, extra) => '<button class="chip" data-act="' + act + '" data-v="' + esc(val) + '"' + (extra || '') + ' aria-pressed="' + on + '"' + (color ? ' style="--on:' + color + '"' : '') + '>' + esc(label) + '</button>';
+const slider = (id, name, v, out, attrs, lock, color, cls) => '<div class="sl' + (lock !== undefined ? ' lockable' : '') + (cls ? ' ' + cls : '') + '"' + (color ? ' style="--sc:' + color + '"' : '') + '><span><label for="' + id + '">' + esc(name) + '</label></span><input id="' + id + '" type="range" min="0" max="1000" value="' + Math.round(v * 1000) + '" style="--p:' + (v * 100).toFixed(1) + '%" ' + attrs + '><output>' + esc(out) + '</output>' + (lock !== undefined ? lock : '') + '</div>';
+const lockBtn = (act, i, on, extra) => '<button class="lock" data-act="' + act + '" data-i="' + i + '"' + (extra || '') + ' aria-pressed="' + on + '">' + (on ? 'Locked' : 'Lock') + '</button>';
+const seg = (opts, cur, act, extra, color) => '<span class="seg" role="group"' + (color ? ' style="--sg:' + color + '"' : '') + '>' + opts.map(([v, tx]) => '<button data-act="' + act + '" data-v="' + esc(v) + '"' + (extra || '') + ' aria-pressed="' + (String(cur) === String(v)) + '">' + esc(tx) + '</button>').join('') + '</span>';
+function tile(i, inner, meta, o, which, laneId, accent, word) {
+  const hear = i === o.hear, par = i === o.parent, d = ' data-k="' + which + '" data-id="' + laneId + '" data-i="' + i + '"';
+  return '<div class="tile' + (hear ? ' hear' : '') + '"' + (accent ? ' style="--ta:' + accent + '"' : '') + '><button class="hearzone" data-act="hear"' + d + ' aria-label="Hear ' + L[i] + '"><div class="th"><b>' + L[i] + '</b>' + (par ? '<em class="par">★ parent</em>' : hear ? '<em>' + (word || 'hearing') + '</em>' : '') + '</div>' + inner + '<div class="meta">' + esc(meta) + '</div></button>' +
+    '<div class="acts"><button class="btn" data-act="breed"' + d + '>' + (par ? 'Again' : 'Breed') + '</button><button class="btn" data-act="cross"' + d + (hear ? ' disabled' : '') + '>Cross</button></div></div>'; }
+const backNew = (which, id) => '<span class="row"><button class="btn small" data-act="back" data-k="' + which + '" data-id="' + id + '">Back</button><button class="btn small" data-act="new" data-k="' + which + '" data-id="' + id + '">New</button></span>';
+const spreadSl = (which, id, o, color) => slider('sp-' + which + '-' + id, 'Spread', (o.spread - 0.02) / 0.48, o.spread.toFixed(2), 'data-spread="' + which + '" data-id="' + id + '"', undefined, color);
+const dbTxt = db => db === -Infinity ? '−∞' : (db > 0 ? '+' : '') + db.toFixed(1);
+const dbPos = db => db === -Infinity ? 0 : clamp((db + 48) / 60, 0.001, 1);
+const posDb = p => p <= 0.002 ? -Infinity : Math.round((-48 + p * 60) * 10) / 10;
 const panTxt = p => Math.abs(p) < 0.03 ? 'C' : (p < 0 ? 'L' : 'R') + Math.round(Math.abs(p) * 100);
-const FEELS = [['ahead', 'Fwd'], ['on', 'On'], ['behind', 'Bhd']];
+function chainText(F) { const c = T.curChain(F); return c.fx.length ? c.fx.map(f => BL.FX_TYPES[f.type].name).join(' · ') : ''; }
 
 // =====================================================================================
 // Track
 // =====================================================================================
 function laneCard(l, draft) {
-  const sel = !draft && state.sel === l.id && !state.adding, m = meterOf(l), fxTxt = l.fx ? l.fx.ch + ' · ' + l.fx.chain.length : '+ FX';
+  const sel = !draft && ui.sel === l.id && !t.adding, fx = chainText(l.fx);
   return '<div class="lanec' + (sel ? ' sel' : '') + (draft ? ' draft' : '') + (l.mute ? ' muted' : '') + '" style="--lc:' + KCOL[l.kind] + '">' +
     '<div class="lhead"><button class="open" data-act="openlane" data-id="' + l.id + '"' + (draft ? ' disabled' : '') + '><b>' + esc(l.name) + '</b><span class="kind">' + l.kind + (draft ? ' · adding' : '') + '</span></button>' +
     (draft ? '' : '<span class="ms"><button class="m" data-act="mute" data-id="' + l.id + '" aria-pressed="' + l.mute + '" aria-label="Mute ' + esc(l.name) + '">M</button><button class="s" data-act="solo" data-id="' + l.id + '" aria-pressed="' + l.solo + '" aria-label="Solo ' + esc(l.name) + '">S</button></span><button class="more" data-act="lanemenu" data-id="' + l.id + '" aria-label="More for ' + esc(l.name) + '">⋯</button>') + '</div>' +
     '<button class="lpic" data-act="openlane" data-id="' + l.id + '" data-step="pattern" aria-label="Open the pattern of ' + esc(l.name) + '"' + (draft ? ' disabled' : '') + '>' + lanePic(l) + '</button>' +
+    '<div class="mix" style="--sc:' + KCOL[l.kind] + '"><input id="lv-' + l.id + '" type="range" min="0" max="1000" value="' + Math.round(dbPos(l.db) * 1000) + '" style="--p:' + (dbPos(l.db) * 100).toFixed(1) + '%" data-level="' + l.id + '" aria-label="Level of ' + esc(l.name) + '"><output id="lvo-' + l.id + '">' + dbTxt(l.db) + ' dB</output>' + (draft ? '<span></span>' : '<button class="lock" data-act="levellock" data-id="' + l.id + '" aria-pressed="' + l.levelLocked + '" title="Auto level leaves a locked level alone">' + (l.levelLocked ? 'Locked' : 'Lock') + '</button>') + '</div>' +
+    '<div class="meter idle" aria-hidden="true"><i id="m-' + l.id + '" style="--m:0%"></i></div>' +
     (draft ? '<p class="hint">Mixed in while you breed it. Finish with Add to track.</p>' :
-    '<div class="mix" style="--sc:' + KCOL[l.kind] + '"><input id="lv-' + l.id + '" type="range" min="0" max="1000" value="' + Math.round(l.level * 1000) + '" style="--p:' + (l.level * 100).toFixed(1) + '%" data-level="' + l.id + '" aria-label="Level of ' + esc(l.name) + '"><output id="lvo-' + l.id + '">' + db(l.level) + ' dB</output><button class="lock" data-act="levellock" data-id="' + l.id + '" aria-pressed="' + l.levelLocked + '" title="Auto level leaves a locked level alone">' + (l.levelLocked ? 'Locked' : 'Lock') + '</button></div>' +
-    '<div class="meter" aria-hidden="true"><i style="--m:' + (m * 100).toFixed(0) + '%"></i></div>' +
     '<div class="lfoot"><span class="pan"><input id="pn-' + l.id + '" type="range" min="0" max="1000" value="' + Math.round((l.pan + 1) * 500) + '" style="--p:' + ((l.pan + 1) * 50).toFixed(1) + '%" data-pan="' + l.id + '" aria-label="Pan of ' + esc(l.name) + '"><span id="pno-' + l.id + '">' + panTxt(l.pan) + '</span></span>' +
     seg(FEELS, l.feel, 'lanefeel', ' data-id="' + l.id + '"') +
     '<label class="swt"><input type="checkbox" data-act="followswing" data-id="' + l.id + '"' + (l.followSwing ? ' checked' : '') + '>Swing</label>' +
-    '<button class="fxbtn' + (l.fx ? ' on' : '') + (l.fx && l.fx.bypass ? ' byp' : '') + '" data-act="fx" data-id="' + l.id + '">' + esc(fxTxt) + '</button></div>') + '</div>';
+    '<button class="fxbtn' + (fx ? ' on' : '') + (fx && l.fx.bypass ? ' byp' : '') + '" data-act="fx" data-id="' + l.id + '">' + (fx ? esc(fx) : '+ FX') + '</button></div>') + '</div>';
 }
 function grooveBlock() {
-  const G = state.groove, g = G.items[G.hear];
-  if (!G.open) return '<button class="seedpill" data-act="grooveopen">' + grooveSvg(state.groove.items[L.indexOf(G.seed)] || g, 22) + 'Groove ' + esc(G.seed) + '<small>swing ' + swingPct(state.groove.items[L.indexOf(G.seed)] || g).toFixed(0) + '% · tap to breed</small></button>';
-  const sets = [['groove', 'Groove'], ['complexity', 'Complexity'], ['forward', 'Forward'], ['behind', 'Behind']].map(([k, n]) => slider('g-' + k, n, g[k] / 100, Math.round(g[k]), 'data-gset="' + k + '"', '<button class="lock" data-act="glock" data-v="' + k + '" aria-pressed="' + G.locks[k] + '">' + (G.locks[k] ? 'Locked' : 'Lock') + '</button>', 'var(--groove)')).join('');
-  return '<div class="card" style="background:var(--tile)"><div class="row between"><span class="row"><b>Groove</b>' + mark('moved', 'moved from Groove tab') + '</span><span class="row">' + backNew('groove') + '<button class="btn small" data-act="grooveopen">Close</button></span></div>' +
-    '<div class="litter">' + G.items.map((x, i) => tile(i, grooveSvg(x, 56), 'swing ' + swingPct(x).toFixed(0) + '%  C' + Math.round(x.complexity) + '  F' + Math.round(x.forward) + '  B' + Math.round(x.behind), G, 'groove', 'var(--groove)', G.seed === L[i] ? 'in use' : 'hearing')).join('') + '</div>' +
-    '<div class="row between"><b>Hearing ' + L[G.hear] + '</b><button class="btn small hot" data-act="seed"' + (G.seed === L[G.hear] ? ' disabled' : '') + '>' + (G.seed === L[G.hear] ? 'Used by every lane' : 'Use ' + L[G.hear] + ' for the Track') + '</button></div>' + sets +
-    '<p class="hint">Swing and accents now apply to every lane, pitched parts too. The feel per row moved to each drum lane\'s Pattern step. Open question: should Complexity stay here, or move to each drum lane?</p>' +
-    '<div class="row between"><span class="lab">Keep grooves</span></div><div class="keep">' + G.kept.map((k, i) => k ? '<div class="pad full" style="--kc:var(--groove)"><span class="no">' + (i + 1) + '</span><span class="nm">' + esc(k.name) + '</span>' + grooveSvg(k.g, 22) + '</div>' : '<button class="pad target" data-act="keepgroove" data-i="' + i + '"><span class="no">' + (i + 1) + '</span><span class="dr">Keep ' + L[G.hear] + '</span></button>').join('') + '</div></div>';
+  const G = t.groove, gUse = T.grooveNow(t);
+  if (!ui.grooveOpen) return '<button class="seedpill" data-act="grooveopen">' + grooveSvg(gUse, 22) + 'Groove ' + esc(G.use.replace('Groove ', '')) + '<small>swing ' + T.swingPct(t, gUse).toFixed(0) + '% · C' + Math.round(gUse.complexity) + ' · tap to breed</small></button>';
+  const g = G.lit.items[G.lit.hear], desc = { groove: 'Swing ' + T.swingPct(t, g).toFixed(1) + '% at ' + t.bpm + ' BPM, off-beats up to ' + (g.groove / 100 * 7).toFixed(1) + ' dB under the beat.', complexity: (g.complexity < 25 ? 'Square' : g.complexity < 60 ? 'Medium' : 'Busy') + ': where New starts each drum lane\'s Dense and Off beat.', forward: 'Forward plays ' + (g.forward * 0.3).toFixed(1) + ' ms early, brighter and shorter.', behind: 'Behind plays ' + (g.behind * 0.3).toFixed(1) + ' ms late, louder and longer.' };
+  const sets = [['groove', 'Groove'], ['complexity', 'Complexity'], ['forward', 'Forward'], ['behind', 'Behind']].map(([k, n]) => slider('g-' + k, n, g[k] / 100, Math.round(g[k]), 'data-gset="' + k + '"', '<button class="lock" data-act="glock" data-v="' + k + '" aria-pressed="' + G.locks[k] + '">' + (G.locks[k] ? 'Locked' : 'Lock') + '</button>', 'var(--groove)') + '<p class="hint dtwhy" id="gd-' + k + '">' + esc(desc[k]) + '</p>').join('');
+  return '<div class="card" style="background:var(--tile)"><div class="row between"><span class="row"><b>Groove</b>' + mark('moved', 'moved from Groove tab') + '</span><span class="row">' + backNew('groove', 0) + '<button class="btn small" data-act="grooveopen">Close</button></span></div>' +
+    spreadSl('groove', 0, G.lit, 'var(--groove)') +
+    '<div class="litter">' + G.lit.items.map((x, i) => tile(i, grooveSvg(x, 56), 'swing ' + T.swingPct(t, x).toFixed(0) + '%  C' + Math.round(x.complexity) + '  F' + Math.round(x.forward) + '  B' + Math.round(x.behind), G.lit, 'groove', 0, 'var(--groove)', G.use === L[i] ? 'in use' : 'hearing')).join('') + '</div>' +
+    '<div class="row between"><b>Hearing ' + L[G.lit.hear] + '</b><button class="btn small hot" data-act="usegroove"' + (G.use === L[G.lit.hear] ? ' disabled' : '') + '>' + (G.use === L[G.lit.hear] ? 'Used by every lane' : 'Use ' + L[G.lit.hear] + ' for the Track') + '</button></div>' + sets +
+    '<p class="hint">Swing, accents and drift apply to every lane at render time. Tapping a groove uses it straight away.</p>' +
+    '<div class="row between"><span class="lab">Keep grooves</span><span class="hint">Tap a kept one to use it</span></div><div class="keep">' + G.kept.map((k, i) => k ? '<div class="pad full' + (G.use === k.name ? ' live' : '') + '" style="--kc:var(--groove)"><button class="hearzone" data-act="usekept" data-i="' + i + '"><span class="no">' + (i + 1) + (G.use === k.name ? ' · in use' : '') + '</span><span class="nm">' + esc(k.name) + '</span>' + grooveSvg(k.g, 22).replace('<svg ', '<svg style="display:block;width:100%;height:20px;margin-top:auto" ') + '</button><button class="x" data-act="cleargroove" data-i="' + i + '" aria-label="Clear ' + esc(k.name) + '">×</button></div>' : '<button class="pad target" data-act="keepgroove" data-i="' + i + '"><span class="no">' + (i + 1) + '</span><span class="dr">Keep ' + L[G.lit.hear] + '</span></button>').join('') + '</div></div>';
+}
+function chainInline(F, id) {
+  const c = T.curChain(F);
+  return '<div class="chain">' + (c.fx.length ? c.fx.map((f, k) => '<div class="fxrow"><b>' + esc(BL.FX_TYPES[f.type].name) + '</b><small>' + esc(BL.fxShow(f).slice(0, 2).join(' · ')) + '</small><button data-act="fxopen" data-id="' + id + '" data-i="' + k + '" aria-label="Edit ' + esc(BL.FX_TYPES[f.type].name) + '">✎</button><button data-act="fxdel" data-id="' + id + '" data-i="' + k + '" aria-label="Remove ' + esc(BL.FX_TYPES[f.type].name) + '">×</button></div>').join('') : '<p class="hint">No effects yet.</p>') +
+    '<div class="row"><button class="btn small" data-act="fxaddmenu" data-id="' + id + '">+ Add effect</button><button class="btn small" data-act="fx" data-id="' + id + '">Breed a chain</button>' + (c.fx.length ? '<button class="btn small" data-act="fxbypass" data-id="' + id + '" aria-pressed="' + F.bypass + '">' + (F.bypass ? 'Bypassed' : 'Bypass') + '</button>' : '') + '</div></div>';
 }
 function trackPane() {
-  const pk = masterPeakDb(), lim = pk > -1 ? pk + 1 : 0, mfx = state.master.fx;
-  const lanes = state.lanes.map(l => laneCard(l)).join('') + (state.adding ? laneCard(state.adding.draft, true) : '');
-  return '<section class="pane' + (state.tab === 'track' ? ' on' : '') + '" data-pane="track" aria-label="Track">' +
+  return '<section class="pane' + (ui.tab === 'track' ? ' on' : '') + '" data-pane="track" aria-label="Track">' +
     '<div class="pane-head"><h2>Track</h2>' + mark('new', 'new · home') + '<p>The whole loop: every part, mixed.</p></div>' +
     '<div class="card mk moved"><div class="row between"><span class="lab">Global</span>' + mark('moved', 'moved here') + '</div>' +
     '<div class="globals">' +
-      '<div class="gbox"><span class="lab">Bars</span>' + seg([[2, '2 bars'], [4, '4 bars']], state.bars, 'bars', '', 'var(--accent)') + '</div>' +
-      '<div class="gbox"><span class="lab">Key ' + mark('new') + '</span><span class="row" style="flex-wrap:nowrap"><select id="key" data-sel="key" aria-label="Key">' + ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'].map(k => '<option' + (k === state.key ? ' selected' : '') + '>' + k + '</option>').join('') + '</select><select id="scale" data-sel="scale" aria-label="Scale">' + ['Minor', 'Major', 'Dorian', 'Pent. minor'].map(k => '<option' + (k === state.scale ? ' selected' : '') + '>' + k + '</option>').join('') + '</select></span></div>' +
+      '<div class="gbox"><span class="lab">Bars</span>' + seg([[2, '2 bars'], [4, '4 bars']], t.bars, 'bars', '', 'var(--accent)') + '</div>' +
+      '<div class="gbox"><span class="lab">Key ' + mark('new') + '</span><span class="row" style="flex-wrap:nowrap"><select id="key" data-sel="key" aria-label="Key">' + T.KEYS.map(k => '<option' + (k === t.key ? ' selected' : '') + '>' + k + '</option>').join('') + '</select><select id="scale" data-sel="scale" aria-label="Scale">' + T.SCALES.map(k => '<option' + (k === t.scale ? ' selected' : '') + '>' + k + '</option>').join('') + '</select></span></div>' +
     '</div>' + grooveBlock() +
-    '<label class="hint"><input type="checkbox" data-act="ease"' + (state.ease ? ' checked' : '') + '> Less swing at faster tempos</label></div>' +
-    '<div class="row between"><span class="row"><span class="lab">Lanes · ' + state.lanes.length + '</span>' + mark('new') + '</span><span class="row"><button class="btn small" data-act="undo"' + (state.undo.length ? '' : ' disabled') + '>Undo' + (state.undo.length ? ' ' + esc(state.undo[state.undo.length - 1].what) : '') + '</button><button class="btn small" data-act="autolevel">Auto level</button></span></div>' +
-    (state.lanes.length || state.adding ? '<div class="lanes">' + lanes + '</div>' : '<div class="empty"><b>No parts yet</b><p class="hint">Start with drums: breed a kit, then a break. Bass and synth follow the same two steps.</p></div>') +
-    '<div class="addrow">' + [['drums', 'Drums', 'kit, then break'], ['bass', 'Bass', 'voice, then line'], ['synth', 'Synth', 'voice, then loop']].map(([k, n, s]) => '<button class="addbtn" data-act="add" data-v="' + k + '" style="--ac:' + KCOL[k] + '"' + (state.adding ? ' disabled' : '') + '><b>+ ' + n + '</b><small>' + s + '</small></button>').join('') + '</div>' +
-    '<div class="card mk new"><div class="row between"><span class="row"><b>Master</b>' + mark('new') + '</span><span class="limit' + (lim > 0 ? ' on' : '') + '">' + (lim > 0 ? 'limiter −' + lim.toFixed(1) + ' dB' : 'limiter idle · peak ' + (isFinite(pk) ? pk.toFixed(1) : '−∞') + ' dB') + '</span></div>' +
-      slider('mlevel', 'Level', state.master.level, db(state.master.level * 0.78) + ' dB', 'data-mlevel="1"') +
-      '<div class="meter" aria-hidden="true"><i style="--m:' + clamp((pk + 24) / 24 * 100, 0, 100).toFixed(0) + '%"></i></div>' +
-      '<div class="row between"><span class="hint">Effects, then the −1 dB limiter.</span><button class="fxbtn' + (mfx ? ' on' : '') + (mfx && mfx.bypass ? ' byp' : '') + '" data-act="fx" data-id="master">' + (mfx ? esc(mfx.ch) + ' · ' + mfx.chain.length : '+ FX') + '</button></div></div>' +
+    '<label class="hint"><input type="checkbox" data-act="ease"' + (t.ease ? ' checked' : '') + '> Less swing at faster tempos</label></div>' +
+    '<div class="row between"><span class="row"><span class="lab">Lanes · ' + t.lanes.length + '</span>' + mark('new') + '</span><span class="row"><button class="btn small" data-act="undo"' + (t.undo.length ? '' : ' disabled') + '>Undo' + (t.undo.length ? ' ' + esc(t.undo[t.undo.length - 1].what) : '') + '</button><button class="btn small" data-act="autolevel"' + (t.lanes.length ? '' : ' disabled') + '>Auto level</button></span></div>' +
+    (t.lanes.length || t.adding ? '<div class="lanes">' + t.lanes.map(l => laneCard(l)).join('') + (t.adding ? laneCard(t.adding.draft, true) : '') + '</div>' : '<div class="empty"><b>No parts yet</b><p class="hint">Start with drums: breed a kit, then a break. Bass and synth follow the same two steps.</p></div>') +
+    '<div class="addrow">' + [['drums', 'Drums', 'kit, then break'], ['bass', 'Bass', 'voice, then line'], ['synth', 'Synth', 'voice, then loop']].map(([k, n, s]) => '<button class="addbtn" data-act="add" data-v="' + k + '" style="--ac:' + KCOL[k] + '"' + (t.adding ? ' disabled' : '') + '><b>+ ' + n + '</b><small>' + s + '</small></button>').join('') + '</div>' +
+    '<div class="card mk new"><div class="row between"><span class="row"><b>Master</b>' + mark('new') + '</span><span class="limit" id="limit">…</span></div>' +
+      '<div class="mix" style="--sc:var(--accent)"><input id="mlevel" type="range" min="0" max="1000" value="' + Math.round(dbPos(t.master.db) * 1000) + '" style="--p:' + (dbPos(t.master.db) * 100).toFixed(1) + '%" data-mlevel="1" aria-label="Master level"><output id="mlvo">' + dbTxt(t.master.db) + ' dB</output><span></span></div>' +
+      '<div class="meter idle" aria-hidden="true"><i id="m-master" style="--m:0%"></i></div>' +
+      '<div class="row between"><span class="lab">Master effects</span><span class="hint">then the −1 dB limiter</span></div>' + chainInline(t.master.fx, 'master') + '</div>' +
     '</section>';
 }
 
 // =====================================================================================
-// Part editor: Sound then Pattern
+// Part editor
 // =====================================================================================
-function stepper(l) { const c = KCOL[l.kind], s = state.step, names = l.kind === 'drums' ? ['Kit', 'Break'] : ['Voice', l.kind === 'bass' ? 'Line' : 'Loop'];
-  return '<div class="stepper" style="--pc:' + c + '"><button data-act="step" data-v="sound"' + (s === 'sound' ? ' aria-current="step"' : ' class="done"') + '><i>1</i><span><b>Sound</b><small>' + names[0] + '</small></span></button><button data-act="step" data-v="pattern"' + (s === 'pattern' ? ' aria-current="step"' : '') + '><i>2</i><span><b>Pattern</b><small>' + names[1] + '</small></span></button></div>'; }
+function stepper(l) { const s = ui.step, names = l.kind === 'drums' ? ['Kit', 'Break'] : ['Voice', l.kind === 'bass' ? 'Line' : 'Loop'];
+  return '<div class="stepper" style="--pc:' + KCOL[l.kind] + '"><button data-act="step" data-v="sound"' + (s === 'sound' ? ' aria-current="step"' : ' class="done"') + '><i>1</i><span><b>Sound</b><small>' + names[0] + '</small></span></button><button data-act="step" data-v="pattern"' + (s === 'pattern' ? ' aria-current="step"' : '') + '><i>2</i><span><b>Pattern</b><small>' + names[1] + '</small></span></button></div>'; }
 function partPane() {
-  const l = openLane(), on = state.tab === 'sound' || state.tab === 'pattern';
+  const l = openLane(), on = ui.tab === 'sound' || ui.tab === 'pattern';
   if (!l) return '<section class="pane' + (on ? ' on' : '') + '" data-pane="part" aria-label="Part"><div class="nothing">Open a lane to change its sound or pattern, or add a part.</div></section>';
-  const adding = !!state.adding;
+  const adding = !!t.adding;
   const head = '<div class="pane-head"><h2 style="color:' + KCOL[l.kind] + '">' + esc(l.name) + '</h2>' + (adding ? mark('new', 'new · add part flow') : '') + '<p>' + (adding ? 'Adding a ' + l.kind + ' part.' : 'Editing a lane. Changes play in place.') + '</p></div>' + stepper(l) +
-    '<div class="partbar"><span class="grow">' + (adding ? seg([['track', 'In the track'], ['alone', 'Alone']], state.draftAlone ? 'alone' : 'track', 'draftalone', '', KCOL[l.kind]) : '') + '</span>' +
-    (adding ? '<button class="btn" data-act="cancel">Cancel</button>' + (state.step === 'sound' ? '<button class="btn primary" data-act="step" data-v="pattern">Next: Pattern</button>' : '<button class="btn" data-act="step" data-v="sound">Back to Sound</button><button class="btn primary" data-act="addtotrack">Add to track</button>')
+    '<div class="partbar"><span class="grow">' + (adding ? seg([['track', 'In the track'], ['alone', 'Alone']], t.draftAlone ? 'alone' : 'track', 'draftalone', '', KCOL[l.kind]) : '') + '</span>' +
+    (adding ? '<button class="btn" data-act="cancel">Cancel</button>' + (ui.step === 'sound' ? '<button class="btn primary" data-act="step" data-v="pattern">Next: Pattern</button>' : '<button class="btn" data-act="step" data-v="sound">Back to Sound</button><button class="btn primary" data-act="addtotrack">Add to track</button>')
       : '<button class="btn" data-act="closepart">Done</button>') + '</div>';
-  const body = l.kind === 'drums' ? (state.step === 'sound' ? drumSound(l) : drumPattern(l)) : (state.step === 'sound' ? pitchSound(l) : pitchPattern(l));
+  const body = l.kind === 'drums' ? (ui.step === 'sound' ? drumSound(l) : drumPattern(l)) : (ui.step === 'sound' ? pitchSound(l) : pitchPattern(l));
   return '<section class="pane' + (on ? ' on' : '') + '" data-pane="part" aria-label="' + esc(l.name) + '">' + head + body + '</section>';
 }
 function padCard(l, p, i) {
   const used = l.pattern.chosen.indexOf(i);
-  return p ? '<div class="pad full" style="--kc:' + LCOL[p.label] + '"><span class="no">' + (36 + i) + '</span><span class="nm">' + esc(p.name) + '</span><button class="labelbtn mk new" data-act="relabel" data-id="' + l.id + '" data-i="' + i + '" aria-label="Label of ' + esc(p.name) + ': ' + p.label + '. Change">' + p.label + '</button><span class="zone">bred as ' + p.zone + '</span>' + (used >= 0 ? '<span class="used">' + (used + 1) + '</span>' : '') + '</div>'
-    : '<button class="pad target" data-act="keepdrum" data-id="' + l.id + '" data-i="' + i + '"><span class="no">' + (36 + i) + '</span><span class="dr">Keep ' + L[l.sound.hear] + '</span></button>'; }
+  return p ? '<div class="pad full" style="--kc:' + LCOL[p.label] + '"><button class="hearzone" data-act="playpad" data-id="' + l.id + '" data-i="' + i + '" aria-label="Play ' + esc(p.name) + '"><span class="no">' + (36 + i) + (used >= 0 ? ' · row ' + (used + 1) : '') + '</span><span class="nm">' + esc(p.name) + '</span></button><button class="labelbtn mk new" data-act="relabel" data-id="' + l.id + '" data-i="' + i + '" aria-label="' + esc(p.name) + ' plays as ' + p.label + '. Change">' + p.label + '</button><span class="zone">bred as ' + p.zone + '</span><button class="x" data-act="clearpad" data-id="' + l.id + '" data-i="' + i + '" aria-label="Clear ' + esc(p.name) + '">×</button></div>'
+    : '<button class="pad target" data-act="keepdrum" data-id="' + l.id + '" data-i="' + i + '"><span class="no">' + (36 + i) + '</span><span class="dr">Keep ' + L[l.sound.lit.hear] + '</span></button>'; }
 function drumSound(l) {
-  const S = l.sound, groups = ['Body', 'Noise', 'Click', 'Grit', 'Out'];
-  return '<div class="row between"><span class="lab">Zone</span>' + backNew('drum') + '</div>' +
-    '<div class="chips">' + LABELS.slice(0, 4).concat('None').map(z => chip(z, S.zone === z, 'zone', z, LCOL[z])).join('') + '</div>' +
-    '<div class="litter">' + S.items.map((x, i) => tile(i, envSvg(x), Math.round(40 + x[0] * 300) + ' Hz  ' + Math.round(30 + x[4] * 500) + ' ms', S, 'drum')).join('') + '</div>' +
-    '<div class="card"><div class="row between"><b>Hearing ' + L[S.hear] + '</b><span class="hint">19 settings, as in Breaks mobile</span></div>' + groups.map((g, gi) => '<details class="grp" style="--gc:var(--g' + (gi + 1) + ')"><summary><i></i>' + g.toUpperCase() + '<small>unchanged</small></summary><p class="hint" style="padding-bottom:10px">Same sliders and locks as the Drums tab today.</p></details>').join('') + '</div>' +
-    '<div class="card"><div class="row between"><span class="row"><span class="lab">Keep · pads 36 to 43</span>' + mark('new', 'label per pad') + '</span><span class="hint">Tap a label to change what the pad plays as</span></div><div class="keep">' + S.pads.map((p, i) => padCard(l, p, i)).join('') + '</div>' +
-    '<p class="hint">The label decides the row\'s part in the break. The zone it was bred in still bounds breeding its sound.</p></div>';
-}
-function drumPattern(l) {
-  const P = l.pattern, S = l.sound, labels = P.chosen.map(i => S.pads[i] && S.pads[i].label);
-  const stale = P.chosen.map((pi, r) => S.pads[pi] && P.writtenAs[r] !== S.pads[pi].label);
-  const plays = P.chosen.map((pi, slot) => { const p = S.pads[pi]; return p ? '<button class="slot" data-act="choose" data-id="' + l.id + '" data-i="' + slot + '" style="--kc:' + LCOL[p.label] + '"><span class="no">' + (slot + 1) + ' · ' + p.label + '</span><span class="nm">' + esc(p.name) + '</span><span class="to">' + (slot === 0 ? 'bottom row' : slot === 3 ? 'top row' : 'row ' + (slot + 1)) + '</span></button>' : '<button class="slot" data-act="choose" data-id="' + l.id + '" data-i="' + slot + '"><span class="no">' + (slot + 1) + '</span><span class="nm">Choose</span><span class="to">row ' + (slot + 1) + '</span></button>'; }).join('');
-  const heads = '<div class="rowheads"><span></span>' + [3, 2, 1, 0].map(r => { const p = S.pads[P.chosen[r]]; return '<div class="rh" style="--kc:' + (p ? LCOL[p.label] : 'var(--faint)') + '">' + (p ? '<button class="labelbtn mk new" data-act="relabel" data-id="' + l.id + '" data-i="' + P.chosen[r] + '" aria-label="Row ' + (r + 1) + ' plays as ' + p.label + '. Change">' + (r + 1) + ' ' + p.label + '</button>' : '<span class="hint">' + (r + 1) + ' empty</span>') + '<button class="lk" data-act="rowlock" data-id="' + l.id + '" data-r="' + r + '" aria-pressed="' + P.rowLocks[r] + '" aria-label="Lock row ' + (r + 1) + '">L</button></div>'; }).join('') + '</div>';
-  const counts = '<div class="counts">' + Array.from({ length: 16 }, (_, k) => '<span class="' + (k % 4 ? '' : 'beat') + '">' + (k % 4 === 0 ? k / 4 + 1 : ['', 'e', '&', 'a'][k % 4]) + '</span>').join('') + '</div>';
-  const lanes = [3, 2, 1, 0].map(r => '<div class="lane' + (P.rowLocks[r] ? ' locked' : '') + (stale[r] ? ' stale' : '') + '" style="--kc:' + (labels[r] ? LCOL[labels[r]] : 'var(--faint)') + '">' + P.rows[r].slice(0, 16).map((v, k) => '<button class="cell' + (k % 4 === 0 ? ' beat' : '') + '" data-act="cell" data-id="' + l.id + '" data-r="' + r + '" data-s="' + k + '" aria-label="Row ' + (r + 1) + ', step ' + (k + 1) + (v ? ', hit' : ', rest') + '">' + (v ? '<i style="height:' + Math.round(4 + v * 28) + 'px;--o:' + (0.5 + v / 2) + '"></i>' : '') + '</button>').join('') + '</div>').join('');
-  const rewrites = stale.map((s, r) => s ? '<div class="rewrite mk new"><span>Row ' + (r + 1) + ' now plays as <b>' + S.pads[P.chosen[r]].label + '</b>. The next Breed or New writes it' + (P.rowLocks[r] ? '; the row is locked.' : '.') + '</span><button class="btn small" data-act="rewrite" data-id="' + l.id + '" data-r="' + r + '"' + (P.rowLocks[r] ? ' disabled' : '') + '>Rewrite row</button></div>' : '').join('');
-  const feel = [3, 2, 1, 0].map(r => { const p = S.pads[P.chosen[r]]; return '<div class="feelrow" style="--kc:' + (p ? LCOL[p.label] : 'var(--faint)') + '"><span class="who"><i></i>' + (r + 1) + ' ' + (p ? esc(p.name) : 'empty') + '</span>' + seg(FEELS, P.rowFeel[r], 'rowfeel', ' data-id="' + l.id + '" data-r="' + r + '"') + '</div>'; }).join('');
-  return '<div class="row between"><span class="hint">Seed: groove ' + esc(state.groove.seed) + ' from the Track · ' + state.bars + ' bars</span>' + backNew('loop') + '</div>' +
-    '<div class="ghost-card"><span class="row"><s>Notes per bar: Quarters, Eighths, Sixteenths, Total, Fit</s>' + mark('gone') + '</span><p>Complexity from the groove still steers how busy a break gets.</p></div>' +
-    '<div class="ghost-card moved"><span class="row"><s>Bars: 2 / 4 in this pane</s>' + mark('moved', 'moved to Track') + '</span></div>' +
-    '<div class="litter">' + P.items.map((x, i) => tile(i, drumPic(x, labels, 56), x.flat().filter(Boolean).length + ' hits', P, 'loop', null, 'playing')).join('') + '</div>' +
-    '<div class="card"><div class="row between"><b>Loop ' + L[P.hear] + '</b><span class="hint">Tap a step: hit, ghost, rest</span></div>' +
-    '<div class="row between"><span class="lab">Plays · left to right</span><span class="hint">pad 1 → bottom row</span></div><div class="plays">' + plays + '</div>' +
-    (state.bars > 1 ? '<div class="barpick" style="grid-template-columns:repeat(' + state.bars + ',minmax(0,1fr))">' + Array.from({ length: state.bars }, (_, b) => '<button aria-pressed="' + (b === 0) + '">Bar ' + (b + 1) + '</button>').join('') + '</div>' : '') +
-    '<div class="gridbox">' + heads + '<div class="steps">' + counts + lanes + '</div></div>' + rewrites + '</div>' +
-    drumTraits(l) + '<div class="card mk moved"><div class="row between"><span class="lab">Feel per row, top down</span>' + mark('moved', 'from Groove tab') + '</div>' + feel + '<p class="hint">Kick rows stay on time whatever the groove\'s drift. The lane\'s own feel is on its Track card.</p></div>' +
-    '<div class="card"><div class="row between"><span class="lab">Keep loops · 48 to 51</span></div><div class="keep">' + P.kept.map((k, i) => k ? '<div class="pad full" style="--kc:var(--accent)"><span class="no">' + (i + 1) + '</span>' + drumPic(k, labels, 30) + '</div>' : '<button class="pad target" data-act="keeploop" data-id="' + l.id + '" data-i="' + i + '"><span class="no">' + (48 + i) + '</span><span class="dr">Keep ' + L[P.hear] + '</span></button>').join('') + '</div></div>';
+  const S = l.sound, v = T.curVoice(l);
+  const groups = T.GROUPS.map((g, gi) => { const idx = T.SET.map((s, i) => i).filter(i => T.SET[i][1] === gi);
+    return '<details class="grp" data-g="d' + g + '"' + (ui.open['d' + g] ? ' open' : '') + ' style="--gc:' + GC[gi] + '"><summary><i></i>' + g.toUpperCase() + '<small>' + idx.length + ' settings</small></summary><div class="sets">' +
+      idx.map(i => slider('set-' + i, T.SET[i][0], v[i], T.fmt(i, v[i]), 'data-dset="' + i + '"', T.SET[i][6] ? lockBtn('dlock', i, S.locks[i]) : '<span></span>', GC[gi])).join('') + '</div></details>'; }).join('');
+  return '<div class="row between"><span class="lab">Zone</span>' + backNew('sound', l.id) + '</div>' +
+    '<div class="chips">' + T.LABELS.map(z => chip(z, S.zone === z, 'zone', z, LCOL[z], ' data-id="' + l.id + '"')).join('') + '</div>' + spreadSl('sound', l.id, S.lit) +
+    '<div class="litter">' + S.lit.items.map((x, i) => tile(i, envSvg(x), T.fmt(0, x[0]) + '  ' + T.fmt(4, x[4]), S.lit, 'sound', l.id)).join('') + '</div>' +
+    '<div class="card"><div class="row between"><b>Hearing ' + L[S.lit.hear] + (S.lit.hear === S.lit.parent ? ' ★' : '') + '</b><span class="hint">Tap a drum to hear it. Lock keeps a setting when breeding.</span></div>' + groups + '</div>' +
+    '<div class="card"><div class="row between"><span class="row"><span class="lab">Keep · pads 36 to 43</span>' + mark('new', 'label per pad') + '</span><span class="hint">' + (S.pads.some(p => !p) ? 'Tap a free pad to keep ' + L[S.lit.hear] : 'Clear a pad with × to keep more') + '</span></div><div class="keep">' + S.pads.map((p, i) => padCard(l, p, i)).join('') + '</div>' +
+    '<p class="hint">Tap a pad to hear it. Its label decides the row\'s part in the break; the zone it was bred in still bounds breeding its sound.</p></div>';
 }
 function drumTraits(l) {
-  const P = l.pattern, S = l.sound, sc = P.traitScope, own = sc >= 0 && P.rowTraits[sc], vals = own || P.traits;
-  const scope = '<div class="chips">' + chip('All rows', sc < 0, 'tscope', -1, 'var(--accent)') + [0, 1, 2, 3].map(r => { const p = S.pads[P.chosen[r]]; return p ? '<button class="chip" data-act="tscope" data-v="' + r + '" aria-pressed="' + (sc === r) + '" style="--on:' + LCOL[p.label] + '">' + (r + 1) + ' ' + p.label + (P.rowTraits[r] ? ' ·' : '') + '</button>' : ''; }).join('') + '</div>';
-  const col = sc >= 0 && !own ? 'var(--faint)' : sc >= 0 ? LCOL[S.pads[P.chosen[sc]].label] : 'var(--accent)';
-  const sl = DTRAITS.map(([n, why], i) => slider('dt-' + i, n, vals[i], Math.round(vals[i] * 100), 'data-dtrait="' + i + '"', '<button class="lock" data-act="dtlock" data-i="' + i + '" aria-pressed="' + P.traitLocks[i] + '">' + (P.traitLocks[i] ? 'Locked' : 'Lock') + '</button>', col) + '<p class="hint dtwhy">' + why + '</p>').join('');
+  const P = l.pattern, S = l.sound, lp = T.curLoop(l), sc = P.traitScope, own = sc >= 0 && lp.rowTraits[sc], vals = own || lp.traits;
+  const scope = '<div class="chips">' + chip('All rows', sc < 0, 'tscope', -1, 'var(--accent)', ' data-id="' + l.id + '"') + [0, 1, 2, 3].map(r => { const p = S.pads[P.chosen[r]]; return p ? '<button class="chip" data-act="tscope" data-id="' + l.id + '" data-v="' + r + '" aria-pressed="' + (sc === r) + '" style="--on:' + LCOL[p.label] + '">' + (r + 1) + ' ' + p.label + (lp.rowTraits[r] ? ' ·' : '') + '</button>' : ''; }).join('') + '</div>';
+  const col = sc >= 0 && !own ? 'var(--faint)' : sc >= 0 && S.pads[P.chosen[sc]] ? LCOL[S.pads[P.chosen[sc]].label] : 'var(--accent)';
+  const why = ['How closely hits sit on the groove. Low drifts loose, high locks to the grid.', 'Accent range: loud beats against soft off-beats.', 'Quiet notes between the main hits.', 'How many hits a bar.', 'Hits away from the beat: syncopation.', 'How much later bars copy the first. Low changes every bar.', 'Variation in the last beat before the loop comes round.', 'Keeps beat 1 and the backbeat fixed. Low lets them move.'];
+  const sl = T.DTRAITS.map((n, i) => slider('dt-' + i, n, vals[i], Math.round(vals[i] * 100), 'data-dtrait="' + i + '" data-id="' + l.id + '"', lockBtn('dtlock', i, P.traitLocks[i], ' data-id="' + l.id + '"'), col) + '<p class="hint dtwhy">' + why[i] + '</p>').join('');
   const p = sc >= 0 ? S.pads[P.chosen[sc]] : null;
-  return '<div class="card mk new"><div class="row between"><span class="row"><span class="lab">Traits</span>' + mark('new') + '</span><span class="hint">Like Bass and Synth. Steer the next Breed or New.</span></div>' + scope +
-    (sc >= 0 ? '<div class="row between"><span class="hint">' + (own ? 'Row ' + (sc + 1) + ' (' + esc(p.name) + ') has its own traits.' : 'Row ' + (sc + 1) + ' follows All rows. Move a slider to give it its own.') + '</span>' + (own ? '<button class="btn small" data-act="tfollow">Follow All rows</button>' : '') + '</div>' : '') +
-    sl + '<p class="hint">Starting values come from the groove: Complexity sets Dense and Off beat, Groove sets Tight and Dynamic. Moving a slider here overrides them for this lane only, so one groove can drive a sparse kit and a busy one.</p></div>';
+  return '<div class="card mk new"><div class="row between"><span class="row"><span class="lab">Traits</span>' + mark('new') + '</span><span class="hint">Moving one redraws loop ' + L[P.lit.hear] + '</span></div>' + scope +
+    (sc >= 0 ? '<div class="row between"><span class="hint">' + (own ? 'Row ' + (sc + 1) + (p ? ' (' + esc(p.name) + ')' : '') + ' has its own traits.' : 'Row ' + (sc + 1) + ' follows All rows. Move a slider to give it its own.') + '</span>' + (own ? '<button class="btn small" data-act="tfollow" data-id="' + l.id + '">Follow All rows</button>' : '') + '</div>' : '') +
+    sl + '<p class="hint">Each loop carries its traits, and Breed moves the unlocked ones. New starts them from the groove: Complexity sets Dense and Off beat, Groove sets Tight and Dynamic.</p></div>';
+}
+function drumPattern(l) {
+  const P = l.pattern, S = l.sound, lp = T.curLoop(l), stale = T.staleRows(l), bars = lp.bars, vb = Math.min(ui.viewBar, bars - 1), off = vb * 16;
+  const labels = P.chosen.map(i => S.pads[i] && S.pads[i].label);
+  const plays = P.chosen.map((pi, slot) => { const p = S.pads[pi]; return p ? '<button class="slot" data-act="choose" data-id="' + l.id + '" data-i="' + slot + '" style="--kc:' + LCOL[p.label] + '"><span class="no">' + (slot + 1) + ' · ' + p.label + '</span><span class="nm">' + esc(p.name) + '</span><span class="to">' + (slot === 0 ? 'bottom row' : slot === 3 ? 'top row' : 'row ' + (slot + 1)) + '</span></button>' : '<button class="slot" data-act="choose" data-id="' + l.id + '" data-i="' + slot + '"><span class="no">' + (slot + 1) + '</span><span class="nm">Choose</span><span class="to">row ' + (slot + 1) + '</span></button>'; }).join('');
+  const heads = '<div class="rowheads"><span></span>' + [3, 2, 1, 0].map(r => { const p = S.pads[P.chosen[r]]; return '<div class="rh" style="--kc:' + (p ? LCOL[p.label] : 'var(--faint)') + '">' + (p ? '<button class="labelbtn mk new' + (stale[r] ? ' stale' : '') + '" data-act="relabel" data-id="' + l.id + '" data-i="' + P.chosen[r] + '" aria-label="Row ' + (r + 1) + ' plays as ' + p.label + '. Change">' + (r + 1) + ' ' + p.label + '</button>' : '<span class="hint">' + (r + 1) + ' empty</span>') + '<button class="lk" data-act="rowlock" data-id="' + l.id + '" data-r="' + r + '" aria-pressed="' + P.rowLocks[r] + '" aria-label="Lock row ' + (r + 1) + '">L</button></div>'; }).join('') + '</div>';
+  const counts = '<div class="counts">' + Array.from({ length: 16 }, (_, k) => '<span class="' + (k % 4 ? '' : 'beat') + '">' + (k % 4 === 0 ? k / 4 + 1 : ['', 'e', '&', 'a'][k % 4]) + '</span>').join('') + '</div>';
+  const lanes = [3, 2, 1, 0].map(r => '<div class="lane' + (P.rowLocks[r] ? ' locked' : '') + (stale[r] ? ' stale' : '') + '" style="--kc:' + (labels[r] ? LCOL[labels[r]] : 'var(--faint)') + '">' + lp.rows[r].slice(off, off + 16).map((v, k) => '<button class="cell' + (k % 4 === 0 ? ' beat' : '') + '" data-act="cell" data-id="' + l.id + '" data-r="' + r + '" data-s="' + (off + k) + '" aria-label="Row ' + (r + 1) + ', bar ' + (vb + 1) + ', step ' + (k + 1) + (v ? ', hit ' + Math.round(v * 100) + '%' : ', rest') + '">' + (v ? '<i style="height:' + Math.round(4 + v * 28) + 'px;--o:' + (0.5 + v / 2) + '"></i>' : '') + '</button>').join('') + '</div>').join('');
+  const rewrites = stale.map((s, r) => s ? '<div class="rewrite mk new"><span>Row ' + (r + 1) + ' now plays as <b>' + S.pads[P.chosen[r]].label + '</b>. The next Breed or New writes it' + (P.rowLocks[r] ? '; the row is locked.' : '.') + '</span><button class="btn small" data-act="rewrite" data-id="' + l.id + '" data-r="' + r + '"' + (P.rowLocks[r] ? ' disabled' : '') + '>Rewrite row</button></div>' : '').join('');
+  const feel = [3, 2, 1, 0].map(r => { const p = S.pads[P.chosen[r]]; return '<div class="feelrow" style="--kc:' + (p ? LCOL[p.label] : 'var(--faint)') + '"><span class="who"><i></i>' + (r + 1) + ' ' + (p ? esc(p.name) : 'empty') + '</span>' + seg(FEELS, P.rowFeel[r], 'rowfeel', ' data-id="' + l.id + '" data-r="' + r + '"') + '</div>'; }).join('');
+  return '<div class="row between"><span class="hint">Groove ' + esc(t.groove.use.replace('Groove ', '')) + ' and ' + t.bars + ' bars, from the Track</span>' + backNew('pattern', l.id) + '</div>' +
+    '<div class="ghost-card"><span class="row"><s>Notes per bar: Quarters, Eighths, Sixteenths, Total, Fit</s>' + mark('gone') + '</span><p>The Traits below steer how busy a break gets.</p></div>' +
+    spreadSl('pattern', l.id, P.lit) +
+    '<div class="litter">' + P.lit.items.map((x, i) => tile(i, drumPic(x, l, 56), x.rows.flat().filter(v => v >= 0.45).length + ' hits  D' + Math.round(x.traits[3] * 100) + ' O' + Math.round(x.traits[4] * 100), P.lit, 'pattern', l.id, null, 'playing')).join('') + '</div>' +
+    '<div class="card"><div class="row between"><b>Loop ' + L[P.lit.hear] + (P.lit.hear === P.lit.parent ? ' ★' : '') + '</b><span class="hint">Tap a step: hit, ghost, rest</span></div>' +
+    '<div class="row between"><span class="lab">Plays · left to right</span><span class="hint">pad 1 → bottom row</span></div><div class="plays">' + plays + '</div>' +
+    (bars > 1 ? '<div class="barpick" style="grid-template-columns:repeat(' + bars + ',minmax(0,1fr))">' + Array.from({ length: bars }, (_, b) => '<button data-act="viewbar" data-v="' + b + '" aria-pressed="' + (b === vb) + '">Bar ' + (b + 1) + '</button>').join('') + '</div>' : '') +
+    '<div class="gridbox">' + heads + '<div class="steps">' + counts + lanes + '</div></div>' + rewrites + '</div>' +
+    drumTraits(l) +
+    '<div class="card mk moved"><div class="row between"><span class="lab">Feel per row, top down</span>' + mark('moved', 'from Groove tab') + '</div>' + feel + '<p class="hint">Kick rows stay on time whatever the drift. The lane\'s own feel is on its Track card and adds to these.</p></div>' +
+    '<div class="card"><div class="row between"><span class="lab">Keep loops</span><span class="hint">Tap a kept one to load it as loop ' + L[P.lit.hear] + '</span></div><div class="keep">' + P.kept.map((k, i) => k ? '<div class="pad full" style="--kc:var(--accent)"><button class="hearzone" data-act="loadloop" data-id="' + l.id + '" data-i="' + i + '"><span class="no">' + (i + 1) + ' · ' + k.bars + ' bars</span>' + drumPic(k, l, 30).replace('<svg ', '<svg style="display:block;width:100%;height:30px;margin-top:auto" ') + '</button><button class="x" data-act="clearloop" data-id="' + l.id + '" data-i="' + i + '" aria-label="Clear kept loop ' + (i + 1) + '">×</button></div>' : '<button class="pad target" data-act="keeploop" data-id="' + l.id + '" data-i="' + i + '"><span class="no">' + (i + 1) + '</span><span class="dr">Keep ' + L[P.lit.hear] + '</span></button>').join('') + '</div></div>';
 }
 function pitchSound(l) {
-  const S = l.sound, c = KCOL[l.kind];
-  return '<div class="row between"><span class="row"><span class="lab">Zone</span>' + mark('new') + '</span>' + backNew('voice') + '</div>' +
-    '<div class="chips">' + ZONES[l.kind].map(z => chip(z, S.zone === z, 'pzone', z, c)).join('') + '</div>' +
-    '<div class="row between"><span class="lab">Audition in ' + state.key + ' ' + state.scale.toLowerCase() + '</span></div>' +
-    '<div class="chips">' + ['Root and fifth', 'Scale run', 'Octaves', l.kind === 'synth' ? 'Chords' : 'Walk'].map(a => chip(a, S.phrase === a, 'phrase', a, c)).join('') + '</div>' +
-    '<div class="litter">' + S.items.map((x, i) => tile(i, waveSvg(x, l.kind), S.zone.toLowerCase() + '  ' + Math.round(x[4] * 80) + ' ms atk  cut ' + (0.4 + x[2] * 8).toFixed(1) + ' kHz', S, 'voice', c)).join('') + '</div>' +
-    '<div class="card"><div class="row between"><b>Hearing ' + L[S.hear] + '</b><span class="hint">Settings from Bloodline Synth, with locks</span></div>' +
-    ['Oscillator', 'Filter', 'Envelope', 'Movement', 'Out'].map((g, gi) => '<details class="grp" style="--gc:var(--g' + (gi + 1) + ')"><summary><i></i>' + g.toUpperCase() + '<small>shared engine</small></summary><p class="hint" style="padding-bottom:10px">Sliders and locks come from the shared Bloodline engine\'s synth voice in phase 2.</p></details>').join('') + '</div>' +
-    '<div class="card"><div class="row between"><span class="lab">Keep voices</span><span class="hint">Tap a free slot to keep ' + L[S.hear] + '</span></div><div class="keep">' + S.kept.map((k, i) => k ? '<div class="pad full" style="--kc:' + c + '"><span class="no">' + (i + 1) + '</span><span class="nm">' + esc(k.name) + '</span>' + waveSvg(k.v, l.kind) + '</div>' : '<button class="pad target" data-act="keepvoice" data-id="' + l.id + '" data-i="' + i + '"><span class="no">' + (i + 1) + '</span><span class="dr">Keep ' + L[S.hear] + '</span></button>').join('') + '</div></div>';
+  const S = l.sound, c = KCOL[l.kind], v = T.curVoice(l);
+  const groups = SYG.map((g, gi) => { const idx = BL.SYNTH.map((s, i) => i).filter(i => BL.SYNTH[i].group === g);
+    return '<details class="grp" data-g="p' + g + '"' + (ui.open['p' + g] ? ' open' : '') + ' style="--gc:' + GC[gi] + '"><summary><i></i>' + g.toUpperCase() + '<small>' + idx.length + ' settings</small></summary><div class="sets">' +
+      idx.map(i => slider('ps-' + i, BL.SYNTH[i].name, v[i], BL.fmt(BL.SYNTH[i], v[i]), 'data-pset="' + i + '" data-id="' + l.id + '"', lockBtn('plock', i, S.locks[i], ' data-id="' + l.id + '"'), GC[gi])).join('') + '</div></details>'; }).join('');
+  return '<div class="row between"><span class="row"><span class="lab">Zone</span>' + mark('new') + '</span>' + backNew('sound', l.id) + '</div>' +
+    '<div class="chips">' + T.ZONE_NAMES[l.kind].map(z => chip(z, S.zone === z, 'zone', z, c, ' data-id="' + l.id + '"')).join('') + '</div>' +
+    '<div class="row between"><span class="lab">Audition in ' + t.key + ' ' + t.scale.toLowerCase() + '</span><span class="hint">Tap a voice to hear it</span></div>' +
+    '<div class="chips">' + Object.keys(T.PHRASES).map(a => chip(a, S.phrase === a, 'phrase', a, c, ' data-id="' + l.id + '"')).join('') + '</div>' + spreadSl('sound', l.id, S.lit, c) +
+    '<div class="litter">' + S.lit.items.map((x, i) => tile(i, waveSvg(x, l.kind), BL.fmt(BL.SYNTH[6], x[6]) + '  atk ' + BL.fmt(BL.SYNTH[10], x[10]), S.lit, 'sound', l.id, c)).join('') + '</div>' +
+    '<div class="card"><div class="row between"><b>Hearing ' + L[S.lit.hear] + (S.lit.hear === S.lit.parent ? ' ★' : '') + '</b><span class="hint">The lane plays the voice you hear</span></div>' + groups + '</div>' +
+    '<div class="card"><div class="row between"><span class="lab">Keep voices</span><span class="hint">Tap a kept one to load it as ' + L[S.lit.hear] + '</span></div><div class="keep">' + S.kept.map((k, i) => k ? '<div class="pad full" style="--kc:' + c + '"><button class="hearzone" data-act="loadvoice" data-id="' + l.id + '" data-i="' + i + '"><span class="no">' + (i + 1) + '</span><span class="nm">' + esc(k.name) + '</span>' + waveSvg(k.v, l.kind).replace('<svg ', '<svg style="display:block;width:100%;height:24px;margin-top:auto" ') + '</button><button class="x" data-act="clearvoice" data-id="' + l.id + '" data-i="' + i + '" aria-label="Clear ' + esc(k.name) + '">×</button></div>' : '<button class="pad target" data-act="keepvoice" data-id="' + l.id + '" data-i="' + i + '"><span class="no">' + (i + 1) + '</span><span class="dr">Keep ' + L[S.lit.hear] + '</span></button>').join('') + '</div></div>';
 }
 function pitchPattern(l) {
-  const P = l.pattern, c = KCOL[l.kind], drums = state.lanes.filter(x => x.kind === 'drums');
-  const traits = TRAITS.map((t, i) => (l.kind === 'bass' && t === 'Poly') ? '' : slider('tr-' + i, t, P.traits[i], Math.round(P.traits[i] * 100), 'data-trait="' + i + '"', undefined, c)).join('');
-  return '<div class="row between"><span class="hint">' + state.key + ' ' + state.scale.toLowerCase() + ' · ' + state.bars + ' bars · groove ' + esc(state.groove.seed) + ', set in the Track</span>' + backNew('notes') + '</div>' +
-    (l.kind === 'bass' ? '<div class="card mk new"><div class="row between"><span class="lab">Follow a kick</span>' + mark('new') + '</div><div class="chips">' + chip('None', P.follow === 0, 'follow', 0, c) + drums.map(d => chip(d.name, P.follow === d.id, 'follow', d.id, c)).join('') + '</div><p class="hint">The line leans its notes onto that lane\'s kick hits when it breeds.</p></div>' : '') +
-    '<div class="litter">' + P.items.map((x, i) => tile(i, notePic(x, l.kind, state.bars, 56), x.length + ' notes', P, 'notes', c, 'playing')).join('') + '</div>' +
-    '<div class="card"><div class="row between"><b>Loop ' + L[P.hear] + '</b><span class="hint">Note grid</span></div><div class="roll">' + notePic(P.items[P.hear], l.kind, state.bars, 150).replace('<svg ', '<svg style="width:100%;height:150px;display:block" ') + '</div>' +
-    '<div class="row between"><span class="lab">Traits</span><span class="hint">As in Bloodline Synth 2</span></div>' + traits + '</div>' +
-    '<div class="card"><div class="row between"><span class="lab">Keep loops</span></div><div class="keep">' + P.kept.map((k, i) => k ? '<div class="pad full" style="--kc:' + c + '"><span class="no">' + (i + 1) + '</span>' + notePic(k, l.kind, state.bars, 30) + '</div>' : '<button class="pad target" data-act="keepnotes" data-id="' + l.id + '" data-i="' + i + '"><span class="no">' + (i + 1) + '</span><span class="dr">Keep ' + L[P.hear] + '</span></button>').join('') + '</div></div>';
+  const P = l.pattern, c = KCOL[l.kind], drums = t.lanes.filter(x => x.kind === 'drums'), lp = T.curLoop(l);
+  const traits = PTRAITS.map((n, i) => (l.kind === 'bass' && i === 1) ? '' : slider('tr-' + i, n, lp.traits[i], Math.round(lp.traits[i] * 100), 'data-ptrait="' + i + '" data-id="' + l.id + '"', undefined, c)).join('');
+  return '<div class="row between"><span class="hint">' + t.key + ' ' + t.scale.toLowerCase() + ', ' + t.bars + ' bars, groove ' + esc(t.groove.use.replace('Groove ', '')) + ', from the Track</span>' + backNew('pattern', l.id) + '</div>' +
+    (l.kind === 'bass' ? '<div class="card mk new"><div class="row between"><span class="lab">Follow a kick</span>' + mark('new') + '</div><div class="chips">' + chip('None', !P.follow, 'follow', 0, c, ' data-id="' + l.id + '"') + drums.map(d => chip(d.name, P.follow === d.id, 'follow', d.id, c, ' data-id="' + l.id + '"')).join('') + '</div><p class="hint">The line leans its notes onto that lane\'s kick hits when it breeds.</p></div>' : '') + spreadSl('pattern', l.id, P.lit, c) +
+    '<div class="litter">' + P.lit.items.map((x, i) => tile(i, notePic(x, l.kind, 56), x.notes.length + ' notes', P.lit, 'pattern', l.id, c, 'playing')).join('') + '</div>' +
+    '<div class="card"><div class="row between"><b>Loop ' + L[P.lit.hear] + (P.lit.hear === P.lit.parent ? ' ★' : '') + '</b><span class="hint">Note grid</span></div>' + notePic(lp, l.kind, 150).replace('<svg ', '<svg class="roll" ') +
+    '<div class="row between"><span class="lab">Traits</span><span class="hint">Moving one redraws loop ' + L[P.lit.hear] + '</span></div>' + traits + '</div>' +
+    '<div class="card"><div class="row between"><span class="lab">Keep loops</span><span class="hint">Tap a kept one to load it</span></div><div class="keep">' + P.kept.map((k, i) => k ? '<div class="pad full" style="--kc:' + c + '"><button class="hearzone" data-act="loadloop" data-id="' + l.id + '" data-i="' + i + '"><span class="no">' + (i + 1) + '</span>' + notePic(k, l.kind, 30).replace('<svg ', '<svg style="display:block;width:100%;height:30px;margin-top:auto" ') + '</button><button class="x" data-act="clearloop" data-id="' + l.id + '" data-i="' + i + '" aria-label="Clear kept loop ' + (i + 1) + '">×</button></div>' : '<button class="pad target" data-act="keeploop" data-id="' + l.id + '" data-i="' + i + '"><span class="no">' + (i + 1) + '</span><span class="dr">Keep ' + L[P.lit.hear] + '</span></button>').join('') + '</div></div>';
 }
 
 // =====================================================================================
 // Sheets
 // =====================================================================================
-function sheet(html) { const root = document.getElementById('sheet-root'); root.innerHTML = '<div class="scrim" data-act="closesheet"><div class="sheet" role="dialog" aria-modal="true">' + html + '<button class="btn" data-act="closesheet">Done</button></div></div>'; const f = root.querySelector('.sheet button, .sheet input'); if (f) f.focus(); }
-const closeSheet = () => { document.getElementById('sheet-root').innerHTML = ''; };
-function laneMenu(l) { const i = state.lanes.indexOf(l);
+function sheet(html, data) { const root = document.getElementById('sheet-root'); root.innerHTML = '<div class="scrim" data-act="closesheet"><div class="sheet" role="dialog" aria-modal="true">' + html + '<button class="btn" data-act="closesheet">Done</button></div></div>'; const sh = root.querySelector('.sheet'); Object.assign(sh.dataset, data || {}); }
+const closeSheet = () => { document.getElementById('sheet-root').innerHTML = ''; ui.fxFor = null; };
+function laneMenu(l) { const i = t.lanes.indexOf(l);
   sheet('<h3>' + esc(l.name) + '</h3><label class="lab" for="rename">Name</label><input id="rename" type="text" value="' + esc(l.name) + '" data-rename="' + l.id + '">' +
     '<div class="menu"><button data-act="openlane" data-id="' + l.id + '" data-step="sound">Change sound</button><button data-act="openlane" data-id="' + l.id + '" data-step="pattern">Change pattern</button><button data-act="dup" data-id="' + l.id + '">Duplicate</button>' +
-    '<button data-act="move" data-id="' + l.id + '" data-v="-1"' + (i === 0 ? ' disabled' : '') + '>Move up</button><button data-act="move" data-id="' + l.id + '" data-v="1"' + (i === state.lanes.length - 1 ? ' disabled' : '') + '>Move down</button><button class="danger" data-act="remove" data-id="' + l.id + '">Remove lane</button></div><p class="hint">Remove can be undone from the Track.</p>'); }
+    '<button data-act="move" data-id="' + l.id + '" data-v="-1"' + (i === 0 ? ' disabled' : '') + '>Move up</button><button data-act="move" data-id="' + l.id + '" data-v="1"' + (i === t.lanes.length - 1 ? ' disabled' : '') + '>Move down</button><button class="danger" data-act="remove" data-id="' + l.id + '">Remove lane</button></div><p class="hint">Remove can be undone from the Track.</p>'); }
 function relabelSheet(l, i) { const p = l.sound.pads[i];
-  sheet('<h3>' + esc(p.name) + ' plays as</h3><div class="chips">' + LABELS.map(z => chip(z, p.label === z, 'setlabel', z, LCOL[z])).join('') + '</div>' +
-    '<p class="hint">Bred as ' + p.zone + '. Changing the label leaves the sound alone; it only changes what the break writes for its row, from the next Breed or New, or now with Rewrite row. Two rows may share a label.</p>');
-  document.querySelector('.sheet').dataset.lane = l.id; document.querySelector('.sheet').dataset.pad = i; }
-function fxSheet(id) { const tgt = id === 'master' ? state.master : laneById(+id), name = id === 'master' ? 'Master' : tgt.name;
-  if (!tgt.fx) tgt.fx = { ch: 'Warm', chain: fxChain('Warm'), bypass: false };
-  if (!tgt.fx.items) tgt.fx.items = [tgt.fx.chain, ...[0, 1, 2].map(() => fxChain(tgt.fx.ch).map(f => ({ n: f.n, amt: clamp(f.amt + (R() - 0.5) * 0.4, 0, 1) })))], tgt.fx.hear = 0, tgt.fx.locks = [false, false, false];
-  const F = tgt.fx;
-  sheet('<div class="row between"><h3>Effects · ' + esc(name) + '</h3>' + mark('new') + '</div>' +
-    '<div class="row between"><span class="lab">Character</span><span class="row"><button class="btn small" data-act="fxbypass" aria-pressed="' + F.bypass + '">' + (F.bypass ? 'Bypassed' : 'Bypass') + '</button><button class="btn small">Back</button><button class="btn small" data-act="fxnew">New</button></span></div>' +
-    '<div class="chips">' + CHARS.map(c => chip(c, F.ch === c, 'fxchar', c, 'var(--fx)')).join('') + '</div>' +
-    '<div class="litter">' + F.items.map((ch, i) => '<div class="tile' + (i === F.hear ? ' hear' : '') + '" style="--ta:var(--fx)"><button class="hearzone" data-act="fxhear" data-i="' + i + '"><div class="th"><b>' + L[i] + '</b>' + (i === F.hear ? '<em>hearing</em>' : '') + '</div><ul>' + ch.map(f => '<li>' + esc(f.n) + ' · ' + Math.round(f.amt * 100) + '%</li>').join('') + '</ul></button><div class="acts"><button class="btn">Breed</button><button class="btn"' + (i === F.hear ? ' disabled' : '') + '>Cross</button></div></div>').join('') + '</div>' +
-    '<div class="fxparams">' + F.items[F.hear].map((f, k) => slider('fx-' + k, f.n, f.amt, Math.round(f.amt * 100) + '%', 'data-fxamt="' + k + '"', '<button class="lock" data-act="fxlock" data-i="' + k + '" aria-pressed="' + F.locks[k] + '">' + (F.locks[k] ? 'Locked' : 'Lock') + '</button>', 'var(--fx)')).join('') + '</div>' +
-    '<p class="hint">Delay and gate times are in beats and follow ' + state.bpm + ' BPM. The chain heard is the one the lane uses.</p>');
-  document.querySelector('.sheet').dataset.fx = id; }
+  sheet('<h3>' + esc(p.name) + ' plays as</h3><div class="chips">' + T.LABELS.map(z => chip(z, p.label === z, 'setlabel', z, LCOL[z])).join('') + '</div>' +
+    '<p class="hint">Bred as ' + p.zone + '. The label only changes what the break writes for its row, from the next Breed or New, or now with Rewrite row. The sound stays as it is. Two rows may share a label.</p>', { lane: l.id, pad: i }); }
+const fxTarget = id => id === 'master' ? t.master.fx : laneById(+id).fx;
+function fxSheet(id) {
+  ui.fxFor = id; const F = fxTarget(id), name = id === 'master' ? 'Master' : laneById(+id).name, c = T.curChain(F), k = Math.min(ui.fxEdit, c.fx.length - 1);
+  const edit = c.fx.length ? c.fx.map((f, j) => '<div class="fxedit"><div class="row"><b>' + (j + 1) + ' · ' + esc(BL.FX_TYPES[f.type].name) + '</b><button class="btn small" data-act="fxmove" data-i="' + j + '" data-v="-1"' + (j === 0 ? ' disabled' : '') + ' aria-label="Move up">↑</button><button class="btn small" data-act="fxmove" data-i="' + j + '" data-v="1"' + (j === c.fx.length - 1 ? ' disabled' : '') + ' aria-label="Move down">↓</button>' + lockBtn('fxlock', j, f.lock) + '<button class="btn small" data-act="fxdel" data-id="' + id + '" data-i="' + j + '" aria-label="Remove">×</button></div>' +
+    (j === k ? BL.FX_TYPES[f.type].params.map((pn, q) => slider('fx-' + j + '-' + q, pn, f.p[q], BL.fxShow(f)[q], 'data-fxp="' + j + '" data-q="' + q + '"', undefined, 'var(--fx)')).join('') : '<button class="btn small ghost" data-act="fxeditone" data-i="' + j + '">Show settings</button>') + '</div>').join('') : '<p class="hint">No effects in this chain. Add one, or pick a character and tap New to breed four chains.</p>';
+  sheet('<div class="row between"><h3>Effects · ' + esc(name) + '</h3><span class="row"><button class="btn small" data-act="fxbypass" data-id="' + id + '" aria-pressed="' + F.bypass + '">' + (F.bypass ? 'Bypassed' : 'Bypass') + '</button></span></div>' +
+    '<div class="row between"><span class="lab">Character</span>' + backNew('fx', id) + '</div>' +
+    '<div class="chips">' + Object.keys(BL.CHARACTERS).map(ch => chip(ch, F.char === ch, 'fxchar', ch, 'var(--fx)')).join('') + '</div>' +
+    '<div class="litter">' + F.lit.items.map((ch, i) => tile(i, '<ul>' + (ch.fx.length ? ch.fx.map(f => '<li>' + esc(BL.FX_TYPES[f.type].name) + ' · ' + esc(BL.fxShow(f)[0]) + '</li>').join('') : '<li>empty</li>') + '</ul>', 'mix ' + Math.round(ch.mix * 100) + '%', F.lit, 'fx', id, 'var(--fx)')).join('') + '</div>' +
+    '<div class="row between"><b>Chain ' + L[F.lit.hear] + '</b><span class="hint">Times in beats follow ' + t.bpm + ' BPM</span></div>' +
+    (c.fx.length ? slider('fxmix', 'Mix', c.mix, Math.round(c.mix * 100) + '%', 'data-fxmix="1"', undefined, 'var(--fx)') : '') + edit +
+    '<div class="row between"><span class="lab">Add an effect</span><span class="hint">Up to 6</span></div><div class="addfx">' + Object.keys(BL.FX_TYPES).map(ty => chip('+ ' + BL.FX_TYPES[ty].name, false, 'fxadd', ty, 'var(--fx)', ' data-id="' + id + '"' + (c.fx.length >= 6 ? ' disabled' : ''))).join('') + '</div>', { fx: id });
+}
+function fxAddMenu(id) { sheet('<h3>Add an effect · ' + (id === 'master' ? 'Master' : esc(laneById(+id).name)) + '</h3><div class="addfx">' + Object.keys(BL.FX_TYPES).map(ty => chip('+ ' + BL.FX_TYPES[ty].name, false, 'fxadd', ty, 'var(--fx)', ' data-id="' + id + '" data-close="1"')).join('') + '</div><p class="hint">It goes on the end of the chain, before any reverb. Edit it with ✎.</p>'); }
+const inViewer = !!(window.claude && window.claude.use);
+let dl = null; if (inViewer) window.claude.use('downloads').then(d => { dl = d; }).catch(() => {});
+async function offer(filename, blob) {
+  if (inViewer) {
+    if (!dl) { toast('Downloads are not available in this view.'); return; }
+    try { await dl.save({ filename, data: blob }); toast('Saved ' + filename); } catch (e) { toast(e && e.code === 'declined' ? 'Export cancelled.' : 'Could not save: ' + ((e && (e.message || e.code)) || 'unknown error')); }
+    return;
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); toast('Saved ' + filename);
+}
+const CRC = (() => { const tb = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; tb[n] = c >>> 0; } return tb; })();
+function crc32(d) { let c = 0xFFFFFFFF; for (let i = 0; i < d.length; i++) c = CRC[(c ^ d[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zip(files) {
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  files.forEach(f => { const name = enc.encode(f.name), data = f.data, crc = crc32(data), h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true); parts.push(new Uint8Array(h.buffer), name, data);
+    const c = new DataView(new ArrayBuffer(46)); c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+    central.push(new Uint8Array(c.buffer), name); off += 30 + name.length + data.length; });
+  const cs = central.reduce((a, p) => a + p.length, 0), e = new DataView(new ArrayBuffer(22)); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cs, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(e.buffer)], { type: 'application/zip' });
+}
+const fileName = () => 'bloodline-track-' + t.bars + 'bars-' + t.bpm + 'bpm-' + t.key.replace('#', 's') + '-' + t.scale.toLowerCase().replace(/\s+/g, '-');
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+async function exportMix() { const r = await T.render(t, { fx: fxFn }), w = T.wav([r.left, r.right]), name = fileName(); if (inViewer) offer(name + '.zip', zip([{ name: name + '.wav', data: w }])); else offer(name + '.wav', new Blob([w], { type: 'audio/wav' })); }
+async function exportStems() { const r = await T.render(t, { fx: fxFn }), name = fileName(), files = [{ name: name + '/mix.wav', data: T.wav([r.left, r.right]) }];
+  r.stems.filter(s => !s.draft).forEach((s, i) => files.push({ name: name + '/stems/' + (i + 1) + '-' + slug(s.name) + '.wav', data: T.wav([s.l, s.r]) }));
+  files.push({ name: name + '/track.json', data: new TextEncoder().encode(JSON.stringify(T.trackJSON(t), null, 1)) });
+  offer(name + '.zip', zip(files)); }
 function changesSheet() {
-  const item = (k, t, d) => '<li><span class="mark ' + k + '" style="--mc:var(--' + k + ')">' + (k === 'gone' ? 'removed' : k) + '</span><span><b>' + t + '</b> ' + d + '</span></li>';
+  const item = (k, tt, d) => '<li><span class="mark ' + k + '" style="--mc:var(--' + k + ')">' + (k === 'gone' ? 'removed' : k) + '</span><span><b>' + tt + '</b> ' + d + '</span></li>';
   sheet('<h3>Changes from Breaks mobile</h3><ul class="chlist">' +
     item('new', 'Track', 'is home: lanes for drums, bass and synth, each with level, pan, mute, solo, meter, feel, swing on or off, and effects.') +
-    item('new', 'Master', 'level, effects and the −1 dB limiter with a readout; Auto level; Undo for mixing edits.') +
+    item('new', 'Master', 'level, an effects chain and the −1 dB limiter with a readout; Auto level; Undo for mixing edits.') +
     item('new', 'Add part', 'in two steps, Sound then Pattern, with Cancel, Back to Sound and Add to track. The draft plays in the Track or alone.') +
     item('new', 'Labels on kept pads', 'Kick, Snare, Hats, Perc or None, from the pad or from its row. Rewrite row applies a new label to the current loop.') +
     item('new', 'Drum traits', 'under the break grid: Tight, Dynamic, Ghosts, Dense, Off beat, Repeat, Fills and Anchored, for all rows or one row, with locks.') +
     item('new', 'Bass and synth', 'voices bred from zones with a phrase in the Track\'s key, then note loops from traits. A bass can follow a drum lane\'s kick.') +
-    item('new', 'Effects', 'a litter of four chains bred from a character, with bypass and locks, on every lane and the master.') +
+    item('new', 'Effects', 'a chain on every lane and the master: add, remove, reorder and edit effects, or breed four chains from a character.') +
     item('new', 'Key and scale', 'set once in the Track.') +
     item('moved', 'Groove', 'from its own tab into the Track\'s global card. It applies to every lane.') +
     item('moved', 'Bars and Less swing at faster tempos', 'into the Track. Tempo stays in the top bar.') +
     item('moved', 'Feel per row', 'from the Groove tab to the drum lane\'s Pattern step. Each lane has its own feel on the Track.') +
     item('gone', 'Groove tab', 'The tab bar is now Track, Sound and Pattern.') +
-    item('gone', 'Notes per bar', 'card, its counts and Fit. Breeding uses the unshaped path.') +
+    item('gone', 'Notes per bar', 'card, its counts and Fit.') +
     '</ul><p class="hint">With Changes on, the page marks each of these in place.</p>'); }
 
 // =====================================================================================
@@ -573,122 +619,153 @@ function changesSheet() {
 // =====================================================================================
 function drawTop() {
   document.getElementById('top').innerHTML = '<div class="brand"><span class="long">BLOODLINE </span>TRACK</div>' +
-    '<button class="topbtn" data-act="diff" aria-pressed="' + state.diff + '" title="Mark what changed since Breaks mobile">Changes</button>' +
-    '<button class="topbtn exp" data-act="export">Export</button><button class="playbtn" data-act="play" aria-pressed="' + state.playing + '">' + (state.playing ? 'Stop' : 'Play') + '</button>' +
-    '<div class="bpm"><button data-act="bpm" data-v="-2" aria-label="Slower">−</button><span>' + state.bpm + '</span><button data-act="bpm" data-v="2" aria-label="Faster">+</button></div>';
+    '<button class="topbtn" data-act="diff" aria-pressed="' + ui.diff + '" title="Mark what changed since Breaks mobile">Changes</button>' +
+    '<button class="topbtn exp" data-act="export">Export</button><button class="playbtn" data-act="play" aria-pressed="' + ui.playing + '">' + (ui.playing ? 'Stop' : 'Play') + '</button>' +
+    '<div class="bpm"><button data-act="bpm" data-v="-2" aria-label="Slower">−</button><span>' + t.bpm + '</span><button data-act="bpm" data-v="2" aria-label="Faster">+</button></div>';
 }
-function drawStatus() { const l = openLane();
-  document.getElementById('status').innerHTML = '<span>' + (state.playing ? 'Playing' : 'Stopped') + '</span><b>' + (state.adding ? 'Track + new ' + state.adding.kind + (state.draftAlone ? ', alone' : '') : 'Track · ' + state.lanes.length + ' lanes · ' + state.bars + ' bars') + '</b><span style="margin-left:auto">silent mock</span>'; }
+function drawStatus() {
+  const lim = res && res.cut < 0.99 ? '<span class="clip" style="color:var(--warn)">limiter −' + (-20 * Math.log10(res.cut)).toFixed(1) + ' dB</span>' : res ? 'peak ' + (res.peak ? (20 * Math.log10(res.peak)).toFixed(1) : '−∞') + ' dB' : 'rendering…';
+  document.getElementById('status').innerHTML = '<span>' + (ui.playing ? 'Playing' : 'Stopped') + '</span><b>' + (t.adding ? 'Track + new ' + t.adding.kind + (t.draftAlone ? ', alone' : '') : 'Track · ' + t.lanes.length + ' lanes · ' + t.bars + ' bars · ' + t.key + ' ' + t.scale.toLowerCase()) + '</b><span style="margin-left:auto">' + lim + '</span>'; }
+function drawReadouts() {
+  drawStatus();
+  const el = document.getElementById('limit'); if (el && res) { const on = res.cut < 0.99; el.className = 'limit' + (on ? ' on' : ''); el.textContent = on ? 'limiter −' + (-20 * Math.log10(res.cut)).toFixed(1) + ' dB' : 'limiter idle · peak ' + (res.peak ? (20 * Math.log10(res.peak)).toFixed(1) : '−∞') + ' dB'; }
+  meters();
+}
 function drawTabs() { const l = openLane();
-  document.getElementById('tabs').innerHTML = [['track', 'Track', state.lanes.length + ' lanes', 'var(--accent)'], ['sound', 'Sound', l ? l.name : 'no part open', l ? KCOL[l.kind] : 'var(--edge)'], ['pattern', 'Pattern', l ? l.name : 'no part open', l ? KCOL[l.kind] : 'var(--edge)']].map(([k, n, s, c]) =>
-    '<button class="tab" role="tab" data-act="gotab" data-v="' + k + '" aria-selected="' + (state.tab === k) + '" style="--tc:' + c + '"' + (k !== 'track' && !l ? ' disabled' : '') + '><i></i>' + n + '<small>' + esc(s) + '</small></button>').join(''); }
-function draw() { const y = window.scrollY; document.body.classList.toggle('diff', state.diff); document.getElementById('panes').innerHTML = trackPane() + partPane(); drawTop(); drawTabs(); drawStatus(); window.scrollTo(0, y); }
+  document.getElementById('tabs').innerHTML = [['track', 'Track', t.lanes.length + ' lanes', 'var(--accent)'], ['sound', 'Sound', l ? l.name : 'no part open', l ? KCOL[l.kind] : 'var(--edge)'], ['pattern', 'Pattern', l ? l.name : 'no part open', l ? KCOL[l.kind] : 'var(--edge)']].map(([k, n, s, c]) =>
+    '<button class="tab" role="tab" data-act="gotab" data-v="' + k + '" aria-selected="' + (ui.tab === k) + '" style="--tc:' + c + '"' + (k !== 'track' && !l ? ' disabled' : '') + '><i></i>' + n + '<small>' + esc(s) + '</small></button>').join(''); }
+function draw() { const y = window.scrollY; document.body.classList.toggle('diff', ui.diff); document.getElementById('panes').innerHTML = trackPane() + partPane(); drawTop(); drawTabs(); drawReadouts(); window.scrollTo(0, y); if (ui.fxFor) fxSheet(ui.fxFor); }
 let toastT = 0;
-function toast(m) { let t = document.querySelector('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2400); }
-function goStep(step) { state.step = step; state.tab = step; draw(); if (window.innerWidth < 1000) window.scrollTo(0, 0); }
+function toast(m) { let el = document.querySelector('.toast'); if (!el) { el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); } el.textContent = m; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 2600); }
+function goStep(step) { ui.step = step; ui.tab = step; ui.viewBar = 0; draw(); if (window.innerWidth < 1000) window.scrollTo(0, 0); }
+const meterW = x => clamp((20 * Math.log10(Math.max(x, 1e-6)) + 48) / 48, 0, 1) * 100;
+function meters() {
+  if (!res) return; const live = ui.playing && cur, k = live ? Math.floor(position() * res.L / 1024) : -1;
+  const at = env => live ? (env[k] || 0) : Math.max(...env);
+  res.stems.forEach(s => { const el = document.getElementById('m-' + s.id); if (el) { el.style.setProperty('--m', meterW(at(s.env)).toFixed(0) + '%'); el.parentElement.classList.toggle('idle', !live); } });
+  const m = document.getElementById('m-master'); if (m) { m.style.setProperty('--m', meterW(at(res.env)).toFixed(0) + '%'); m.parentElement.classList.toggle('idle', !live); }
+}
+function tick() { if (ui.playing) meters(); requestAnimationFrame(tick); }
 
 // =====================================================================================
 // Events
 // =====================================================================================
-const litOf = (k, l) => k === 'groove' ? state.groove : k === 'drum' || k === 'voice' ? l.sound : l.pattern;
-function reroll(k, l, i) { const o = litOf(k, l);
-  if (k === 'groove') o.items = o.items.map((x, j) => j === i ? x : grooveItem());
-  else if (k === 'drum') o.items = o.items.map((x, j) => j === i ? x : drumVals());
-  else if (k === 'voice') o.items = o.items.map((x, j) => j === i ? x : Array.from({ length: 8 }, () => R()));
-  else if (k === 'loop') o.items = o.items.map((x, j) => j === i ? x : l.pattern.chosen.map((pi, r) => l.pattern.rowLocks[r] ? l.pattern.rows[r].slice() : part(l.sound.pads[pi] ? ROLE[l.sound.pads[pi].label] : 'drum', state.bars)));
-  else o.items = o.items.map((x, j) => j === i ? x : notes(l.kind, state.bars));
-  if (k === 'loop') { const P = l.pattern; P.writtenAs = P.chosen.map(pi => l.sound.pads[pi] && l.sound.pads[pi].label); P.rows = P.items[P.hear]; } }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b || b.disabled) return; const d = b.dataset, act = d.act;
   if (act === 'closesheet') { if (e.target === b || b.tagName === 'BUTTON') closeSheet(); return; }
-  const l = d.id && d.id !== 'master' ? laneById(+d.id) : openLane();
+  const l = d.id && d.id !== 'master' && d.id !== '0' ? laneById(+d.id) : openLane();
   switch (act) {
-    case 'diff': state.diff = !state.diff; draw(); if (state.diff) changesSheet(); return;
-    case 'gotab': state.tab = d.v; if (d.v !== 'track') state.step = d.v; draw(); window.scrollTo(0, 0); return;
-    case 'play': state.playing = !state.playing; drawTop(); drawStatus(); if (state.playing) toast('Silent mock: the engine comes in phase 2.'); return;
-    case 'bpm': state.bpm = clamp(state.bpm + +d.v, 60, 160); draw(); return;
-    case 'export': sheet('<h3>Export the Track</h3><div class="menu"><button>Mix WAV</button><button>Mix and stems: a .zip with the mix, a stem per lane (' + state.lanes.length + ') and the Track as JSON</button></div><p class="hint">Stems add up to the mix; tails wrap round to the start. Works in phase 2.</p>'); return;
-    case 'grooveopen': state.groove.open = !state.groove.open; draw(); return;
-    case 'seed': state.groove.seed = L[state.groove.hear]; draw(); toast('Groove ' + state.groove.seed + ' now sets swing for every lane.'); return;
-    case 'glock': state.groove.locks[d.v] = !state.groove.locks[d.v]; draw(); return;
-    case 'keepgroove': state.groove.kept[+d.i] = { name: 'Groove ' + (state.groove.kept.filter(Boolean).length + 1), g: clone(state.groove.items[state.groove.hear]) }; draw(); return;
-    case 'bars': state.bars = +d.v; state.lanes.forEach(x => { if (x.kind === 'drums') { x.pattern.rows = x.pattern.rows.map(r => state.bars === 4 ? r.slice(0, 32).concat(r.slice(0, 32)) : r.slice(0, 32)); x.pattern.items = x.pattern.items.map(it => it.map(r => state.bars === 4 ? r.slice(0, 32).concat(r.slice(0, 32)) : r.slice(0, 32))); } }); draw(); return;
-    case 'mute': snapshot('mute'); l.mute = !l.mute; draw(); return;
-    case 'solo': snapshot('solo'); l.solo = !l.solo; draw(); return;
+    case 'diff': ui.diff = !ui.diff; draw(); if (ui.diff) changesSheet(); return;
+    case 'gotab': ui.tab = d.v; if (d.v !== 'track') ui.step = d.v; draw(); window.scrollTo(0, 0); return;
+    case 'play': if (ui.playing) { stopAudio(); drawTop(); drawReadouts(); } else { ctx(); ui.playing = true; drawTop(); if (res) startSource(0); else rerender(); drawStatus(); } return;
+    case 'bpm': t.bpm = clamp(t.bpm + +d.v, 60, 160); BL.transport.bpm = t.bpm; changed(); return;
+    case 'export': sheet('<h3>Export the Track</h3><p class="hint">' + t.bars + ' bars at ' + t.bpm + ' BPM, 44.1 kHz 16-bit stereo. It loops seamlessly: tails wrap round to the start.</p><div class="exp menu"><button data-act="exmix"><b>Mix WAV</b></button><button data-act="exstems"><b>Mix and stems</b>: a .zip with the mix, a stem per lane (' + t.lanes.length + ') and the Track as JSON</button></div><p class="hint">Stems are after each lane\'s effects, level and pan. They add up to the mix when the master chain is empty or bypassed and the limiter is idle.</p>'); return;
+    case 'exmix': closeSheet(); exportMix(); return;
+    case 'exstems': closeSheet(); exportStems(); return;
+    case 'grooveopen': ui.grooveOpen = !ui.grooveOpen; draw(); return;
+    case 'usegroove': t.groove.use = L[t.groove.lit.hear]; changed(); toast('Groove ' + t.groove.use + ' sets the feel of every lane.'); return;
+    case 'glock': t.groove.locks[d.v] = !t.groove.locks[d.v]; draw(); return;
+    case 'keepgroove': t.groove.kept[+d.i] = { name: 'Groove ' + (t.groove.kept.filter(Boolean).length + 1), g: T.clone(t.groove.lit.items[t.groove.lit.hear]) }; draw(); return;
+    case 'usekept': t.groove.use = t.groove.kept[+d.i].name; changed(); return;
+    case 'cleargroove': { const k = t.groove.kept[+d.i]; if (k && t.groove.use === k.name) t.groove.use = L[t.groove.lit.hear]; t.groove.kept[+d.i] = null; changed(); return; }
+    case 'bars': T.setBars(t, +d.v); ui.viewBar = 0; changed(); return;
+    case 'mute': T.toggle(t, l, 'mute'); changed(); return;
+    case 'solo': T.toggle(t, l, 'solo'); changed(); return;
     case 'levellock': l.levelLocked = !l.levelLocked; draw(); return;
-    case 'lanefeel': snapshot('feel'); l.feel = d.v; draw(); return;
+    case 'lanefeel': T.snapshot(t, 'feel'); l.feel = d.v; changed(); return;
     case 'followswing': return;
-    case 'fx': fxSheet(d.id); return;
+    case 'fx': ui.fxEdit = 0; fxSheet(d.id); return;
+    case 'fxaddmenu': fxAddMenu(d.id); return;
+    case 'fxadd': { const F = fxTarget(d.id); if (T.fxAdd(F, d.v)) { ui.fxEdit = T.curChain(F).fx.findIndex(f => f.type === d.v); if (d.close) closeSheet(); changed(); toast('Added ' + BL.FX_TYPES[d.v].name + '.'); } return; }
+    case 'fxdel': { const F = fxTarget(d.id); T.fxRemove(F, +d.i); changed(); return; }
+    case 'fxopen': ui.fxEdit = +d.i; fxSheet(d.id); return;
+    case 'fxeditone': ui.fxEdit = +d.i; fxSheet(ui.fxFor); return;
+    case 'fxmove': { const F = fxTarget(ui.fxFor); T.fxMove(F, +d.i, +d.v); ui.fxEdit = +d.i + +d.v; changed(); return; }
+    case 'fxlock': { const f = T.curChain(fxTarget(ui.fxFor)).fx[+d.i]; f.lock = !f.lock; draw(); return; }
+    case 'fxbypass': { const F = fxTarget(d.id || ui.fxFor); F.bypass = !F.bypass; changed(); return; }
+    case 'fxchar': { const F = fxTarget(ui.fxFor); F.char = d.v; draw(); toast('New breeds four ' + d.v + ' chains.'); return; }
     case 'lanemenu': laneMenu(l); return;
-    case 'openlane': closeSheet(); state.sel = l.id; goStep(d.step || state.step || 'sound'); return;
-    case 'closepart': state.tab = 'track'; draw(); return;
-    case 'dup': { closeSheet(); snapshot('duplicate'); const c = clone(l); c.id = ++laneN; c.name = l.name + ' 2'; c.solo = false; state.lanes.splice(state.lanes.indexOf(l) + 1, 0, c); draw(); toast('Duplicated ' + l.name + '.'); return; }
-    case 'move': { closeSheet(); snapshot('move'); const i = state.lanes.indexOf(l), j = i + +d.v; state.lanes.splice(i, 1); state.lanes.splice(j, 0, l); draw(); return; }
-    case 'remove': { closeSheet(); snapshot('remove'); state.lanes.splice(state.lanes.indexOf(l), 1); if (state.sel === l.id) { state.sel = state.lanes[0] ? state.lanes[0].id : null; state.tab = 'track'; } draw(); toast('Removed ' + l.name + '. Undo brings it back.'); return; }
-    case 'undo': { const u = state.undo.pop(); if (!u) return; state.lanes = u.lanes; state.master = u.master; if (!laneById(state.sel)) state.sel = state.lanes[0] ? state.lanes[0].id : null; draw(); toast('Undid ' + u.what + '.'); return; }
-    case 'autolevel': { snapshot('auto level'); const free = state.lanes.filter(x => !x.levelLocked); free.forEach(x => { x.level = x.kind === 'drums' ? 0.74 : x.kind === 'bass' ? 0.66 : 0.52; }); let pk = masterPeakDb(); if (pk > -1.5) { const k = Math.pow(10, (-1.5 - pk) / 20); free.forEach(x => { x.level *= k; }); } draw(); toast('Auto level set ' + free.length + ' lane' + (free.length === 1 ? '' : 's') + (state.lanes.length > free.length ? '; locked lanes kept' : '') + '. Drum rows keep their own levels.'); return; }
-    case 'add': { const k = d.v, n = state.lanes.filter(x => x.kind === k).length + 1, name = (k === 'drums' ? 'Drums ' : k === 'bass' ? 'Bass ' : 'Synth ') + n;
-      const draft = k === 'drums' ? drumLane(name, [null, null, null, null, null, null, null, null], [0, 1, 2, 3]) : pitchedLane(k, name);
-      if (k === 'drums') { draft.sound.pads = [{ name: 'Kick 2', zone: 'Kick', label: 'Kick', v: drumVals() }, { name: 'Drum 2', zone: 'None', label: 'None', v: drumVals() }, null, null, null, null, null, null]; draft.pattern.chosen = [0, 1, 2, 3]; draft.pattern.writtenAs = ['Kick', 'None', null, null]; draft.pattern.rows = [part('kick', state.bars), part('drum', state.bars), new Array(state.bars * 16).fill(0), new Array(state.bars * 16).fill(0)]; draft.pattern.items = [0, 1, 2, 3].map(() => draft.pattern.rows.map(r => r.slice())); }
-      state.adding = { kind: k, draft }; goStep('sound'); return; }
-    case 'cancel': state.adding = null; state.tab = 'track'; draw(); toast('Cancelled. Nothing was added.'); return;
-    case 'addtotrack': { const dr = state.adding.draft; snapshot('add part'); state.lanes.push(dr); state.adding = null; state.sel = dr.id; state.tab = 'track'; draw(); toast(dr.name + ' added to the Track.'); return; }
-    case 'draftalone': state.draftAlone = d.v === 'alone'; draw(); return;
+    case 'openlane': closeSheet(); ui.sel = l.id; goStep(d.step || ui.step || 'sound'); return;
+    case 'closepart': ui.tab = 'track'; draw(); return;
+    case 'dup': { closeSheet(); const c = T.duplicateLane(t, l); changed(); toast('Duplicated ' + l.name + ' as ' + c.name + '.'); return; }
+    case 'move': closeSheet(); T.moveLane(t, l, +d.v); changed(); return;
+    case 'remove': { closeSheet(); T.removeLane(t, l); if (ui.sel === l.id) { ui.sel = t.lanes[0] ? t.lanes[0].id : null; ui.tab = 'track'; } changed(); toast('Removed ' + l.name + '. Undo brings it back.'); return; }
+    case 'undo': { const w = T.undo(t); if (!w) return; if (!laneById(ui.sel)) ui.sel = t.lanes[0] ? t.lanes[0].id : null; changed(); toast('Undid ' + w + '.'); return; }
+    case 'autolevel': (async () => { const n = await autoLevelAll(); toast(n ? 'Auto level set ' + n + ' lane' + (n === 1 ? '' : 's') + (t.lanes.some(x => x.levelLocked) ? '; locked lanes kept' : '') + '. Drum rows keep their own levels.' : 'Every lane is locked.'); })(); return;
+    case 'add': T.addPart(t, d.v); t.draftAlone = false; goStep('sound'); schedule(); return;
+    case 'cancel': T.cancelAdd(t); ui.tab = 'track'; changed(); toast('Cancelled. Nothing was added.'); return;
+    case 'addtotrack': { const dr = T.addToTrack(t); ui.sel = dr.id; ui.tab = 'track'; changed(); toast(dr.name + ' added to the Track.'); return; }
+    case 'draftalone': t.draftAlone = d.v === 'alone'; changed(); return;
     case 'step': goStep(d.v); return;
-    case 'hear': { const o = litOf(d.k, l); o.hear = +d.i; if (d.k === 'loop') l.pattern.rows = o.items[o.hear]; draw(); return; }
-    case 'breed': case 'cross': { const o = litOf(d.k, l); o.hear = +d.i; reroll(d.k, l, +d.i); draw(); return; }
-    case 'new': { const o = litOf(d.k, l); reroll(d.k, l, -1); o.hear = 0; if (d.k === 'loop') l.pattern.rows = o.items[0]; draw(); toast('Four new.'); return; }
-    case 'back': toast('Back steps through this litter\'s history (phase 2).'); return;
-    case 'zone': l.sound.zone = d.v; draw(); return;
-    case 'pzone': l.sound.zone = d.v; draw(); return;
-    case 'phrase': l.sound.phrase = d.v; draw(); return;
-    case 'follow': l.pattern.follow = +d.v; draw(); return;
-    case 'keepdrum': { const S = l.sound, z = S.zone, base = z === 'None' ? 'Drum' : z, n = S.pads.filter(p => p && p.name.startsWith(base + ' ')).length + 1; S.pads[+d.i] = { name: base + ' ' + n, zone: z, label: z, v: S.items[S.hear].slice() }; draw(); return; }
-    case 'keepvoice': l.sound.kept[+d.i] = { name: l.sound.zone + ' ' + (l.sound.kept.filter(Boolean).length + 1), v: l.sound.items[l.sound.hear].slice() }; draw(); return;
-    case 'keeploop': l.pattern.kept[+d.i] = clone(l.pattern.items[l.pattern.hear]); draw(); return;
-    case 'keepnotes': l.pattern.kept[+d.i] = clone(l.pattern.items[l.pattern.hear]); draw(); return;
+    case 'hear': {
+      const k = d.k, i = +d.i;
+      if (k === 'groove') { t.groove.lit.hear = i; t.groove.use = L[i]; changed(); return; }
+      if (k === 'fx') { const F = fxTarget(d.id); F.lit.hear = i; ui.fxEdit = 0; changed(); return; }
+      const o = T.litFor(t, l, k).o; o.hear = i;
+      if (k === 'sound') { if (l.kind === 'drums') oneShot(o.items[i]); else playPhrase(l, o.items[i]); }
+      if (k === 'pattern' && !ui.playing) { ui.playing = true; ctx(); }
+      changed(); return;
+    }
+    case 'breed': case 'cross': { const tgt = d.k === 'groove' ? null : d.k === 'fx' ? (d.id === 'master' ? 'master' : laneById(+d.id)) : l; (act === 'breed' ? T.breed : T.cross)(t, tgt, d.k, +d.i); if (d.k === 'groove') t.groove.use = L[t.groove.lit.hear]; changed(); return; }
+    case 'back': { const tgt = d.k === 'groove' ? null : d.k === 'fx' ? (d.id === 'master' ? 'master' : laneById(+d.id)) : l; if (!T.back(t, tgt, d.k)) { toast('Nothing to go back to.'); return; } changed(); return; }
+    case 'new': { const tgt = d.k === 'groove' ? null : d.k === 'fx' ? (d.id === 'master' ? 'master' : laneById(+d.id)) : l; T.renew(t, tgt, d.k); if (d.k === 'groove') t.groove.use = 'A'; changed(); toast('Four new.'); return; }
+    case 'zone': l.sound.zone = d.v; draw(); toast('Zone steers the next New or Breed.'); return;
+    case 'phrase': l.sound.phrase = d.v; draw(); playPhrase(l, T.curVoice(l)); return;
+    case 'follow': T.setFollow(t, l, +d.v); changed(); return;
+    case 'dlock': { const S = openLane().sound; S.locks[+d.i] = !S.locks[+d.i]; draw(); return; }
+    case 'plock': l.sound.locks[+d.i] = !l.sound.locks[+d.i]; draw(); return;
+    case 'keepdrum': { const p = T.keepPad(t, l, +d.i); changed(); toast('Kept ' + p.name + ' on pad ' + (36 + +d.i) + '.'); return; }
+    case 'clearpad': l.sound.pads[+d.i] = null; changed(); return;
+    case 'playpad': oneShot(l.sound.pads[+d.i].v); return;
+    case 'keepvoice': { const S = l.sound; S.kept[+d.i] = { name: S.zone + ' ' + (S.kept.filter(Boolean).length + 1), v: T.curVoice(l).slice() }; draw(); return; }
+    case 'loadvoice': { const S = l.sound; T.snap(S.lit); S.lit.items[S.lit.hear] = S.kept[+d.i].v.slice(); playPhrase(l, T.curVoice(l)); changed(); return; }
+    case 'clearvoice': l.sound.kept[+d.i] = null; draw(); return;
+    case 'keeploop': l.pattern.kept[+d.i] = T.clone(T.curLoop(l)); draw(); return;
+    case 'loadloop': { const P = l.pattern; T.snap(P.lit); P.lit.items[P.lit.hear] = T.clone(P.kept[+d.i]); changed(); return; }
+    case 'clearloop': l.pattern.kept[+d.i] = null; draw(); return;
     case 'relabel': relabelSheet(l, +d.i); return;
-    case 'setlabel': { const sh = document.querySelector('.sheet'), ln = laneById(+sh.dataset.lane), p = ln.sound.pads[+sh.dataset.pad]; if (p.label === d.v) return; snapshot('relabel'); p.label = d.v; closeSheet(); draw(); toast(p.name + ' plays as ' + d.v + ' from the next Breed or New.'); return; }
-    case 'rewrite': { const r = +d.r, P = l.pattern, p = l.sound.pads[P.chosen[r]]; snapshot('rewrite row'); P.rows[r] = part(ROLE[p.label], state.bars); P.writtenAs[r] = p.label; draw(); toast('Row ' + (r + 1) + ' rewritten as ' + p.label + '.'); return; }
-    case 'tscope': l.pattern.traitScope = +d.v; draw(); return;
-    case 'tfollow': l.pattern.rowTraits[l.pattern.traitScope] = null; draw(); return;
-    case 'dtlock': l.pattern.traitLocks[+d.i] = !l.pattern.traitLocks[+d.i]; draw(); return;
+    case 'setlabel': { const sh = document.querySelector('.sheet'), ln = laneById(+sh.dataset.lane), p = ln.sound.pads[+sh.dataset.pad]; if (T.relabel(t, ln, +sh.dataset.pad, d.v)) { closeSheet(); draw(); toast(p.name + ' plays as ' + d.v + ' from the next Breed or New.'); } return; }
+    case 'rewrite': if (T.rewriteRow(t, l, +d.r)) { changed(); toast('Row ' + (+d.r + 1) + ' rewritten. Back undoes it.'); } return;
     case 'rowlock': l.pattern.rowLocks[+d.r] = !l.pattern.rowLocks[+d.r]; draw(); return;
-    case 'rowfeel': l.pattern.rowFeel[+d.r] = d.v; draw(); return;
-    case 'choose': { const S = l.sound, slot = +d.i; sheet('<h3>Row ' + (slot + 1) + ' plays</h3><div class="keep">' + S.pads.map((p, i) => p ? '<button class="pad full" data-act="pick" data-id="' + l.id + '" data-slot="' + slot + '" data-i="' + i + '" style="--kc:' + LCOL[p.label] + '"><span class="no">' + (36 + i) + '</span><span class="nm">' + esc(p.name) + '</span><span class="labelbtn" style="pointer-events:none">' + p.label + '</span></button>' : '<div class="pad"><span class="no">' + (36 + i) + '</span><span class="dr">empty</span></div>').join('') + '</div>'); return; }
-    case 'pick': l.pattern.chosen[+d.slot] = +d.i; closeSheet(); draw(); return;
-    case 'cell': { const P = l.pattern, r = +d.r, s = +d.s, v = P.rows[r][s]; P.rows[r][s] = !v ? 0.9 : v >= 0.45 ? 0.3 : 0; draw(); return; }
-    case 'fxchar': case 'fxnew': case 'fxhear': case 'fxbypass': case 'fxlock': { const sh = document.querySelector('.sheet'), id = sh.dataset.fx, tgt = id === 'master' ? state.master : laneById(+id), F = tgt.fx;
-      if (act === 'fxchar') { F.ch = d.v; F.items = [0, 1, 2, 3].map(() => fxChain(d.v)); F.hear = 0; }
-      if (act === 'fxnew') { F.items = [0, 1, 2, 3].map(() => fxChain(F.ch)); F.hear = 0; }
-      if (act === 'fxhear') F.hear = +d.i;
-      if (act === 'fxbypass') F.bypass = !F.bypass;
-      if (act === 'fxlock') F.locks[+d.i] = !F.locks[+d.i];
-      F.chain = F.items[F.hear]; fxSheet(id); draw(); return; }
+    case 'rowfeel': l.pattern.rowFeel[+d.r] = d.v; changed(); return;
+    case 'viewbar': ui.viewBar = +d.v; draw(); return;
+    case 'tscope': l.pattern.traitScope = +d.v; draw(); return;
+    case 'tfollow': { const lp = T.curLoop(l); T.snap(l.pattern.lit); lp.rowTraits[l.pattern.traitScope] = null; T.redrawLoop(t, l, lp); changed(); return; }
+    case 'dtlock': l.pattern.traitLocks[+d.i] = !l.pattern.traitLocks[+d.i]; draw(); return;
+    case 'choose': { const S = l.sound, slot = +d.i; sheet('<h3>Row ' + (slot + 1) + ' plays</h3><div class="keep">' + S.pads.map((p, i) => p ? '<button class="pad full" data-act="pick" data-id="' + l.id + '" data-slot="' + slot + '" data-i="' + i + '" style="--kc:' + LCOL[p.label] + (l.pattern.chosen[slot] === i ? ';border-width:2px' : '') + '"><span class="no">' + (36 + i) + (l.pattern.chosen[slot] === i ? ' · now' : '') + '</span><span class="nm">' + esc(p.name) + '</span><span class="labelbtn" style="pointer-events:none">' + p.label + '</span></button>' : '<div class="pad"><span class="no">' + (36 + i) + '</span><span class="dr">empty</span></div>').join('') + '</div><p class="hint">Only kept pads can play. The row\'s part follows the pad\'s label on the next Breed or New.</p>'); return; }
+    case 'pick': l.pattern.chosen[+d.slot] = +d.i; closeSheet(); changed(); return;
+    case 'cell': { const lp = T.curLoop(l), r = +d.r, s = +d.s, v = lp.rows[r][s]; lp.rows[r][s] = !v ? 0.9 : v >= 0.45 ? 0.3 : 0; changed(); return; }
   }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+document.addEventListener('toggle', e => { const el = e.target; if (el.classList && el.classList.contains('grp')) ui.open[el.dataset.g] = el.open; }, true);
 let slideSnap = false;
 document.addEventListener('input', e => {
-  const t = e.target, d = t.dataset, n = +t.value / 1000; if (t.type === 'range') t.style.setProperty('--p', (n * 100).toFixed(1) + '%');
-  if (d.level || d.pan) { if (!slideSnap) { snapshot(d.level ? 'level' : 'pan'); slideSnap = true; } }
-  if (d.level) { const l = laneById(+d.level); l.level = n; document.getElementById('lvo-' + l.id).textContent = db(n) + ' dB'; }
-  if (d.pan) { const l = laneById(+d.pan); l.pan = n * 2 - 1; document.getElementById('pno-' + l.id).textContent = panTxt(l.pan); }
-  if (d.mlevel) { state.master.level = n; t.parentElement.querySelector('output').textContent = db(n * 0.78) + ' dB'; }
-  if (d.gset) { state.groove.items[state.groove.hear][d.gset] = n * 100; t.parentElement.querySelector('output').textContent = Math.round(n * 100); }
-  if (d.dtrait) { const l = openLane(), P = l.pattern, sc = P.traitScope; if (sc >= 0 && !P.rowTraits[sc]) P.rowTraits[sc] = P.traits.slice(); const arr = sc >= 0 ? P.rowTraits[sc] : P.traits; arr[+d.dtrait] = n; t.parentElement.querySelector('output').textContent = Math.round(n * 100); }
-  if (d.trait) { const l = openLane(); l.pattern.traits[+d.trait] = n; t.parentElement.querySelector('output').textContent = Math.round(n * 100); }
-  if (d.fxamt) { const id = document.querySelector('.sheet').dataset.fx, tgt = id === 'master' ? state.master : laneById(+id); tgt.fx.chain[+d.fxamt].amt = n; t.parentElement.querySelector('output').textContent = Math.round(n * 100) + '%'; }
+  const el = e.target, d = el.dataset, n = +el.value / 1000, out = el.parentElement && el.parentElement.querySelector('output'); if (el.type === 'range') el.style.setProperty('--p', (n * 100).toFixed(1) + '%');
+  const l = d.id ? laneById(+d.id) : openLane();
+  if (d.level) { const ln = laneById(+d.level); if (!slideSnap) { T.snapshot(t, 'level'); slideSnap = true; } ln.db = posDb(n); document.getElementById('lvo-' + ln.id).textContent = dbTxt(ln.db) + ' dB'; schedule(); }
+  if (d.pan) { const ln = laneById(+d.pan); if (!slideSnap) { T.snapshot(t, 'pan'); slideSnap = true; } ln.pan = n * 2 - 1; document.getElementById('pno-' + ln.id).textContent = panTxt(ln.pan); schedule(); }
+  if (d.mlevel) { t.master.db = posDb(n); document.getElementById('mlvo').textContent = dbTxt(t.master.db) + ' dB'; schedule(); }
+  if (d.spread) { const o = T.litFor(t, d.spread === 'groove' ? null : d.spread === 'fx' ? (d.id === 'master' ? 'master' : laneById(+d.id)) : l, d.spread).o; o.spread = 0.02 + n * 0.48; out.textContent = o.spread.toFixed(2); }
+  if (d.gset) { const g = t.groove.lit.items[t.groove.lit.hear]; g[d.gset] = n * 100; out.textContent = Math.round(n * 100); schedule(); }
+  if (d.dset !== undefined) { const lane = openLane(), i = +d.dset; lane.sound.lit.items[lane.sound.lit.hear][i] = n; out.textContent = T.fmt(i, n); }
+  if (d.pset !== undefined) { const i = +d.pset; T.curVoice(l)[i] = n; out.textContent = BL.fmt(BL.SYNTH[i], n); schedule(); }
+  if (d.dtrait !== undefined) { const lp = T.curLoop(l), P = l.pattern, sc = P.traitScope; if (!slideSnap) { T.snap(P.lit); slideSnap = true; } if (sc >= 0 && !lp.rowTraits[sc]) lp.rowTraits[sc] = lp.traits.slice(); (sc >= 0 ? lp.rowTraits[sc] : lp.traits)[+d.dtrait] = n; out.textContent = Math.round(n * 100); T.redrawLoop(t, l, lp); schedule(); }
+  if (d.ptrait !== undefined) { const P = l.pattern; if (!slideSnap) { T.snap(P.lit); slideSnap = true; } const g = T.curLoop(l); g.traits[+d.ptrait] = n; P.lit.items[P.lit.hear] = T.redrawNotes(t, l, g); out.textContent = Math.round(n * 100); schedule(); }
+  if (d.fxmix) { T.curChain(fxTarget(ui.fxFor)).mix = n; out.textContent = Math.round(n * 100) + '%'; schedule(); }
+  if (d.fxp !== undefined) { const f = T.curChain(fxTarget(ui.fxFor)).fx[+d.fxp]; f.p[+d.q] = n; out.textContent = BL.fxShow(f)[+d.q]; schedule(); }
 });
 document.addEventListener('change', e => {
-  const t = e.target, d = t.dataset; slideSnap = false;
-  if (d.sel) { state[d.sel] = t.value; draw(); return; }
-  if (d.act === 'ease') { state.ease = t.checked; draw(); return; }
-  if (d.act === 'followswing') { const l = laneById(+d.id); snapshot('swing'); l.followSwing = t.checked; draw(); toast(l.name + (t.checked ? ' follows the groove\'s swing.' : ' plays straight.')); return; }
-  if (d.rename) { const l = laneById(+d.rename); if (t.value.trim()) { snapshot('rename'); l.name = t.value.trim(); draw(); } return; }
-  if (d.level || d.pan || d.mlevel || d.gset || d.dtrait) draw();
+  const el = e.target, d = el.dataset; const was = slideSnap; slideSnap = false;
+  if (d.sel === 'key') { t.key = el.value; changed(); return; }
+  if (d.sel === 'scale') { T.setScale(t, el.value); changed(); return; }
+  if (d.act === 'ease') { t.ease = el.checked; changed(); return; }
+  if (d.act === 'followswing') { const l = laneById(+d.id); T.snapshot(t, 'swing'); l.followSwing = el.checked; changed(); toast(l.name + (el.checked ? ' follows the groove\'s swing.' : ' plays straight.')); return; }
+  if (d.rename) { T.renameLane(t, laneById(+d.rename), el.value); draw(); return; }
+  if (d.dset !== undefined) { const lane = openLane(); oneShot(T.curVoice(lane)); draw(); return; }
+  if (d.pset !== undefined) { const lane = d.id ? laneById(+d.id) : openLane(); playPhrase(lane, T.curVoice(lane)); draw(); return; }
+  if (was || d.gset || d.mlevel || d.spread) draw();
 });
-window.trackMockGo = function (fn) { fn(state); draw(); }; // screenshots set up states through this
-draw();
+draw(); rerender(); requestAnimationFrame(tick);
 })();
 </script>

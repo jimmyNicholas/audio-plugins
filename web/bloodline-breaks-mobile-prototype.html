@@ -2,11 +2,11 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* PROTOTYPE, throwaway, UI only. Mobile first: three tabs (Drums, Groove, Break) under a sticky transport, a tab bar at the bottom; from 1000px the three panels sit side by side and the tab bar goes. One dark look, colours from the Bloodline Breaks 2 editor. */
+/* PROTOTYPE, throwaway. Mobile first: three tabs (Drums, Groove, Break) under a sticky transport, a tab bar at the bottom; from 1000px the three panels sit side by side and the tab bar goes. One dark look, colours from the Bloodline Breaks 2 editor. */
 :root {
   color-scheme: dark;
   --bg: #15171c; --panel: #1f2229; --tile: #292d36; --edge: #3a3f4b; --fg: #e8e6e1; --muted: #8d8f96; --faint: #5d626d;
-  --accent: #ff8c69; --parent: #ffc857; --keep: #9be564; --lock: #b39ddb; --groove: #f2c14e; --wild: #c9c6bf;
+  --accent: #ff8c69; --parent: #ffc857; --keep: #9be564; --lock: #b39ddb; --groove: #f2c14e; --wild: #c9c6bf; --warn: #ff5d5d;
   --kick: #ff6b6b; --snare: #7cc6fe; --hat: #f4d35e; --perc: #9be564;
   --g1: #7cc6fe; --g2: #ff8c69; --g3: #9be564; --g4: #d59bf6; --g5: #f4d35e;
   --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -25,15 +25,18 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--fg); outlin
 
 /* transport */
 .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg); border-bottom: 1px solid var(--edge); }
-.top-in { display: flex; align-items: center; gap: 8px; padding-block: 8px; max-width: 1500px; margin: 0 auto; }
+.top-in { display: flex; align-items: center; gap: 8px; padding-block: 8px 4px; max-width: 1500px; margin: 0 auto; }
 .brand { font: 700 15px var(--body); letter-spacing: 0.04em; margin-right: auto; white-space: nowrap; }
-.brand small { display: block; font: 10px var(--mono); color: var(--muted); letter-spacing: 0; font-weight: 400; }
-.playbtn { height: 40px; min-width: 92px; border-radius: 20px; border: 1.5px solid var(--edge); background: var(--tile); font-weight: 700; }
+.playbtn { height: 40px; min-width: 88px; border-radius: 20px; border: 1.5px solid var(--edge); background: var(--tile); font-weight: 700; }
 .playbtn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
-.bpm { font: 500 12px var(--mono); color: var(--muted); text-align: right; white-space: nowrap; }
-.bpm b { display: block; color: var(--fg); font-size: 15px; }
-@media (max-width: 440px) { .brand { font-size: 13px; } .brand small { display: none; } .playbtn { min-width: 72px; } .midi { padding: 0 8px; } }
-.midi { height: 40px; border-radius: 10px; border: 1.5px solid var(--accent); background: var(--tile); padding: 0 10px; font-weight: 700; font-size: 12px; white-space: nowrap; }
+.bpm { display: flex; align-items: center; background: var(--panel); border-radius: 20px; height: 40px; }
+.bpm button { width: 30px; height: 40px; border: 0; background: none; color: var(--muted); font-size: 17px; }
+.bpm span { font: 600 14px var(--mono); min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; }
+.exportbtn { height: 40px; border-radius: 10px; border: 1.5px solid var(--accent); background: var(--tile); padding: 0 10px; font-weight: 700; font-size: 12px; white-space: nowrap; }
+.status { max-width: 1500px; margin: 0 auto; padding-block: 0 6px; font: 11px var(--mono); color: var(--muted); display: flex; gap: 10px; white-space: nowrap; overflow: hidden; }
+.status b { color: var(--fg); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.status .clip { color: var(--warn); }
+@media (max-width: 440px) { .brand { font-size: 12px; letter-spacing: 0.02em; } .playbtn { min-width: 68px; } .exportbtn { padding: 0 7px; } .bpm button { width: 24px; } }
 
 /* layout */
 main { max-width: 1500px; margin: 0 auto; padding-block: 12px calc(var(--tabh) + env(safe-area-inset-bottom, 0px) + 20px); }
@@ -54,7 +57,6 @@ main { max-width: 1500px; margin: 0 auto; padding-block: 12px calc(var(--tabh) +
 .lab { font: 700 10px var(--body); letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
 .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .row.between { justify-content: space-between; }
-.grow { flex: 1; }
 .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .chips::-webkit-scrollbar { display: none; }
 .chip { flex: none; height: 34px; padding: 0 13px; border-radius: 17px; border: 1px solid var(--edge); background: var(--tile); font-size: 13px; font-weight: 500; white-space: nowrap; }
@@ -63,8 +65,9 @@ main { max-width: 1500px; margin: 0 auto; padding-block: 12px calc(var(--tabh) +
 .btn:disabled { opacity: 0.35; cursor: default; }
 .btn.small { height: 28px; padding: 0 9px; font-size: 12px; }
 .btn.hot { border-color: var(--groove); color: var(--groove); font-weight: 700; }
-.sl { display: grid; grid-template-columns: 74px minmax(0, 1fr) 54px; align-items: center; gap: 10px; }
-.sl.lockable { grid-template-columns: 74px minmax(0, 1fr) 54px 58px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; }
+.sl { display: grid; grid-template-columns: 74px minmax(0, 1fr) 58px; align-items: center; gap: 10px; }
+.sl.lockable { grid-template-columns: 74px minmax(0, 1fr) 58px 58px; }
 .sl > span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sl output { font: 12px var(--mono); text-align: right; white-space: nowrap; }
 input[type=range] { -webkit-appearance: none; appearance: none; background: none; height: 30px; width: 100%; min-width: 0; margin: 0; cursor: pointer; }
@@ -90,7 +93,7 @@ input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 
 .tile .meta { font: 10.5px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .tile .acts .btn { height: 32px; padding: 0 4px; }
-.hearzone { display: grid; gap: 6px; background: none; border: 0; padding: 0; text-align: left; }
+.hearzone { display: grid; gap: 6px; background: none; border: 0; padding: 0; text-align: left; width: 100%; }
 
 /* settings accordion */
 details.grp { border-top: 1px solid var(--edge); }
@@ -106,11 +109,12 @@ details.grp .sets { display: grid; gap: 2px; padding-bottom: 10px; }
 .keep { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .pad { position: relative; min-height: 70px; border-radius: 8px; border: 1px solid var(--edge); background: var(--panel); padding: 5px 6px; display: flex; flex-direction: column; gap: 2px; text-align: left; min-width: 0; }
 .pad.full { background: var(--tile); border-color: color-mix(in srgb, var(--kc) 70%, transparent); }
+.pad.live { box-shadow: inset 0 0 0 2px var(--accent); }
 .pad.target { border: 1.5px dashed var(--keep); background: color-mix(in srgb, var(--panel) 85%, var(--keep)); }
 .pad .no { font: 10px var(--mono); color: var(--muted); }
 .pad .nm { font: 700 12px var(--body); color: var(--kc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pad .dr { margin: auto; font-size: 11px; color: var(--muted); text-align: center; }
-.pad .x { position: absolute; top: 2px; right: 3px; width: 22px; height: 22px; border: 0; background: none; color: var(--muted); font-size: 14px; }
+.pad .x { position: absolute; top: 2px; right: 3px; width: 24px; height: 24px; border: 0; background: none; color: var(--muted); font-size: 14px; }
 .pad svg { display: block; width: 100%; height: 22px; margin-top: auto; }
 .pad .used { position: absolute; bottom: 4px; right: 5px; font: 700 10px var(--mono); color: var(--bg); background: var(--kc); border-radius: 3px; padding: 0 4px; }
 
@@ -121,7 +125,7 @@ details.grp .sets { display: grid; gap: 2px; padding-bottom: 10px; }
 .feelrow .who { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .seg { display: inline-flex; background: var(--bg); border-radius: 8px; padding: 2px; gap: 2px; }
 .seg button { height: 28px; padding: 0 9px; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 12px; font-weight: 500; }
-.seg button[aria-pressed="true"] { background: var(--groove); color: var(--bg); font-weight: 700; }
+.seg button[aria-pressed="true"] { background: var(--sg, var(--groove)); color: var(--bg); font-weight: 700; }
 .seedpill { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 17px; border: 1.5px solid var(--groove); background: var(--tile); font-weight: 700; font-size: 13px; color: var(--groove); }
 .seedpill svg { width: 44px; height: 16px; }
 
@@ -150,6 +154,10 @@ details.grp .sets { display: grid; gap: 2px; padding-bottom: 10px; }
 .cell i { position: absolute; left: 15%; right: 15%; bottom: 2px; border-radius: 2px; background: var(--kc); opacity: var(--o, 1); }
 .playhead { position: absolute; top: 16px; bottom: 0; width: 2px; background: var(--fg); opacity: 0.75; pointer-events: none; left: 0; }
 .map { font: 10.5px var(--mono); color: var(--muted); }
+.barpick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.barpick button { height: 30px; border-radius: 6px; border: 1px solid var(--edge); background: var(--tile); font: 600 11px var(--mono); color: var(--muted); position: relative; overflow: hidden; }
+.barpick button[aria-pressed="true"] { border-color: var(--accent); color: var(--fg); }
+.barpick button.now::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--accent); }
 
 /* tabs */
 .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: color-mix(in srgb, var(--panel) 92%, transparent); backdrop-filter: blur(10px); border-top: 1px solid var(--edge); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
@@ -165,39 +173,67 @@ details.grp .sets { display: grid; gap: 2px; padding-bottom: 10px; }
 .sheet { width: 100%; max-width: 560px; background: var(--panel); border-radius: 16px 16px 0 0; padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 10px; }
 @media (min-width: 1000px) { .scrim { align-items: center; } .sheet { border-radius: 16px; } }
 .sheet h3 { margin: 0; font-size: 16px; }
+.exp { display: grid; gap: 8px; }
+.exp button { display: grid; gap: 2px; text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--edge); background: var(--tile); }
+.exp button b { font-size: 14px; }
+.exp button span { font-size: 12px; color: var(--muted); }
 .toast { position: fixed; left: 50%; bottom: calc(var(--tabh) + env(safe-area-inset-bottom, 0px) + 12px); transform: translateX(-50%); background: var(--tile); border: 1px solid var(--edge); border-radius: 8px; padding: 8px 14px; font-size: 13px; z-index: 60; max-width: calc(100% - 32px); }
 @media (min-width: 1000px) { .toast { bottom: 20px; } }
 </style>
-<header class="top"><div class="top-in gut" id="top"></div></header>
+<header class="top"><div class="top-in gut" id="top"></div><div class="status gut" id="status"></div></header>
 <main class="gut"><div class="panes" id="panes"></div></main>
 <nav class="tabs" aria-label="Sections"><div class="tabs-in" role="tablist" id="tabs"></div></nav>
 <div id="sheet-root"></div>
 <script>
-/* PROTOTYPE, wipe me. A mobile-first look at Bloodline Breaks 2 with the user's changes, UI only:
-   - Drums: Breaks 2's left panel (zone, loop audition, four drum tiles, 19 settings, eight keep pads).
-   - Groove: a new panel that seeds the break. Like every Bloodline panel: four options (A to D, Breed,
-     Cross, Back, New), the heard option's settings (Groove, Complexity, Forward, Behind, with locks,
-     plus a feel per row), and choices (kept grooves). The heard groove is the seed.
-   - Break: Breaks 2's right panel without layering. Four chosen pads, left to right, play the grid's
-     rows from the bottom up: pad 1 is the bottom row, pad 4 the top.
-   Nothing makes sound; Breed and the rest redraw example data so the screens can be judged. */
+/* PROTOTYPE, wipe me. Bloodline Breaks, mobile first, with an engine.
+   - Drums: Bloodline Drums' voice (19 settings, zones; Perc from plugins/bloodline-breaks-2/SPEC.md), a litter of
+     four bred as in Bloodline Drums 2 (Cross takes whole setting groups), eight keep pads, a Loop audition.
+   - Groove: four options bred with Groove, Complexity, Forward, Behind (docs/research/groove-and-drum-feel.md),
+     a feel per row and locks; kept grooves. The heard or kept groove seeds the break.
+   - Break: loops of 2 or 4 bars bred from the seed groove. Four chosen pads, left to right, play the rows from
+     the bottom up; a row's part is written for its pad's zone and pulled to the Complexity target.
+   Everything renders offline into one seamless loop, so what plays is what exports (mix WAV, or a zip with stems). */
 (function () {
 'use strict';
+const SR = 44100;
 const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
-let seed = 11; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+const lerp = (a, b, t) => a + (b - a) * t;
+const fold = v => { v = Math.abs(v); if (v > 1) v = 2 - v; return clamp(v, 0, 1); };
+const dbg = db => Math.pow(10, db / 20);
+const R = Math.random;
+function gaussOf(r) { let u = 0; while (!u) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); }
+const gauss = () => gaussOf(R);
+function poisson(l) { const E = Math.exp(-l); let k = 0, p = 1; do { k++; p *= R(); } while (p > E); return k - 1; }
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const newSeed = () => Math.floor(R() * 2147483646) + 1;
+const clone = o => JSON.parse(JSON.stringify(o));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const L = 'ABCD';
-const ZCOL = { Kick: 'var(--kick)', Snare: 'var(--snare)', Hats: 'var(--hat)', Perc: 'var(--perc)', None: 'var(--wild)' };
-const GC = ['var(--g1)', 'var(--g2)', 'var(--g3)', 'var(--g4)', 'var(--g5)'];
-const SET = [ // Bloodline Drums' 19 settings: name, group, unit, min, max, log
-  ['Pitch', 0, 'Hz', 20, 2000, 1], ['Sweep', 0, 'st', 0, 60], ['Sweep time', 0, 's', 0.002, 0.3, 1], ['Attack', 0, 's', 0, 0.05], ['Decay', 0, 's', 0.005, 4, 1],
-  ['Body / Noise', 1, '%', 0, 1], ['Noise tone', 1, 'Hz', 100, 16000, 1], ['Noise decay', 1, 's', 0.005, 4, 1], ['Metal', 1, '%', 0, 1],
-  ['Click', 2, '%', 0, 1], ['Click tone', 2, 'Hz', 500, 12000, 1],
-  ['Drive', 3, '%', 0, 1], ['Bits', 3, 'bits', 16, 2], ['Rate', 3, 'Hz', 48000, 1000, 1],
-  ['High-pass', 4, 'Hz', 20, 8000, 1], ['Low-pass', 4, 'Hz', 200, 20000, 1], ['Resonance', 4, '%', 0, 0.95], ['Pan', 4, 'pan', -1, 1], ['Level', 4, 'dB', -24, 0],
+
+// =====================================================================================
+// Drums: settings, zones, voice (ported from plugins/bloodline-drums/core)
+// =====================================================================================
+const SET = [ // name, group, unit, min, max, log, bred
+  ['Pitch', 0, 'Hz', 20, 2000, 1, 1], ['Sweep', 0, 'st', 0, 60, 0, 1], ['Sweep time', 0, 's', 0.002, 0.3, 1, 1], ['Attack', 0, 's', 0, 0.05, 0, 1], ['Decay', 0, 's', 0.005, 4, 1, 1],
+  ['Body / Noise', 1, '%', 0, 1, 0, 1], ['Noise tone', 1, 'Hz', 100, 16000, 1, 1], ['Noise decay', 1, 's', 0.005, 4, 1, 1], ['Metal', 1, '%', 0, 1, 0, 1],
+  ['Click', 2, '%', 0, 1, 0, 1], ['Click tone', 2, 'Hz', 500, 12000, 1, 1],
+  ['Drive', 3, '%', 0, 1, 0, 1], ['Bits', 3, 'bits', 16, 2, 0, 1], ['Rate', 3, 'Hz', 48000, 1000, 1, 1],
+  ['High-pass', 4, 'Hz', 20, 8000, 1, 1], ['Low-pass', 4, 'Hz', 200, 20000, 1, 1], ['Resonance', 4, '%', 0, 0.95, 0, 1], ['Pan', 4, 'pan', -1, 1, 0, 1], ['Level', 4, 'dB', -24, 0, 0, 0],
 ];
 const GROUPS = ['Body', 'Noise', 'Click', 'Grit', 'Out'];
-function real(i, n) { const s = SET[i]; return s[5] ? s[3] * Math.pow(s[4] / s[3], n) : s[3] + (s[4] - s[3]) * n; }
+const GC = ['var(--g1)', 'var(--g2)', 'var(--g3)', 'var(--g4)', 'var(--g5)'];
+const PAN = 17, LEVEL = 18;
+const ZONES = {
+  Kick: [[40, 90], [3, 24], [0.015, 0.08], [0, 0.003], [0.15, 0.6], [0, 0.25], [200, 2000], [0.01, 0.08], [0, 0.05], [0.1, 0.8], [1000, 5000]],
+  Snare: [[150, 280], [0, 8], [0.01, 0.05], [0, 0.002], [0.08, 0.35], [0.4, 0.8], [1500, 6000], [0.1, 0.4], [0, 0.2], [0, 0.6], [2000, 8000]],
+  Hats: [[100, 400], [0, 2], [0.002, 0.02], [0, 0.001], [0.03, 0.8], [0.85, 1], [5000, 16000], [0.03, 0.8], [0.4, 1], [0, 0.4], [4000, 12000]],
+  Perc: [[200, 900], [0, 6], [0.005, 0.04], [0, 0.002], [0.02, 0.2], [0.2, 0.6], [1500, 8000], [0.02, 0.15], [0, 0.3], [0.2, 0.8], [1500, 6000]],
+};
+const ZCOL = { Kick: 'var(--kick)', Snare: 'var(--snare)', Hats: 'var(--hat)', Perc: 'var(--perc)', None: 'var(--wild)' };
+const TUNE = { start: 0.25, min: 0.02, max: 0.5, narrow: 0.6, widen: 1.6, zoneShare: 0.8, pull: 0.5 };
+function real(i, n) { const s = SET[i]; n = clamp(n, 0, 1); return s[5] ? s[3] * Math.pow(s[4] / s[3], n) : s[3] + (s[4] - s[3]) * n; }
+function norm(i, x) { const s = SET[i]; x = clamp(x, Math.min(s[3], s[4]), Math.max(s[3], s[4])); return s[5] ? Math.log(x / s[3]) / Math.log(s[4] / s[3]) : (x - s[3]) / (s[4] - s[3]); }
+function zoneRange(zone, i) { if (!ZONES[zone] || i > 10) return [0, 1]; const z = ZONES[zone][i], a = norm(i, z[0]), b = norm(i, z[1]); return [Math.min(a, b), Math.max(a, b)]; }
 function fmt(i, n) {
   const v = real(i, n), u = SET[i][2];
   if (u === 'Hz') return v >= 1000 ? (v / 1000).toFixed(1) + ' kHz' : Math.round(v) + ' Hz';
@@ -208,39 +244,305 @@ function fmt(i, n) {
   if (u === 'pan') return Math.abs(v) < 0.02 ? 'C' : (v < 0 ? 'L' : 'R') + Math.round(Math.abs(v) * 100);
   return Math.round(v * 100) + '%';
 }
-const ZONE_N = { Kick: [0.25, 0.3, 0.45, 0.05, 0.55, 0.1, 0.35, 0.3, 0.02, 0.4, 0.5], Snare: [0.6, 0.08, 0.35, 0.02, 0.4, 0.6, 0.6, 0.55, 0.1, 0.3, 0.6], Hats: [0.65, 0.02, 0.1, 0.01, 0.3, 0.92, 0.85, 0.4, 0.7, 0.2, 0.7], Perc: [0.7, 0.05, 0.3, 0.02, 0.35, 0.4, 0.6, 0.35, 0.15, 0.5, 0.5] };
-function drumFresh(zone) { const base = ZONE_N[zone] || []; return SET.map((s, i) => i === 18 ? 1 : i === 17 ? 0.5 : i < 11 && base[i] != null ? clamp(base[i] + (rnd() - 0.5) * 0.18, 0, 1) : i >= 11 ? (i === 12 ? rnd() * 0.15 : i === 13 ? rnd() * 0.2 : i === 14 ? rnd() * 0.15 : i === 15 ? 0.75 + rnd() * 0.25 : rnd() * 0.3) : rnd()); }
+const drumOps = {
+  fresh(zone) { const v = SET.map((s, i) => { const r = zone !== 'None' && R() < TUNE.zoneShare ? zoneRange(zone, i) : [0, 1]; return lerp(r[0], r[1], R()); }); v[LEVEL] = 1; if (zone === 'Kick') v[PAN] = 0.5; return v; },
+  mutate(from, spread, locks, zone) { return from.map((x, i) => { if (!SET[i][6] || locks[i]) return x; let y = fold(x + gauss() * spread); if (zone !== 'None') { const [lo, hi] = zoneRange(zone, i); if (y < lo) y += (lo - y) * TUNE.pull; else if (y > hi) y -= (y - hi) * TUNE.pull; } return y; }); },
+  cross(a, b, locks) { const pick = GROUPS.map(() => R() < 0.5); return a.map((x, i) => locks[i] ? x : pick[SET[i][1]] ? x : b[i]); }, // whole groups from one parent or the other
+};
+const K808 = [205.3, 304.4, 369.6, 522.7, 540, 800];
+const coefFor = (sec, target) => Math.exp(Math.log(target) / Math.max(1, sec * SR));
+const gFor = hz => Math.tan(Math.PI * clamp(hz, 10, 0.45 * SR) / SR);
+function voice(vals, h, seed, maxN) {
+  const r = vals.map((x, i) => real(i, x));
+  const dm = h.dm || 1; r[4] *= dm; r[7] *= dm; r[6] *= h.br || 1; r[10] *= h.br || 1;
+  const vel = clamp(h.vel, 0, 1), harder = 0.15 * vel * vel;
+  const pitch = r[0], sweepOct = r[1] / 12, sweepCoef = coefFor(r[2], 0.001), ampCoef = coefFor(r[4], 0.001), noiseCoef = coefFor(r[7], 0.001);
+  const noiseMix = r[5], metalAmt = r[8], click = Math.min(1, r[9] + harder);
+  const drive = Math.min(1, r[11] + harder), driveGain = 1 + 30 * drive * drive, driveNorm = 1 / Math.tanh(driveGain), hard = clamp((drive - 0.8) / 0.2, 0, 1);
+  const steps = Math.pow(2, r[12] - 1), holdInc = Math.min(1, r[13] / SR), level = 0.5 * vel * dbg(clamp(h.levelDb, -60, 6));
+  const svfK = 1.4, fK = 2 - 2 * r[16], co = (g, k) => { const a1 = 1 / (1 + g * (g + k)); return [a1, g * a1, g * g * a1]; };
+  const [na1, na2, na3] = co(gFor(r[6]), svfK), [ca1, ca2, ca3] = co(gFor(r[10]), 1), [ha1, ha2, ha3] = co(gFor(r[14]), fK), [la1, la2, la3] = co(gFor(r[15]), fK);
+  const sqInc = K808.map(f => f * pitch / 200 / SR), sqPh = [0, 0, 0, 0, 0, 0];
+  const attackStep = 1 / Math.max(1, Math.max(0.001, r[3]) * SR), nAttackStep = 1 / Math.max(1, 0.0005 * SR), clickCoef = coefFor(0.004, 0.001);
+  let phase = 0, sweepEnv = 1, amp = 1, noiseAmp = 1, attack = 0, nAttack = 0, clickEnv = 1, held = 0, holdPh = 1, noise = (seed >>> 0) || 0x9e3779b9;
+  let n1 = 0, n2 = 0, m1 = 0, m2 = 0, c1 = 0, c2 = 0, h1 = 0, h2 = 0, l1 = 0, l2 = 0;
+  const N = Math.min(maxN, 5 * SR), out = new Float32Array(N); let n = 0;
+  for (; n < N; n++) {
+    phase += Math.min(pitch * Math.pow(2, sweepOct * sweepEnv), 0.45 * SR) / SR; phase -= Math.floor(phase);
+    const body = Math.sin(2 * Math.PI * phase) * amp * attack;
+    sweepEnv *= sweepCoef; amp *= ampCoef; attack = Math.min(1, attack + attackStep);
+    noise ^= noise << 13; noise >>>= 0; noise ^= noise >>> 17; noise ^= noise << 5; noise >>>= 0;
+    const white = noise / 4294967295 * 2 - 1;
+    let v3 = white - n2, v1 = na1 * n1 + na2 * v3, v2 = n2 + na2 * n1 + na3 * v3; n1 = 2 * v1 - n1; n2 = 2 * v2 - n2;
+    const nz = v1 * svfK * 2.5;
+    let sq = 0; for (let k = 0; k < 6; k++) { sqPh[k] += sqInc[k]; sqPh[k] -= Math.floor(sqPh[k]); sq += sqPh[k] < 0.5 ? 1 : -1; } sq /= 6;
+    v3 = sq - m2; v1 = na1 * m1 + na2 * v3; v2 = m2 + na2 * m1 + na3 * v3; m1 = 2 * v1 - m1; m2 = 2 * v2 - m2;
+    const metal = (sq - svfK * v1 - v2) * 1.5;
+    const noisePart = ((1 - metalAmt) * nz + metalAmt * metal) * noiseAmp * nAttack;
+    noiseAmp *= noiseCoef; nAttack = Math.min(1, nAttack + nAttackStep);
+    let s = (1 - noiseMix) * body + noiseMix * noisePart;
+    v3 = white - c2; v1 = ca1 * c1 + ca2 * v3; v2 = c2 + ca2 * c1 + ca3 * v3; c1 = 2 * v1 - c1; c2 = 2 * v2 - c2;
+    s += click * clickEnv * v1 * 2; clickEnv *= clickCoef;
+    const soft = Math.tanh(s * driveGain) * driveNorm, hd = clamp(s * driveGain, -1, 1); s = soft + (hd - soft) * hard;
+    s = Math.round(s * steps) / steps;
+    holdPh += holdInc; if (holdPh >= 1) { holdPh -= 1; held = s; } s = held;
+    v3 = s - h2; v1 = ha1 * h1 + ha2 * v3; v2 = h2 + ha2 * h1 + ha3 * v3; h1 = 2 * v1 - h1; h2 = 2 * v2 - h2; s = s - fK * v1 - v2;
+    v3 = s - l2; v1 = la1 * l1 + la2 * v3; v2 = l2 + la2 * l1 + la3 * v3; l1 = 2 * v1 - l1; l2 = 2 * v2 - l2;
+    s = v2 * level; if (!isFinite(s)) { s = 0; h1 = h2 = l1 = l2 = 0; }
+    const mag = Math.abs(s); if (mag > 0.7) s = Math.sign(s) * (0.7 + 0.3 * Math.tanh((mag - 0.7) / 0.3));
+    out[n] = s;
+    if (amp < 1e-4 && noiseAmp < 1e-4 && clickEnv < 1e-4 && n > 64) { n++; break; }
+  }
+  const res = out.subarray(0, n);
+  if (n >= maxN) { const f = Math.min(n, Math.round(0.002 * SR)); for (let i = 0; i < f; i++) res[n - 1 - i] *= i / f; } // cut by the same pad's next hit
+  return res;
+}
+
+// =====================================================================================
+// Groove: four settings, a feel per row, bred with locks
+// =====================================================================================
 const STYLES = ['None', 'Boom bap', 'Lo-fi', 'Strung', 'Neo soul'];
 const STYLE_G = { None: [30, 40, 10, 20], 'Boom bap': [45, 40, 5, 35], 'Lo-fi': [60, 30, 0, 50], Strung: [70, 65, 30, 60], 'Neo soul': [65, 55, 10, 45] };
-function grooveFresh(style) { const g = STYLE_G[style]; return { groove: clamp(g[0] + (rnd() - 0.5) * 30, 0, 100), complexity: clamp(g[1] + (rnd() - 0.5) * 30, 0, 100), forward: clamp(g[2] + (rnd() - 0.5) * 20, 0, 100), behind: clamp(g[3] + (rnd() - 0.5) * 30, 0, 100), feel: ['on', rnd() < 0.6 ? 'behind' : 'on', rnd() < 0.5 ? 'ahead' : 'on', ['ahead', 'on', 'behind'][Math.floor(rnd() * 3)]], ease: true }; }
-function swingPct(g) { return 50 + g.groove / 100 * 16.7 * (g.ease ? clamp(90 / state.bpm, 0.45, 1.25) : 1); }
-const PAT = ['9002003020810130', '0000900100009102', '8383838383838383', '0000000100000030'];
-function loopFresh(g) { const c = (g ? g.complexity : 40) / 100; return { rows: PAT.map((p, r) => [...p].map((ch, k) => { let v = +ch / 9; if (rnd() < 0.12 + c * 0.25) v = v && !(r < 2 && k % 4 === 0) ? 0 : (r === 1 ? 0.35 : 0.5 + rnd() * 0.4); return +v.toFixed(2); })), swing: g ? swingPct(g) : 58 }; }
-
-// ---------- state (example data)
-const state = {
-  tab: 'break', bpm: 92, playing: false,
-  zone: 'Kick', audition: 'Boom bap', auditionOn: true,
-  drums: { items: [], hear: 0, parent: 1, spread: 0.25, locks: Array(19).fill(false) },
-  pads: [{ name: 'Kick 1', zone: 'Kick' }, { name: 'Snare 1', zone: 'Snare' }, { name: 'Hats 1', zone: 'Hats' }, { name: 'Hats 2', zone: 'Hats' }, { name: 'Drum 1', zone: 'None' }, { name: 'Perc 1', zone: 'Perc' }, null, null],
-  style: 'Boom bap',
-  groove: { items: [], hear: 1, parent: 1, spread: 0.25, locks: { groove: false, complexity: true, forward: false, behind: false } },
-  keptGrooves: [null, null, null, null],
-  seedFrom: 'B',
-  chosen: [0, 1, 2, 5], // left to right; pad 1 plays the bottom row
-  loops: { items: [], hear: 0, parent: 2, spread: 0.25 },
-  rowLocks: [false, false, false, false],
-  keptLoops: [null, null, null, null, null, null, null, null],
-  open: { Body: true },
+const GKEYS = ['groove', 'complexity', 'forward', 'behind'];
+const FEELS = ['ahead', 'on', 'behind'];
+const grooveOps = {
+  fresh() { const g = STYLE_G[state.style]; return { groove: clamp(g[0] + gauss() * 12, 0, 100), complexity: clamp(g[1] + gauss() * 12, 0, 100), forward: clamp(g[2] + gauss() * 8, 0, 100), behind: clamp(g[3] + gauss() * 12, 0, 100), feel: [0, 1, 2, 3].map(r => defaultFeel(roleOfRow(r))), ease: true, seed: newSeed() }; },
+  mutate(from, spread) { const g = clone(from), lk = state.groove.locks, st = STYLE_G[state.style]; GKEYS.forEach((k, i) => { if (lk[k]) return; const y = clamp(g[k] + gauss() * spread * 60, 0, 100); g[k] = y + (st[i] - y) * 0.15; }); g.feel = g.feel.map((f, r) => R() < spread * 0.5 ? defaultFeel(roleOfRow(r)) : f); g.seed = newSeed(); return g; },
+  cross(a, b) { const g = clone(a), lk = state.groove.locks; GKEYS.forEach(k => { if (!lk[k] && R() < 0.5) g[k] = b[k]; }); g.feel = a.feel.map((f, r) => R() < 0.5 ? f : b.feel[r]); return g; },
 };
-state.drums.items = [0, 1, 2, 3].map(() => drumFresh('Kick'));
-state.pads.forEach(p => { if (p) p.vals = drumFresh(p.zone); });
-state.groove.items = [0, 1, 2, 3].map(() => grooveFresh('Boom bap'));
-state.keptGrooves[0] = { name: 'Groove 1', g: JSON.parse(JSON.stringify(state.groove.items[1])) };
-state.loops.items = [0, 1, 2, 3].map(() => loopFresh(state.groove.items[1]));
-state.keptLoops[0] = JSON.parse(JSON.stringify(state.loops.items[0])); state.keptLoops[1] = JSON.parse(JSON.stringify(state.loops.items[2]));
+function defaultFeel(role) { const x = R(); return role === 'kick' ? (x < 0.85 ? 'on' : 'behind') : role === 'snare' ? (x < 0.6 ? 'behind' : 'on') : role === 'hat' ? (x < 0.5 ? 'on' : x < 0.85 ? 'ahead' : 'behind') : FEELS[Math.floor(x * 3)]; }
+function swingPct(g) { return 50 + g.groove / 100 * 16.7 * (g.ease ? clamp(90 / state.bpm, 0.45, 1.25) : 1); }
 
-// ---------- little drawings
+// =====================================================================================
+// Break: parts written per row from its pad's zone, pulled to the Complexity target
+// =====================================================================================
+const ZROLE = { Kick: 'kick', Snare: 'snare', Hats: 'hat', Perc: 'perc', None: 'drum' };
+const ROLE_W = { kick: 1, snare: 0.7, hat: 0.4, perc: 0.5, drum: 0.5 };
+const W16 = [0, -4, -3, -4, -2, -4, -3, -4, -1, -4, -3, -4, -2, -4, -3, -4];
+function roleOfRow(r) { const p = state.pads[state.chosen[r]]; return p ? ZROLE[p.zone] : null; }
+function rolesNow() { return [0, 1, 2, 3].map(roleOfRow); }
+function hasOf(roles) { return { kick: roles.includes('kick'), snare: roles.includes('snare'), hat: roles.includes('hat') }; }
+function lhl(row) { const N = row.length, on = []; for (let i = 0; i < N; i++) if (row[i] >= 0.45) on.push(i); if (!on.length) return 0; let s = 0;
+  for (let n = 0; n < on.length; n++) { const i = on[n], j = on[(n + 1) % on.length] + (n + 1 === on.length ? N : 0); let mw = -9; for (let k = i + 1; k < j; k++) mw = Math.max(mw, W16[k % 16]); if (mw > W16[i % 16]) s += mw - W16[i % 16]; }
+  return s / (N / 16); }
+function syncTarget(role, c) { return role === 'kick' ? c * 5 : role === 'snare' ? 3 + c * 1.6 : role === 'hat' ? c * 1.6 : c * 3; }
+const isAnchor = (role, s) => (role === 'kick' && s % 16 === 0) || (role === 'snare' && (s % 16 === 4 || s % 16 === 12));
+function odds(role, c, has, s) {
+  const b = s % 16;
+  if (role === 'kick') { const P = { 0: 1, 8: 0.8 - 0.5 * c, 10: 0.1 + 0.5 * c, 6: 0.06 + 0.4 * c, 7: 0.04 + 0.4 * c, 3: 0.04 + 0.35 * c, 11: 0.04 + 0.3 * c, 14: 0.06 + 0.35 * c, 15: 0.03 + 0.3 * c, 2: 0.03 + 0.25 * c, 9: 0.02 + 0.2 * c, 13: 0.02 + 0.15 * c, 5: 0.01 + 0.1 * c }; if (!has.snare) { P[4] = 0.15 + 0.2 * c; P[12] = 0.2 + 0.2 * c; } return P[b] || 0; }
+  if (role === 'snare') return b === 4 || b === 12 ? 1 : (!has.kick && b === 0 ? 0.6 : 0);
+  if (role === 'hat') return b % 4 === 0 ? 1 : b % 2 === 0 ? 1 - 0.2 * c : c * 0.7 * (b % 4 === 3 ? 1 : 0.6);
+  return ({ 3: 0.3, 6: 0.25, 7: 0.2, 10: 0.3, 11: 0.25, 13: 0.2, 14: 0.3, 15: 0.35, 2: 0.15, 5: 0.15, 9: 0.15 }[b] || 0.04) * (0.3 + c);
+}
+const GHOST_W = { 7: 1, 9: 0.8, 15: 0.9, 13: 0.6, 11: 0.7, 3: 0.5, 1: 0.3, 5: 0.3, 14: 0.5, 10: 0.4, 6: 0.4, 2: 0.3 };
+function candidate(role, c, has, bars) {
+  const N = bars * 16, g = new Array(N).fill(0), velOf = s => role === 'hat' ? (s % 4 === 0 ? 0.85 : s % 2 === 0 ? 0.6 : 0.42) : s % 16 === 0 ? 1 : s % 4 === 0 ? 0.9 : 0.78;
+  const bar1 = []; for (let s = 0; s < 16; s++) if (R() < odds(role, c, has, s)) bar1.push(s);
+  for (let b = 0; b < bars; b++) for (let s = 0; s < 16; s++) { // later bars mostly repeat the first
+    const on = b === 0 ? bar1.includes(s) : (R() < 0.2 + 0.4 * c ? R() < odds(role, c, has, s) : bar1.includes(s));
+    if (on || isAnchor(role, s)) g[b * 16 + s] = velOf(s);
+  }
+  if (role === 'snare') { for (let s = 0; s < N; s++) if (!g[s] && GHOST_W[s % 16] && R() < c * 0.45 * GHOST_W[s % 16]) g[s] = 0.2 + R() * 0.12; if (c > 0.5 && R() < (c - 0.5) * 1.4) g[N - 1] = 0.75; }
+  if (role === 'hat' || role === 'snare') { for (let b = 0; b < bars; b++) [4, 12].forEach(s => { if (role === 'hat' && g[b * 16 + s]) g[b * 16 + s] = has.snare ? 0.7 : 1; }); }
+  if (bars > 1 && (role === 'perc' || role === 'drum' || role === 'snare')) for (let s = N - 4; s < N; s++) if (!g[s] && R() < 0.2 + 0.3 * c) g[s] = 0.5 + R() * 0.3; // a fill into the top
+  return g;
+}
+function pickBySync(cands, role, c) { const T = syncTarget(role, c); let best = cands[0], bs = 1e9; cands.forEach(g => { const d = Math.abs(lhl(g) - T) + R() * 0.6; if (d < bs) { bs = d; best = g; } }); return best; }
+function mutateRow(row, role, c, has, spread) {
+  const h = row.slice(), N = h.length, n = 1 + poisson(spread * 8 * (N / 32));
+  for (let k = 0; k < n; k++) {
+    const on = []; for (let s = 0; s < N; s++) if (h[s]) on.push(s);
+    const op = R(), free = on.filter(s => !isAnchor(role, s));
+    if (op < 0.38) { const ws = h.map((x, s) => x ? 0 : 0.03 + odds(role, c, has, s)); let t = ws.reduce((a, b) => a + b, 0) * R(), s = 0; for (; s < N - 1; s++) { t -= ws[s]; if (t <= 0) break; } if (!h[s]) h[s] = role === 'snare' && R() < 0.7 ? 0.2 + R() * 0.12 : clamp(0.45 + odds(role, c, has, s) * 0.45 + gauss() * 0.08, 0.2, 1); }
+    else if (op < 0.66 && free.length) h[free[Math.floor(R() * free.length)]] = 0;
+    else if (op < 0.9 && free.length) { const s = free[Math.floor(R() * free.length)], t = (s + (R() < 0.5 ? -1 : 1) + N) % N; if (!h[t]) { h[t] = h[s]; h[s] = 0; } }
+    else if (on.length) { const s = on[Math.floor(R() * on.length)]; h[s] = clamp(h[s] + gauss() * spread, 0.1, 1); }
+  }
+  return h;
+}
+const loopOps = {
+  fresh() { const g = seedGroove(), roles = rolesNow(), has = hasOf(roles), c = g.complexity / 100, bars = state.bars;
+    return { bars, rows: roles.map(role => role ? pickBySync(Array.from({ length: 14 }, () => candidate(role, c, has, bars)), role, c) : new Array(bars * 16).fill(0)), roles: roles.slice(), g: clone(g), swing: swingPct(g), seed: newSeed() }; },
+  mutate(from, spread) {
+    const g = seedGroove(), roles = rolesNow(), has = hasOf(roles), c = g.complexity / 100, out = clone(from);
+    out.rows = from.rows.map((row, r) => { const role = roles[r]; if (!role) return row.slice(); if (from.roles[r] !== role || !row.some(Boolean)) return pickBySync(Array.from({ length: 14 }, () => candidate(role, c, has, from.bars)), role, c); if (state.rowLocks[r]) return row.slice();
+      const before = row.join(','), cands = []; for (let k = 0; k < 6; k++) { const h = mutateRow(row, role, c, has, spread); if (h.join(',') !== before) cands.push(h); } return cands.length ? pickBySync(cands, role, c) : mutateRow(row, role, c, has, Math.max(spread, 0.2)); });
+    out.roles = roles.slice(); out.g = clone(g); out.swing = clamp(swingPct(g) + gauss() * spread * 4, 50, 75); out.seed = R() < 0.5 ? from.seed : newSeed();
+    return out;
+  },
+  cross(a, b) { const c = clone(a); c.rows = a.rows.map((row, r) => state.rowLocks[r] || R() < 0.5 || b.bars !== a.bars ? row.slice() : b.rows[r].slice()); c.swing = R() < 0.5 ? a.swing : b.swing; return c; },
+};
+function resize(lp, bars) { if (lp.bars === bars) return lp; const N = bars * 16, c = clone(lp); c.rows = lp.rows.map(row => Array.from({ length: N }, (_, s) => row[s % row.length])); c.bars = bars; return c; }
+
+// =====================================================================================
+// Litters (shared): breed, again, cross, back, new
+// =====================================================================================
+const HIST = new WeakMap();
+const hist = o => { if (!HIST.has(o)) HIST.set(o, []); return HIST.get(o); };
+function snap(o) { const h = hist(o); h.push(clone({ items: o.items, hear: o.hear, parent: o.parent, spread: o.spread, streak: o.streak })); if (h.length > 40) h.shift(); }
+function litBreed(o, i, mutate) { snap(o); if (i === o.parent) { o.spread *= TUNE.narrow; o.streak = 0; } else if (++o.streak >= 2) { o.spread *= TUNE.widen; o.streak = 0; } o.spread = clamp(o.spread, TUNE.min, TUNE.max); const p = o.items[i]; o.items = o.items.map((x, k) => k === i ? p : mutate(p, o.spread)); o.parent = i; o.hear = i; }
+function litCross(o, i, cross, mutate) { const j = o.hear; if (i === j) return litBreed(o, i, mutate); snap(o); const a = o.items[i], b = o.items[j]; o.items = o.items.map((x, k) => k === i || k === j ? x : mutate(cross(a, b), o.spread * 0.5)); o.parent = i; }
+function litBack(o) { const s = hist(o).pop(); if (!s) return false; Object.assign(o, s); return true; }
+function litNew(o, fresh) { snap(o); o.items = o.items.map(() => fresh()); o.parent = -1; o.hear = 0; o.spread = TUNE.start; o.streak = 0; }
+const OPS = {
+  drum: { mutate: (p, s) => drumOps.mutate(p, s, state.drums.locks, state.zone), cross: (a, b) => drumOps.cross(a, b, state.drums.locks), fresh: () => drumOps.fresh(state.zone) },
+  groove: { mutate: (p, s) => grooveOps.mutate(p, s), cross: grooveOps.cross, fresh: grooveOps.fresh },
+  loop: { mutate: (p, s) => loopOps.mutate(p, s), cross: loopOps.cross, fresh: loopOps.fresh },
+};
+
+// =====================================================================================
+// State: an example kit to start from, bred from each zone
+// =====================================================================================
+const state = {
+  tab: 'break', bpm: 90, bars: 2,
+  zone: 'Kick', audition: 'Boom bap', auditionOn: true,
+  drums: { items: [], hear: 0, parent: -1, spread: TUNE.start, streak: 0, locks: Array(19).fill(false) },
+  pads: [null, null, null, null, null, null, null, null],
+  style: 'Boom bap',
+  groove: { items: [], hear: 0, parent: -1, spread: TUNE.start, streak: 0, locks: { groove: false, complexity: false, forward: false, behind: false } },
+  keptGrooves: [null, null, null, null], seedFrom: 'A',
+  chosen: [0, 1, 2, 3],
+  loops: { items: [], hear: 0, parent: -1, spread: TUNE.start, streak: 0 },
+  rowLocks: [false, false, false, false], keptLoops: Array(8).fill(null), playingSlot: -1, viewBar: 0,
+  open: { Body: true }, mode: 'break', playing: false,
+};
+[['Kick', 'Kick 1'], ['Snare', 'Snare 1'], ['Hats', 'Hats 1'], ['Perc', 'Perc 1']].forEach(([z, n], i) => { const v = drumOps.fresh(z); v[PAN] = z === 'Kick' || z === 'Snare' ? 0.5 : z === 'Hats' ? 0.6 : 0.4; state.pads[i] = { name: n, zone: z, v }; });
+state.pads[3].v[LEVEL] = norm(LEVEL, -6); state.pads[2].v[LEVEL] = norm(LEVEL, -8);
+state.drums.items = [0, 1, 2, 3].map(() => drumOps.fresh('Kick'));
+state.groove.items = [0, 1, 2, 3].map(() => grooveOps.fresh());
+state.loops.items = [0, 1, 2, 3].map(() => loopOps.fresh());
+function seedGroove() { const k = state.seedFrom; if (k.startsWith('Groove ')) { const kept = state.keptGrooves.find(x => x && x.name === k); if (kept) return kept.g; } return state.groove.items[L.indexOf(k)] || state.groove.items[0]; }
+function sourceLoop() { return state.playingSlot >= 0 && state.keptLoops[state.playingSlot] ? state.keptLoops[state.playingSlot] : state.loops.items[state.loops.hear]; }
+
+// =====================================================================================
+// Render: every hit into one seamless loop; stems per row
+// =====================================================================================
+function hitsFor(lp, r, g, swing) {
+  const row = lp.rows[r], role = lp.roles[r] || roleOfRow(r), sd = 60 / state.bpm / 4, sw = swing / 100, depth = g.groove / 100 * 7, f = g.forward / 100 * 30, b = g.behind / 100 * 30, sig = g.groove / 100 * 5, feel = g.feel[r];
+  const rr = mulberry32((g.seed || 1) * 31 + r * 17 + lp.seed), contour = [], drift = [];
+  for (let k = 0; k < lp.bars * 4; k++) contour.push(k % 4 === 0 ? 1 : 1 - rr() * 0.3 * g.groove / 100);
+  let x = 0, lastJ = 0; for (let s = 0; s < row.length; s++) { x = 0.9 * x + 0.45 * gaussOf(rr); const j = gaussOf(rr) * 0.4 - 0.3 * lastJ; lastJ = j; drift.push((x * 0.7 + j) * sig); } // correlated drift
+  const hits = [];
+  row.forEach((v, s) => {
+    if (!v) return;
+    let t = s * sd; if (s % 2) t += (sw * 2 - 1) * sd;
+    const lvl = s % 4 === 0 ? 0 : s % 2 === 0 ? 0.5 : 1;
+    let vel = v * dbg(-depth * lvl) * contour[Math.floor(s / 4)], ms = 0, dm = 1, br = 1;
+    if (feel === 'ahead') { ms -= f; br *= 1 + f / 30 * 0.25; dm *= 1 - f / 30 * 0.15; }
+    if (feel === 'behind') { ms += b; vel *= 1 + b / 30 * 0.3; dm *= 1 + b / 30 * 0.35; br *= 1 - b / 30 * 0.1; }
+    if (role !== 'kick') ms += drift[s]; // the kick stays on time
+    hits.push({ s, t: t + ms / 1000, vel: clamp(vel, 0.05, 1), dm, br });
+  });
+  return hits;
+}
+const rowCache = new Map();
+const TRIM = 0.6; // about -4.4 dB a row, so four pads sit under the limiter and the stems add up to the mix
+function renderLoop(lp, opts = {}) {
+  const g = opts.groove || lp.g, swing = opts.groove ? swingPct(opts.groove) : lp.swing, Lsamp = Math.round(lp.bars * 16 * 60 / state.bpm / 4 * SR);
+  const left = new Float32Array(Lsamp), right = new Float32Array(Lsamp), stems = [];
+  for (let r = 0; r < 4; r++) {
+    const pi = state.chosen[r], pad = opts.swap && opts.swap.row === r ? { name: 'candidate', zone: state.zone, v: opts.swap.v } : state.pads[pi];
+    if (!pad) { stems.push(null); continue; }
+    const key = JSON.stringify([state.bpm, pad.v, lp.rows[r], lp.roles[r], g, swing, lp.seed, r, pi]);
+    let st = rowCache.get(key);
+    if (!st) {
+      const hits = hitsFor(lp, r, g, swing).sort((a, b) => a.t - b.t), l = new Float32Array(Lsamp), rt = new Float32Array(Lsamp);
+      const pan = real(PAN, pad.v[PAN]), gl = Math.min(1, 1 - pan) * TRIM, gr = Math.min(1, 1 + pan) * TRIM, lev = real(LEVEL, pad.v[LEVEL]);
+      hits.forEach((h, k) => {
+        const start = Math.round(h.t * SR); let cut = Lsamp;
+        if (hits.length > 1) { const nx = hits[(k + 1) % hits.length]; cut = Math.round(nx.t * SR) - start; if (cut <= 0) cut += Lsamp; } // one voice per pad
+        const s = voice(pad.v, { vel: h.vel, dm: h.dm, br: h.br, levelDb: lev }, (lp.seed + r * 7919 + h.s * 104729) >>> 0, cut);
+        for (let q = 0; q < s.length; q++) { let j = (start + q) % Lsamp; if (j < 0) j += Lsamp; l[j] += s[q] * gl; rt[j] += s[q] * gr; }
+      });
+      st = { l, r: rt, name: (r + 1) + '-' + pad.name.toLowerCase().replace(/\s+/g, '-') };
+      if (rowCache.size > 40) rowCache.clear();
+      rowCache.set(key, st);
+    }
+    stems.push(st);
+    for (let k = 0; k < Lsamp; k++) { left[k] += st.l[k]; right[k] += st.r[k]; }
+  }
+  return finish(left, right, stems);
+}
+function finish(left, right, stems) { // the Bloodline Effects safety: a -1 dB limiter, run twice round so the loop's start is settled
+  const n = left.length, rel = Math.exp(-1 / (0.08 * SR)); let lim = 1, peak = 0, cut = 1;
+  for (let pass = 0; pass < 2; pass++) for (let i = 0; i < n; i++) { const pk = Math.max(Math.abs(left[i]), Math.abs(right[i])), want = pk > 0.891 ? 0.891 / pk : 1; lim = want < lim ? want : want + (lim - want) * rel; if (pass) { left[i] = clamp(left[i] * lim, -1, 1); right[i] = clamp(right[i] * lim, -1, 1); peak = Math.max(peak, pk); cut = Math.min(cut, lim); } }
+  return { L: n, left, right, stems, peak, cut };
+}
+const AUD = { Quarters: [0, 4, 8, 12], 'Boom bap': [0, 3, 6, 10, 12], '16ths': [...Array(16).keys()] };
+function renderAudition(v) {
+  const n = Math.round(16 * 60 / state.bpm / 4 * SR), left = new Float32Array(n), right = new Float32Array(n), steps = AUD[state.audition], sd = 60 / state.bpm / 4;
+  steps.forEach((s, k) => { const start = Math.round(s * sd * SR), next = steps[(k + 1) % steps.length], cut = ((next - s + 16) % 16 || 16) * sd * SR, vel = s % 4 === 0 ? 0.95 : 0.7;
+    const out = voice(v, { vel, dm: 1, br: 1, levelDb: real(LEVEL, v[LEVEL]) }, 99 + s, Math.round(cut)), pan = real(PAN, v[PAN]);
+    for (let q = 0; q < out.length; q++) { const j = (start + q) % n; left[j] += out[q] * Math.min(1, 1 - pan); right[j] += out[q] * Math.min(1, 1 + pan); } });
+  return finish(left, right, []);
+}
+let render = null;
+function doRender() {
+  const D = state.drums;
+  if (state.mode === 'audition') render = renderAudition(D.items[D.hear]);
+  else if (state.mode === 'inbreak') { const zr = ZROLE[state.zone], row = Math.max(0, rolesNow().indexOf(zr)); render = renderLoop(sourceLoop(), { swap: { row, v: D.items[D.hear] } }); render.swapRow = row; }
+  else if (state.mode === 'groove') render = renderLoop(sourceLoop(), { groove: state.groove.items[state.groove.hear] });
+  else render = renderLoop(sourceLoop());
+}
+
+// ---------- playback
+let actx = null, cur = null;
+function ctx() { if (!actx) { try { actx = new AudioContext({ sampleRate: SR }); } catch (e) { actx = new AudioContext(); } } if (actx.state !== 'running') actx.resume(); return actx; }
+function position() { if (!cur) return 0; const p = (actx.currentTime - cur.startAt) / cur.dur; return ((p % 1) + 1) % 1; }
+function startSource(frac) {
+  const dur = render.L / SR, t = actx.currentTime + 0.03, src = actx.createBufferSource(), gain = actx.createGain(), b = actx.createBuffer(2, render.L, SR);
+  b.copyToChannel(render.left, 0); b.copyToChannel(render.right, 1); src.buffer = b; src.loop = true; src.connect(gain).connect(actx.destination);
+  gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(1, t + 0.008); src.start(t, (frac % 1) * dur);
+  if (cur) { cur.gain.gain.setValueAtTime(1, t); cur.gain.gain.linearRampToValueAtTime(0, t + 0.008); cur.src.stop(t + 0.02); }
+  cur = { src, gain, startAt: t - frac * dur, dur };
+}
+function stopAudio() { if (cur) { try { cur.src.stop(); } catch (e) { /* stopped */ } cur = null; } state.playing = false; }
+let pend = 0;
+function refreshAudio() { cancelAnimationFrame(pend); pend = requestAnimationFrame(() => { const f = position(); doRender(); if (state.playing) startSource(f); drawStatus(); }); }
+function play(mode) { ctx(); if (mode) state.mode = mode; state.playing = true; const f = position(); doRender(); startSource(cur ? f : 0); drawTop(); drawStatus(); }
+function oneShot(v) { ctx(); const s = voice(v, { vel: 0.95, dm: 1, br: 1, levelDb: real(LEVEL, v[LEVEL]) }, newSeed(), 5 * SR), pan = real(PAN, v[PAN]), b = actx.createBuffer(2, s.length, SR);
+  b.copyToChannel(s.map(x => x * Math.min(1, 1 - pan)), 0); b.copyToChannel(s.map(x => x * Math.min(1, 1 + pan)), 1); const src = actx.createBufferSource(); src.buffer = b; src.connect(actx.destination); src.start(); }
+
+// ---------- export: WAV, and a zip of the mix and stems
+function wav(chans) {
+  const n = chans[0].length, nc = chans.length, ab = new ArrayBuffer(44 + n * nc * 2), v = new DataView(ab), ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0, 'RIFF'); v.setUint32(4, 36 + n * nc * 2, true); ws(8, 'WAVE'); ws(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, nc, true); v.setUint32(24, SR, true); v.setUint32(28, SR * nc * 2, true); v.setUint16(32, nc * 2, true); v.setUint16(34, 16, true); ws(36, 'data'); v.setUint32(40, n * nc * 2, true);
+  let o = 44; for (let i = 0; i < n; i++) for (let c = 0; c < nc; c++) { v.setInt16(o, Math.round(clamp(chans[c][i], -1, 1) * 32767), true); o += 2; }
+  return new Uint8Array(ab);
+}
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(d) { let c = 0xFFFFFFFF; for (let i = 0; i < d.length; i++) c = CRC[(c ^ d[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zip(files) {
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  files.forEach(f => { const name = enc.encode(f.name), data = f.data, crc = crc32(data), h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true); parts.push(new Uint8Array(h.buffer), name, data);
+    const c = new DataView(new ArrayBuffer(46)); c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+    central.push(new Uint8Array(c.buffer), name); off += 30 + name.length + data.length; });
+  const cs = central.reduce((a, p) => a + p.length, 0), e = new DataView(new ArrayBuffer(22)); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cs, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(e.buffer)], { type: 'application/zip' });
+}
+function loopName() { const lp = sourceLoop(); return 'bloodline-break-' + (state.playingSlot >= 0 ? 'kept' + (state.playingSlot + 1) : L[state.loops.hear]) + '-' + lp.bars + 'bars-' + state.bpm + 'bpm'; }
+const inViewer = !!(window.claude && window.claude.use);
+let dl = null; if (inViewer) window.claude.use('downloads').then(d => { dl = d; }).catch(() => {});
+async function offer(filename, blob) {
+  if (inViewer) {
+    if (!dl) { toast('Downloads are not available in this view.'); return; }
+    try { await dl.save({ filename, data: blob }); toast('Saved ' + filename); } catch (e) { toast(e && e.code === 'declined' ? 'Export cancelled.' : 'Could not save: ' + ((e && (e.message || e.code)) || 'unknown error')); }
+    return;
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); toast('Saved ' + filename);
+}
+function exportMix() { const r = renderLoop(sourceLoop()), name = loopName(), w = wav([r.left, r.right]);
+  if (inViewer) offer(name + '.zip', zip([{ name: name + '.wav', data: w }])); // claude.ai saves audio inside a zip
+  else offer(name + '.wav', new Blob([w], { type: 'audio/wav' })); }
+function exportStems() { const r = renderLoop(sourceLoop()), name = loopName(), files = [{ name: name + '/mix.wav', data: wav([r.left, r.right]) }];
+  r.stems.forEach(s => { if (s) files.push({ name: name + '/stems/row' + s.name + '.wav', data: wav([s.l, s.r]) }); });
+  const lp = sourceLoop(); files.push({ name: name + '/break.json', data: new TextEncoder().encode(JSON.stringify({ bpm: state.bpm, bars: lp.bars, swing: lp.swing, groove: lp.g, rows: lp.rows.map((row, i) => ({ row: i + 1, pad: state.pads[state.chosen[i]] && state.pads[state.chosen[i]].name, steps: row })) }, null, 1)) });
+  offer(name + '.zip', zip(files)); }
+
+// =====================================================================================
+// Drawing
+// =====================================================================================
 function envSvg(v, h = 64) {
   const dec = real(4, v[4]), nd = real(7, v[7]), mix = v[5]; let pb = '', pn = '';
   for (let x = 0; x <= 100; x += 3) { const t = 0.5 * x / 100; pb += (x ? 'L' : 'M') + x + ' ' + (30 - (1 - mix) * Math.pow(0.001, t / dec) * 27).toFixed(1); pn += (x ? 'L' : 'M') + x + ' ' + (30 - mix * Math.pow(0.001, t / nd) * 27).toFixed(1); }
@@ -249,46 +551,35 @@ function envSvg(v, h = 64) {
   return s + '</svg>';
 }
 function padSvg(v) { let s = '<svg viewBox="0 0 100 22" preserveAspectRatio="none" aria-hidden="true">'; const bw = 100 / 19; v.forEach((x, i) => { const hh = Math.max(1, x * 20); s += '<rect x="' + (i * bw).toFixed(2) + '" y="' + (22 - hh).toFixed(1) + '" width="' + (bw - 0.8).toFixed(2) + '" height="' + hh.toFixed(1) + '" fill="' + GC[SET[i][1]] + '" opacity="0.8"/>'; }); return s + '</svg>'; }
-// A groove drawn as timing: each row's sixteenths as ticks, off-beats pushed by swing, rows shifted by their feel.
-function grooveSvg(g, h = 64) {
+function grooveSvg(g, h = 64) { // timing: each row's sixteenths, off-beats pushed by swing, rows shifted by their feel, heights by accent
   const sw = (swingPct(g) - 50) / 50, f = g.forward / 100 * 0.3, bh = g.behind / 100 * 0.3, depth = g.groove / 100;
   let s = '<svg viewBox="0 0 160 64" preserveAspectRatio="none" aria-hidden="true" style="height:' + h + 'px"><rect width="160" height="64" rx="3" fill="rgba(21,23,28,0.55)"/>';
   for (let k = 0; k <= 16; k += 4) s += '<rect x="' + (k * 10) + '" y="0" width="0.6" height="64" fill="rgba(58,63,75,0.9)"/>';
-  for (let r = 0; r < 4; r++) {
-    const pad = state.pads[state.chosen[r]], col = pad ? ZCOL[pad.zone] : 'var(--faint)', y0 = 64 - (r + 1) * 16, shift = g.feel[r] === 'ahead' ? -f : g.feel[r] === 'behind' ? bh : 0;
-    for (let k = 0; k < 16; k++) { const x = (k + (k % 2 ? sw : 0) + shift) * 10 + 2, acc = k % 4 === 0 ? 1 : k % 2 === 0 ? 1 - depth * 0.35 : 1 - depth * 0.6, hh = 3 + acc * 10; s += '<rect x="' + x.toFixed(1) + '" y="' + (y0 + 15 - hh).toFixed(1) + '" width="2.2" height="' + hh.toFixed(1) + '" fill="' + col + '" opacity="' + (0.35 + acc * 0.6).toFixed(2) + '"/>'; }
-  }
+  for (let r = 0; r < 4; r++) { const pad = state.pads[state.chosen[r]], col = pad ? ZCOL[pad.zone] : 'var(--faint)', y0 = 64 - (r + 1) * 16, shift = g.feel[r] === 'ahead' ? -f : g.feel[r] === 'behind' ? bh : 0;
+    for (let k = 0; k < 16; k++) { const x = (k + (k % 2 ? sw : 0) + shift) * 10 + 2, acc = k % 4 === 0 ? 1 : k % 2 === 0 ? 1 - depth * 0.35 : 1 - depth * 0.6, hh = 3 + acc * 10; s += '<rect x="' + x.toFixed(1) + '" y="' + (y0 + 15 - hh).toFixed(1) + '" width="2.2" height="' + hh.toFixed(1) + '" fill="' + col + '" opacity="' + (0.35 + acc * 0.6).toFixed(2) + '"/>'; } }
   return s + '</svg>';
 }
 function loopSvg(lp, h = 64) {
-  const sw = (lp.swing - 50) / 50;
+  const N = lp.rows[0].length, W = 160, cw = W / N, sw = (lp.swing - 50) / 50;
   let s = '<svg viewBox="0 0 160 64" preserveAspectRatio="none" aria-hidden="true" style="height:' + h + 'px"><rect width="160" height="64" rx="3" fill="rgba(21,23,28,0.55)"/>';
-  for (let k = 0; k < 16; k += 4) s += '<rect x="' + k * 10 + '" y="0" width="10" height="64" fill="rgba(58,63,75,0.35)"/>';
-  lp.rows.forEach((row, r) => {
-    const pad = state.pads[state.chosen[r]], col = pad ? ZCOL[pad.zone] : 'var(--faint)', y0 = 64 - (r + 1) * 16;
+  for (let k = 0; k < N; k += 4) s += '<rect x="' + (k * cw).toFixed(2) + '" y="0" width="' + (cw * 4 - 0.5).toFixed(2) + '" height="64" fill="rgba(58,63,75,' + (k % 16 === 0 ? 0.5 : 0.25) + ')"/>';
+  lp.rows.forEach((row, r) => { const pad = state.pads[state.chosen[r]], col = pad ? ZCOL[pad.zone] : 'var(--faint)', y0 = 64 - (r + 1) * 16;
     if (state.rowLocks[r]) s += '<rect x="0" y="' + y0 + '" width="160" height="16" fill="var(--lock)" opacity="0.16"/>';
-    row.forEach((v, k) => { if (!v) return; const hh = (16 - 3) * (0.3 + 0.7 * v), x = (k + (k % 2 ? sw : 0)) * 10 + 1; s += '<rect x="' + x.toFixed(1) + '" y="' + (y0 + (16 - hh) / 2).toFixed(1) + '" width="8" height="' + hh.toFixed(1) + '" rx="1" fill="' + col + '" opacity="' + (0.55 + 0.45 * v).toFixed(2) + '"/>'; });
-  });
+    row.forEach((v, k) => { if (!v) return; const hh = 13 * (0.3 + 0.7 * v), x = (k + (k % 2 ? sw : 0)) * cw + 0.3; s += '<rect x="' + x.toFixed(2) + '" y="' + (y0 + (16 - hh) / 2).toFixed(1) + '" width="' + Math.max(1.2, cw * 0.75).toFixed(2) + '" height="' + hh.toFixed(1) + '" rx="0.6" fill="' + col + '" opacity="' + (0.55 + 0.45 * v).toFixed(2) + '"/>'; }); });
   return s + '</svg>';
 }
-
-// ---------- pieces
 const chip = (label, on, act, val, color) => '<button class="chip" data-act="' + act + '" data-v="' + esc(val) + '" aria-pressed="' + on + '"' + (color ? ' style="--on:' + color + '"' : '') + '>' + esc(label) + '</button>';
 const slider = (id, name, v, out, attrs, lock, color) => '<div class="sl' + (lock !== undefined ? ' lockable' : '') + '"' + (color ? ' style="--sc:' + color + '"' : '') + '><span><label for="' + id + '">' + esc(name) + '</label></span><input id="' + id + '" type="range" min="0" max="1000" value="' + Math.round(v * 1000) + '" style="--p:' + (v * 100).toFixed(1) + '%" ' + attrs + '><output>' + esc(out) + '</output>' + (lock !== undefined ? lock : '') + '</div>';
-const tile = (i, inner, meta, L_, kind, accent) => {
-  const hear = i === L_.hear, par = i === L_.parent;
-  return '<div class="tile' + (hear ? ' hear' : '') + '"' + (accent ? ' style="--ta:' + accent + '"' : '') + '><button class="hearzone" data-act="hear" data-k="' + kind + '" data-i="' + i + '" aria-label="Hear ' + kind + ' ' + L[i] + '"><div class="th"><b>' + L[i] + '</b>' + (par ? '<em class="par">★ parent</em>' : hear ? '<em>' + (kind === 'loop' ? 'playing' : kind === 'groove' ? 'seed' : 'hearing') + '</em>' : '') + '</div>' + inner + '<div class="meta">' + esc(meta) + '</div></button>' +
+function tile(i, inner, meta, o, kind, accent, word) {
+  const hear = i === o.hear, par = i === o.parent;
+  return '<div class="tile' + (hear ? ' hear' : '') + '"' + (accent ? ' style="--ta:' + accent + '"' : '') + '><button class="hearzone" data-act="hear" data-k="' + kind + '" data-i="' + i + '" aria-label="Hear ' + kind + ' ' + L[i] + '"><div class="th"><b>' + L[i] + '</b>' + (par ? '<em class="par">★ parent</em>' : hear ? '<em>' + word + '</em>' : '') + '</div>' + inner + '<div class="meta">' + esc(meta) + '</div></button>' +
     '<div class="acts"><button class="btn" data-act="breed" data-k="' + kind + '" data-i="' + i + '">' + (par ? 'Again' : 'Breed') + '</button><button class="btn" data-act="cross" data-k="' + kind + '" data-i="' + i + '"' + (hear ? ' disabled' : '') + '>Cross</button></div></div>';
-};
+}
 function drumsPane() {
   const D = state.drums, v = D.items[D.hear];
-  let groups = '';
-  GROUPS.forEach((g, gi) => {
-    const idx = SET.map((s, i) => i).filter(i => SET[i][1] === gi);
-    groups += '<details class="grp" data-g="' + g + '"' + (state.open[g] ? ' open' : '') + ' style="--gc:' + GC[gi] + '"><summary><i></i>' + g.toUpperCase() + '<small>' + idx.length + ' settings</small></summary><div class="sets">' +
-      idx.map(i => slider('set-' + i, SET[i][0], v[i], fmt(i, v[i]), 'data-set="' + i + '"', i === 18 ? '<span></span>' : '<button class="lock" data-act="lock" data-i="' + i + '" aria-pressed="' + D.locks[i] + '">' + (D.locks[i] ? 'Locked' : 'Lock') + '</button>', GC[gi])).join('') + '</div></details>';
-  });
-  const target = state.pads.some(p => !p);
+  const groups = GROUPS.map((g, gi) => { const idx = SET.map((s, i) => i).filter(i => SET[i][1] === gi);
+    return '<details class="grp" data-g="' + g + '"' + (state.open[g] ? ' open' : '') + ' style="--gc:' + GC[gi] + '"><summary><i></i>' + g.toUpperCase() + '<small>' + idx.length + ' settings</small></summary><div class="sets">' +
+      idx.map(i => slider('set-' + i, SET[i][0], v[i], fmt(i, v[i]), 'data-set="' + i + '"', SET[i][6] ? '<button class="lock" data-act="lock" data-i="' + i + '" aria-pressed="' + D.locks[i] + '">' + (D.locks[i] ? 'Locked' : 'Lock') + '</button>' : '<span></span>', GC[gi])).join('') + '</div></details>'; }).join('');
   return '<section class="pane' + (state.tab === 'drums' ? ' on' : '') + '" data-pane="drums" aria-label="Drums">' +
     '<div class="pane-head"><span class="n">1</span><h2>Drums</h2><p>Breed a drum, keep it on a pad.</p></div>' +
     '<div class="row between"><span class="lab">Zone</span><span class="row"><button class="btn small" data-act="back" data-k="drum">Back</button><button class="btn small" data-act="new" data-k="drum">New</button></span></div>' +
@@ -296,143 +587,165 @@ function drumsPane() {
     '<div class="row between"><span class="lab">Loop</span><button class="chip" data-act="audon" aria-pressed="' + state.auditionOn + '">' + (state.auditionOn ? 'On' : 'Off') + '</button></div>' +
     '<div class="chips">' + ['Quarters', 'Boom bap', '16ths', 'In break'].map(a => chip(a, state.audition === a, 'aud', a)).join('') + '</div>' +
     slider('dspread', 'Spread', (D.spread - 0.02) / 0.48, D.spread.toFixed(2), 'data-spread="drum"') +
-    '<div class="litter">' + D.items.map((x, i) => tile(i, envSvg(x), fmt(0, x[0]) + '  ' + fmt(4, x[4]), D, 'drum')).join('') + '</div>' +
+    '<div class="litter">' + D.items.map((x, i) => tile(i, envSvg(x), fmt(0, x[0]) + '  ' + fmt(4, x[4]), D, 'drum', null, 'hearing')).join('') + '</div>' +
     '<div class="card"><div class="row between"><b>Hearing ' + L[D.hear] + (D.hear === D.parent ? ' ★' : '') + '</b><span class="hint">Drag to change. Lock keeps it when breeding.</span></div>' + groups + '</div>' +
-    '<div class="card"><div class="row between"><span class="lab">Keep · pads 36 to 43</span><span class="hint">' + (target ? 'Tap a free pad to keep ' + L[D.hear] : 'Clear a pad with × to keep more') + '</span></div><div class="keep">' +
-    state.pads.map((p, i) => p ? '<div class="pad full" style="--kc:' + ZCOL[p.zone] + '"><button class="hearzone" data-act="playpad" data-i="' + i + '" style="display:contents"><span class="no">' + (36 + i) + '</span><span class="nm">' + esc(p.name) + '</span>' + padSvg(p.vals) + '</button><button class="x" data-act="clearpad" data-i="' + i + '" aria-label="Clear ' + esc(p.name) + '">×</button>' + (state.chosen.includes(i) ? '<span class="used">' + (state.chosen.indexOf(i) + 1) + '</span>' : '') + '</div>'
+    '<div class="card"><div class="row between"><span class="lab">Keep · pads 36 to 43</span><span class="hint">' + (state.pads.some(p => !p) ? 'Tap a free pad to keep ' + L[D.hear] : 'Clear a pad with × to keep more') + '</span></div><div class="keep">' +
+    state.pads.map((p, i) => p ? '<div class="pad full" style="--kc:' + ZCOL[p.zone] + '"><button class="hearzone" data-act="playpad" data-i="' + i + '" style="display:contents"><span class="no">' + (36 + i) + '</span><span class="nm">' + esc(p.name) + '</span>' + padSvg(p.v) + '</button><button class="x" data-act="clearpad" data-i="' + i + '" aria-label="Clear ' + esc(p.name) + '">×</button>' + (state.chosen.includes(i) ? '<span class="used">' + (state.chosen.indexOf(i) + 1) + '</span>' : '') + '</div>'
       : '<button class="pad target" data-act="keep" data-i="' + i + '"><span class="no">' + (36 + i) + '</span><span class="dr">Keep ' + L[D.hear] + '</span></button>').join('') + '</div><p class="hint">The number on a pad is its place in the break: 1 plays the bottom row.</p></div></section>';
 }
 function grooveDesc(g) {
-  const sw = swingPct(g), d = g.groove / 100 * 7, c = g.complexity;
-  return { groove: 'Swing ' + sw.toFixed(1) + '% at ' + state.bpm + ' BPM, off-beats ' + d.toFixed(1) + ' dB under the beat, drift up to ±' + (g.groove / 20).toFixed(1) + ' ms (row 1 stays on time).', complexity: (c < 25 ? 'Square' : c < 60 ? 'Medium' : 'Busy') + ': how syncopated the break breeds. Beat 1 and the backbeat stay.', forward: 'Rows set Forward play ' + (g.forward * 0.3).toFixed(1) + ' ms early, a little brighter and shorter.', behind: 'Rows set Behind play ' + (g.behind * 0.3).toFixed(1) + ' ms late, louder and longer.' };
+  return { groove: 'Swing ' + swingPct(g).toFixed(1) + '% at ' + state.bpm + ' BPM, off-beats ' + (g.groove / 100 * 7).toFixed(1) + ' dB under the beat, drift up to ±' + (g.groove / 20).toFixed(1) + ' ms (kick rows stay on time).',
+    complexity: (g.complexity < 25 ? 'Square' : g.complexity < 60 ? 'Medium' : 'Busy') + ': how syncopated the break breeds. Beat 1 and the backbeat stay.',
+    forward: 'Rows set Forward play ' + (g.forward * 0.3).toFixed(1) + ' ms early, a little brighter and shorter.', behind: 'Rows set Behind play ' + (g.behind * 0.3).toFixed(1) + ' ms late, louder and longer.' };
 }
 function groovePane() {
   const G = state.groove, g = G.items[G.hear], desc = grooveDesc(g);
-  const sets = [['groove', 'Groove'], ['complexity', 'Complexity'], ['forward', 'Forward'], ['behind', 'Behind']].map(([k, n]) => slider('g-' + k, n, g[k] / 100, Math.round(g[k]), 'data-gset="' + k + '"', '<button class="lock" data-act="glock" data-v="' + k + '" aria-pressed="' + G.locks[k] + '">' + (G.locks[k] ? 'Locked' : 'Lock') + '</button>', 'var(--groove)') + '<p class="gdesc">' + esc(desc[k]) + '</p>').join('');
-  const feel = [3, 2, 1, 0].map(r => { const pad = state.pads[state.chosen[r]]; return '<div class="feelrow" style="--kc:' + (pad ? ZCOL[pad.zone] : 'var(--faint)') + '"><span class="dot">' + (r + 1) + '</span><span class="who">' + (pad ? esc(pad.name) : 'empty') + '</span><span class="seg" role="group" aria-label="Feel for row ' + (r + 1) + '">' + ['ahead', 'on', 'behind'].map(f => '<button data-act="feel" data-r="' + r + '" data-v="' + f + '" aria-pressed="' + (g.feel[r] === f) + '">' + (f === 'ahead' ? 'Forward' : f === 'on' ? 'On' : 'Behind') + '</button>').join('') + '</span></div>'; }).join('');
+  const sets = [['groove', 'Groove'], ['complexity', 'Complexity'], ['forward', 'Forward'], ['behind', 'Behind']].map(([k, n]) => slider('g-' + k, n, g[k] / 100, Math.round(g[k]), 'data-gset="' + k + '"', '<button class="lock" data-act="glock" data-v="' + k + '" aria-pressed="' + G.locks[k] + '">' + (G.locks[k] ? 'Locked' : 'Lock') + '</button>', 'var(--groove)') + '<p class="gdesc" id="gd-' + k + '">' + esc(desc[k]) + '</p>').join('');
+  const feel = [3, 2, 1, 0].map(r => { const pad = state.pads[state.chosen[r]]; return '<div class="feelrow" style="--kc:' + (pad ? ZCOL[pad.zone] : 'var(--faint)') + '"><span class="dot">' + (r + 1) + '</span><span class="who">' + (pad ? esc(pad.name) : 'empty') + '</span><span class="seg" role="group" aria-label="Feel for row ' + (r + 1) + '">' + FEELS.map(f => '<button data-act="feel" data-r="' + r + '" data-v="' + f + '" aria-pressed="' + (g.feel[r] === f) + '">' + (f === 'ahead' ? 'Forward' : f === 'on' ? 'On' : 'Behind') + '</button>').join('') + '</span></div>'; }).join('');
   return '<section class="pane' + (state.tab === 'groove' ? ' on' : '') + '" data-pane="groove" aria-label="Groove">' +
-    '<div class="pane-head"><span class="n">2</span><h2>Groove</h2><p>Breed a feel. The one you hear seeds the break.</p></div>' +
+    '<div class="pane-head"><span class="n">2</span><h2>Groove</h2><p>Breed a feel. Seed the break with it.</p></div>' +
     '<div class="row between"><span class="lab">Style</span><span class="row"><button class="btn small" data-act="back" data-k="groove">Back</button><button class="btn small" data-act="new" data-k="groove">New</button></span></div>' +
     '<div class="chips">' + STYLES.map(s => chip(s, state.style === s, 'style', s, 'var(--groove)')).join('') + '</div>' +
     slider('gspread', 'Spread', (G.spread - 0.02) / 0.48, G.spread.toFixed(2), 'data-spread="groove"', undefined, 'var(--groove)') +
-    '<div class="litter">' + G.items.map((x, i) => tile(i, grooveSvg(x), 'swing ' + swingPct(x).toFixed(0) + '%  C' + Math.round(x.complexity) + '  F' + Math.round(x.forward) + '  B' + Math.round(x.behind), G, 'groove', 'var(--groove)')).join('') + '</div>' +
-    '<div class="card"><div class="row between"><b>Hearing ' + L[G.hear] + (G.hear === G.parent ? ' ★' : '') + '</b><button class="btn small hot" data-act="seed">Seed the break with ' + L[G.hear] + '</button></div>' + sets +
+    '<div class="litter">' + G.items.map((x, i) => tile(i, grooveSvg(x), 'swing ' + swingPct(x).toFixed(0) + '%  C' + Math.round(x.complexity) + '  F' + Math.round(x.forward) + '  B' + Math.round(x.behind), G, 'groove', 'var(--groove)', state.seedFrom === L[i] ? 'seed' : 'hearing')).join('') + '</div>' +
+    '<p class="hint">Tap a groove while playing to hear the current loop in its feel.</p>' +
+    '<div class="card"><div class="row between"><b>Hearing ' + L[G.hear] + (G.hear === G.parent ? ' ★' : '') + '</b><button class="btn small hot" data-act="seed"' + (state.seedFrom === L[G.hear] ? ' disabled' : '') + '>' + (state.seedFrom === L[G.hear] ? 'Seeds the break' : 'Seed the break with ' + L[G.hear]) + '</button></div>' + sets +
     '<div class="row between"><span class="lab">Feel per row, top down</span><label class="hint"><input type="checkbox" data-act="ease"' + (g.ease ? ' checked' : '') + '> Less swing at faster tempos</label></div>' + feel + '</div>' +
     '<div class="card"><div class="row between"><span class="lab">Keep grooves</span><span class="hint">Tap a free slot to keep ' + L[G.hear] + '; tap a kept one to seed with it</span></div><div class="keep">' +
-    state.keptGrooves.map((k, i) => k ? '<div class="pad full" style="--kc:var(--groove)"><button class="hearzone" data-act="seedkept" data-i="' + i + '" style="display:contents"><span class="no">' + (i + 1) + '</span><span class="nm">' + esc(k.name) + '</span>' + grooveSvg(k.g, 22).replace('style="height:22px"', '') + '</button><button class="x" data-act="cleargroove" data-i="' + i + '" aria-label="Clear ' + esc(k.name) + '">×</button></div>'
+    state.keptGrooves.map((k, i) => k ? '<div class="pad full' + (state.seedFrom === k.name ? ' live' : '') + '" style="--kc:var(--groove)"><button class="hearzone" data-act="seedkept" data-i="' + i + '" style="display:contents"><span class="no">' + (i + 1) + (state.seedFrom === k.name ? ' · seed' : '') + '</span><span class="nm">' + esc(k.name) + '</span>' + grooveSvg(k.g, 22).replace('style="height:22px"', '') + '</button><button class="x" data-act="cleargroove" data-i="' + i + '" aria-label="Clear ' + esc(k.name) + '">×</button></div>'
       : '<button class="pad target" data-act="keepgroove" data-i="' + i + '"><span class="no">' + (i + 1) + '</span><span class="dr">Keep ' + L[G.hear] + '</span></button>').join('') + '</div></div></section>';
 }
 function breakPane() {
-  const B = state.loops, lp = B.items[B.hear], seedG = seedGroove();
-  const plays = state.chosen.map((pi, slot) => { const p = state.pads[pi]; return p ? '<button class="slot" data-act="choose" data-i="' + slot + '" style="--kc:' + ZCOL[p.zone] + '"><span class="no">' + (slot + 1) + '</span><span class="nm">' + esc(p.name) + '</span><span class="to">row ' + (slot + 1) + (slot === 0 ? ', bottom' : slot === 3 ? ', top' : '') + '</span></button>' : '<button class="slot empty" data-act="choose" data-i="' + slot + '"><span class="no">' + (slot + 1) + '</span><span class="nm">Choose</span><span class="to">row ' + (slot + 1) + '</span></button>'; }).join('');
+  const B = state.loops, lp = sourceLoop(), bars = lp.bars, vb = Math.min(state.viewBar, bars - 1), off = vb * 16;
+  const plays = state.chosen.map((pi, slot) => { const p = state.pads[pi]; return p ? '<button class="slot" data-act="choose" data-i="' + slot + '" style="--kc:' + ZCOL[p.zone] + '"><span class="no">' + (slot + 1) + '</span><span class="nm">' + esc(p.name) + '</span><span class="to">' + (slot === 0 ? 'bottom row' : slot === 3 ? 'top row' : 'row ' + (slot + 1)) + '</span></button>' : '<button class="slot empty" data-act="choose" data-i="' + slot + '"><span class="no">' + (slot + 1) + '</span><span class="nm">Choose</span><span class="to">row ' + (slot + 1) + '</span></button>'; }).join('');
   const heads = '<div class="rowheads"><span></span>' + [3, 2, 1, 0].map(r => { const p = state.pads[state.chosen[r]]; return '<div class="rh" style="--kc:' + (p ? ZCOL[p.zone] : 'var(--faint)') + '"><span class="tag">' + (r + 1) + '</span><span class="nm">' + (p ? esc(p.name) : 'empty') + '</span><button class="lk" data-act="rowlock" data-r="' + r + '" aria-pressed="' + state.rowLocks[r] + '" aria-label="Lock row ' + (r + 1) + '">L</button></div>'; }).join('') + '</div>';
   const counts = '<div class="counts">' + Array.from({ length: 16 }, (_, k) => '<span class="' + (k % 4 ? '' : 'beat') + '">' + (k % 4 === 0 ? k / 4 + 1 : ['', 'e', '&', 'a'][k % 4]) + '</span>').join('') + '</div>';
-  const lanes = [3, 2, 1, 0].map(r => { const p = state.pads[state.chosen[r]]; return '<div class="lane' + (state.rowLocks[r] ? ' locked' : '') + '" style="--kc:' + (p ? ZCOL[p.zone] : 'var(--faint)') + '">' + lp.rows[r].map((v, k) => '<button class="cell' + (k % 4 === 0 ? ' beat' : '') + '" data-act="cell" data-r="' + r + '" data-s="' + k + '" aria-label="Row ' + (r + 1) + ', step ' + (k + 1) + (v ? ', hit ' + Math.round(v * 100) + '%' : ', rest') + '">' + (v ? '<i style="height:' + Math.round(4 + v * 30) + 'px;--o:' + (0.5 + v / 2) + '"></i>' : '') + '</button>').join('') + '</div>'; }).join('');
+  const lanes = [3, 2, 1, 0].map(r => { const p = state.pads[state.chosen[r]]; return '<div class="lane' + (state.rowLocks[r] ? ' locked' : '') + '" style="--kc:' + (p ? ZCOL[p.zone] : 'var(--faint)') + '">' + lp.rows[r].slice(off, off + 16).map((v, k) => '<button class="cell' + (k % 4 === 0 ? ' beat' : '') + '" data-act="cell" data-r="' + r + '" data-s="' + (off + k) + '" aria-label="Row ' + (r + 1) + ', bar ' + (vb + 1) + ', step ' + (k + 1) + (v ? ', hit ' + Math.round(v * 100) + '%' : ', rest') + '">' + (v ? '<i style="height:' + Math.round(4 + v * 30) + 'px;--o:' + (0.5 + v / 2) + '"></i>' : '') + '</button>').join('') + '</div>'; }).join('');
+  const barpick = bars > 1 ? '<div class="barpick" style="grid-template-columns:repeat(' + bars + ',minmax(0,1fr))">' + Array.from({ length: bars }, (_, b) => '<button data-act="viewbar" data-v="' + b + '" aria-pressed="' + (b === vb) + '" id="vb-' + b + '">Bar ' + (b + 1) + '</button>').join('') + '</div>' : '';
+  const name = state.playingSlot >= 0 ? 'Kept loop ' + (state.playingSlot + 1) : 'Loop ' + L[B.hear] + (B.hear === B.parent ? ' ★' : '');
   return '<section class="pane' + (state.tab === 'break' ? ' on' : '') + '" data-pane="break" aria-label="Break">' +
     '<div class="pane-head"><span class="n">3</span><h2>Break</h2><p>Loops bred from the groove, played by four pads.</p></div>' +
-    '<div class="row between"><button class="seedpill" data-act="gotab" data-v="groove" aria-label="Seeded by groove ' + esc(state.seedFrom) + '; open Groove">' + grooveSvg(seedG, 16).replace('style="height:16px"', '') + 'Seed: groove ' + esc(state.seedFrom) + '</button><span class="row"><button class="btn small" data-act="back" data-k="loop">Back</button><button class="btn small" data-act="new" data-k="loop">New</button></span></div>' +
+    '<div class="row between"><button class="seedpill" data-act="gotab" data-v="groove" aria-label="Seeded by ' + esc(seedLabel()) + '; open Groove">' + grooveSvg(seedGroove(), 16).replace('style="height:16px"', '') + 'Seed: ' + esc(seedLabel()) + '</button><span class="row"><button class="btn small" data-act="back" data-k="loop">Back</button><button class="btn small" data-act="new" data-k="loop">New</button></span></div>' +
+    '<div class="row between"><span class="lab">Bars</span><span class="seg" role="group" aria-label="Bars" style="--sg:var(--accent)">' + [2, 4].map(n => '<button data-act="bars" data-v="' + n + '" aria-pressed="' + (state.bars === n) + '">' + n + ' bars</button>').join('') + '</span></div>' +
     slider('lspread', 'Spread', (B.spread - 0.02) / 0.48, B.spread.toFixed(2), 'data-spread="loop"') +
-    '<div class="litter">' + B.items.map((x, i) => tile(i, loopSvg(x), 'swing ' + x.swing.toFixed(0) + '%  ' + x.rows.flat().filter(Boolean).length + ' hits', B, 'loop')).join('') + '</div>' +
-    '<div class="card"><div class="row between"><b>Loop ' + L[B.hear] + (B.hear === B.parent ? ' ★' : '') + '</b><span class="hint">Tap a step: hit, ghost, rest</span></div>' +
-    '<div><div class="row between"><span class="lab">Plays · left to right</span><span class="map">pad 1 → bottom row, pad 4 → top</span></div></div><div class="plays">' + plays + '</div>' +
+    '<div class="litter">' + B.items.map((x, i) => tile(i, loopSvg(x), 'swing ' + x.swing.toFixed(0) + '%  ' + x.rows.flat().filter(Boolean).length + ' hits', B, 'loop', null, 'playing')).join('') + '</div>' +
+    '<div class="card"><div class="row between"><b>' + name + '</b><span class="hint">Tap a step: hit, ghost, rest</span></div>' +
+    '<div class="row between"><span class="lab">Plays · left to right</span><span class="map">pad 1 → bottom row, pad 4 → top</span></div><div class="plays">' + plays + '</div>' + barpick +
     '<div class="gridbox">' + heads + '<div class="steps" id="steps">' + counts + lanes + '<span class="playhead" id="ph" hidden></span></div></div>' +
     slider('lswing', 'Its swing', (lp.swing - 50) / 25, lp.swing.toFixed(0) + '%', 'data-lswing="1"') +
-    '<p class="hint">Bred from groove ' + esc(state.seedFrom) + ': swing, accents and each row\'s feel come from it. Breed or New here to follow a new seed.</p></div>' +
-    '<div class="card"><div class="row between"><span class="lab">Keep loops · 48 to 55</span><span class="hint">Tap a free slot to keep ' + L[B.hear] + '</span></div><div class="keep">' +
-    state.keptLoops.map((k, i) => k ? '<div class="pad full" style="--kc:var(--accent)"><button class="hearzone" data-act="playloop" data-i="' + i + '" style="display:contents"><span class="no">' + (i + 1) + '  ' + (48 + i) + '</span>' + loopSvg(k, 34).replace('style="height:34px"', 'style="height:34px;margin-top:auto"') + '</button><button class="x" data-act="clearloop" data-i="' + i + '" aria-label="Clear kept loop ' + (i + 1) + '">×</button></div>'
+    '<p class="hint">Bred from ' + esc(seedLabel(lp)) + ': swing, accents and each row\'s feel come from it. Breed or New to follow a new seed.</p></div>' +
+    '<div class="card"><div class="row between"><span class="lab">Keep loops · 48 to 55</span><span class="hint">Tap a free slot to keep ' + L[B.hear] + '; tap a kept one to play it</span></div><div class="keep">' +
+    state.keptLoops.map((k, i) => k ? '<div class="pad full' + (state.playingSlot === i ? ' live' : '') + '" style="--kc:var(--accent)"><button class="hearzone" data-act="playloop" data-i="' + i + '" style="display:contents"><span class="no">' + (i + 1) + '  ' + (48 + i) + ' · ' + k.bars + ' bars</span>' + loopSvg(k, 34).replace('style="height:34px"', 'style="height:34px;margin-top:auto"') + '</button><button class="x" data-act="clearloop" data-i="' + i + '" aria-label="Clear kept loop ' + (i + 1) + '">×</button></div>'
       : '<button class="pad target" data-act="keeploop" data-i="' + i + '"><span class="no">' + (i + 1) + '  ' + (48 + i) + '</span><span class="dr">Keep ' + L[B.hear] + '</span></button>').join('') + '</div></div></section>';
 }
-function seedGroove() { const k = state.seedFrom; if (k.startsWith('Groove ')) { const kept = state.keptGrooves.find(x => x && x.name === k); if (kept) return kept.g; } return state.groove.items[L.indexOf(k)] || state.groove.items[0]; }
+function seedLabel(lp) { const k = state.seedFrom; return k.startsWith('Groove ') ? k.toLowerCase() : 'groove ' + k; }
 function drawTop() {
-  document.getElementById('top').innerHTML = '<div class="brand">BLOODLINE BREAKS<small>mobile mock · UI only, no sound</small></div>' +
-    '<button class="midi" data-act="midi">⇲ MIDI</button><button class="playbtn" data-act="play" aria-pressed="' + state.playing + '">' + (state.playing ? 'Playing' : 'Play') + '</button>' +
-    '<div class="bpm"><b>' + state.bpm + '</b>BPM</div>';
+  document.getElementById('top').innerHTML = '<div class="brand">BLOODLINE BREAKS</div>' +
+    '<button class="exportbtn" data-act="export">Export</button><button class="playbtn" data-act="play" aria-pressed="' + state.playing + '">' + (state.playing ? 'Stop' : 'Play') + '</button>' +
+    '<div class="bpm"><button data-act="bpm" data-v="-2" aria-label="Slower">−</button><span>' + state.bpm + '</span><button data-act="bpm" data-v="2" aria-label="Faster">+</button></div>';
+}
+function drawStatus() {
+  const lp = sourceLoop(), what = state.mode === 'audition' ? 'drum ' + L[state.drums.hear] + ', ' + state.audition : state.mode === 'inbreak' ? 'drum ' + L[state.drums.hear] + ' in the break, row ' + ((render && render.swapRow || 0) + 1) : state.mode === 'groove' ? (state.playingSlot >= 0 ? 'kept loop ' + (state.playingSlot + 1) : 'loop ' + L[state.loops.hear]) + ' in groove ' + L[state.groove.hear] + "'s feel" : (state.playingSlot >= 0 ? 'kept loop ' + (state.playingSlot + 1) : 'loop ' + L[state.loops.hear]) + ', ' + lp.bars + ' bars';
+  const pk = render ? (render.cut < 0.97 ? '<span class="clip">limiter −' + (-20 * Math.log10(render.cut)).toFixed(1) + ' dB</span>' : 'peak ' + (render.peak ? (20 * Math.log10(render.peak)).toFixed(1) : '−∞') + ' dB') : '';
+  document.getElementById('status').innerHTML = '<span>' + (state.playing ? 'Playing' : 'Stopped') + '</span><b>' + esc(what) + '</b><span style="margin-left:auto">' + pk + '</span>';
 }
 function drawTabs() {
-  const kept = state.pads.filter(Boolean).length;
-  document.getElementById('tabs').innerHTML = [['drums', 'Drums', kept + ' kept', 'var(--accent)'], ['groove', 'Groove', 'seed ' + state.seedFrom, 'var(--groove)'], ['break', 'Break', 'loop ' + L[state.loops.hear], 'var(--accent)']].map(([k, n, s, c]) =>
+  document.getElementById('tabs').innerHTML = [['drums', 'Drums', state.pads.filter(Boolean).length + ' kept', 'var(--accent)'], ['groove', 'Groove', 'seed ' + (state.seedFrom.startsWith('Groove ') ? state.seedFrom.slice(7) + '★' : state.seedFrom), 'var(--groove)'], ['break', 'Break', (state.playingSlot >= 0 ? 'kept ' + (state.playingSlot + 1) : 'loop ' + L[state.loops.hear]) + ' · ' + sourceLoop().bars + ' bars', 'var(--accent)']].map(([k, n, s, c]) =>
     '<button class="tab" role="tab" data-act="gotab" data-v="' + k + '" aria-selected="' + (state.tab === k) + '" style="--tc:' + c + '"><i></i>' + n + '<small>' + esc(s) + '</small></button>').join('');
 }
-function draw() {
-  const y = window.scrollY;
-  document.getElementById('panes').innerHTML = drumsPane() + groovePane() + breakPane();
-  drawTop(); drawTabs(); window.scrollTo(0, y);
+function draw() { const y = window.scrollY; document.getElementById('panes').innerHTML = drumsPane() + groovePane() + breakPane(); drawTop(); drawTabs(); drawStatus(); window.scrollTo(0, y); }
+function changed() { draw(); refreshAudio(); }
+
+// ---------- sheets
+function sheet(html) { const root = document.getElementById('sheet-root'); root.innerHTML = '<div class="scrim" data-act="closesheet"><div class="sheet" role="dialog" aria-modal="true">' + html + '<button class="btn" data-act="closesheet">Done</button></div></div>'; const f = root.querySelector('.sheet button'); if (f) f.focus(); }
+function choosePadSheet(slot) {
+  sheet('<h3>Row ' + (slot + 1) + (slot === 0 ? ' (bottom)' : slot === 3 ? ' (top)' : '') + ' plays</h3><div class="keep">' + state.pads.map((p, i) => p ? '<button class="pad full" data-act="pick" data-slot="' + slot + '" data-i="' + i + '" style="--kc:' + ZCOL[p.zone] + (state.chosen[slot] === i ? ';border-width:2px' : '') + '"><span class="no">' + (36 + i) + (state.chosen[slot] === i ? ' · now' : '') + '</span><span class="nm">' + esc(p.name) + '</span>' + padSvg(p.v) + '</button>' : '<div class="pad"><span class="no">' + (36 + i) + '</span><span class="dr">empty</span></div>').join('') + '</div><p class="hint">Only kept pads can play. The row\'s part follows the pad\'s zone on the next Breed or New.</p>');
+}
+function exportSheet() {
+  const lp = sourceLoop(), secs = (lp.bars * 4 * 60 / state.bpm).toFixed(2), rows = state.chosen.filter(i => state.pads[i]).length;
+  sheet('<h3>Export ' + (state.playingSlot >= 0 ? 'kept loop ' + (state.playingSlot + 1) : 'loop ' + L[state.loops.hear]) + '</h3><p class="hint">' + lp.bars + ' bars at ' + state.bpm + ' BPM, ' + secs + ' s, 44.1 kHz 16-bit stereo. It loops seamlessly: tails wrap round to the start.</p>' +
+    '<div class="exp"><button data-act="exmix"><b>Mix WAV</b><span>The whole break, as you hear it.' + (inViewer ? ' Saved inside a .zip, the way claude.ai hands out audio.' : '') + '</span></button>' +
+    '<button data-act="exstems"><b>Mix and stems</b><span>A .zip with the mix, a WAV per row (' + rows + ' rows) and the break as JSON.</span></button></div>');
 }
 
-// ---------- the chosen-pad sheet
-function openSheet(slot) {
-  const root = document.getElementById('sheet-root');
-  root.innerHTML = '<div class="scrim" data-act="closesheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="Choose the pad for row ' + (slot + 1) + '"><h3>Row ' + (slot + 1) + (slot === 0 ? ' (bottom)' : slot === 3 ? ' (top)' : '') + ' plays</h3><div class="keep">' +
-    state.pads.map((p, i) => p ? '<button class="pad full" data-act="pick" data-slot="' + slot + '" data-i="' + i + '" style="--kc:' + ZCOL[p.zone] + (state.chosen[slot] === i ? ';border-width:2px' : '') + '"><span class="no">' + (36 + i) + (state.chosen[slot] === i ? ' · now' : '') + '</span><span class="nm">' + esc(p.name) + '</span>' + padSvg(p.vals) + '</button>' : '<div class="pad"><span class="no">' + (36 + i) + '</span><span class="dr">empty</span></div>').join('') +
-    '</div><p class="hint">Only kept pads can play. Keep more on the Drums tab.</p><button class="btn" data-act="closesheet">Done</button></div></div>';
-  const first = root.querySelector('.pad.full'); if (first) first.focus();
-}
-
-// ---------- events (UI only: breeding redraws example data)
+// =====================================================================================
+// Events
+// =====================================================================================
 let toastT = 0;
-function toast(m) { let t = document.querySelector('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2200); }
+function toast(m) { let t = document.querySelector('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); } t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2400); }
 const litOf = k => k === 'drum' ? state.drums : k === 'groove' ? state.groove : state.loops;
-const history = { drum: [], groove: [], loop: [] };
-function bump(L_, i, again) { L_.spread = clamp(L_.spread * (again ? 0.6 : 1.1), 0.02, 0.5); }
-function freshItem(k, base) {
-  if (k === 'drum') { const v = drumFresh(state.zone === 'None' ? ['Kick', 'Snare', 'Hats', 'Perc'][Math.floor(rnd() * 4)] : state.zone); if (base) return base.map((x, i) => i === 18 ? x : state.drums.locks[i] ? x : clamp(x + (rnd() - 0.5) * state.drums.spread, 0, 1)); return v; }
-  if (k === 'groove') { const g = grooveFresh(state.style); if (base) { const G = state.groove; ['groove', 'complexity', 'forward', 'behind'].forEach(s => { g[s] = G.locks[s] ? base[s] : clamp(base[s] + (rnd() - 0.5) * G.spread * 120, 0, 100); }); g.feel = base.feel.map(f => rnd() < G.spread * 0.4 ? ['ahead', 'on', 'behind'][Math.floor(rnd() * 3)] : f); g.ease = base.ease; } return g; }
-  const lp = loopFresh(seedGroove()); if (base) lp.rows = lp.rows.map((row, r) => state.rowLocks[r] ? base.rows[r].slice() : row.map((v, k) => rnd() < 0.75 ? base.rows[r][k] : v)); return lp;
-}
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b || b.disabled) return; const d = b.dataset, act = d.act;
-  if (act === 'closesheet') { if (e.target === b || b.tagName === 'BUTTON') { document.getElementById('sheet-root').innerHTML = ''; } return; }
+  if (act === 'closesheet') { if (e.target === b || b.tagName === 'BUTTON') document.getElementById('sheet-root').innerHTML = ''; return; }
   switch (act) {
     case 'gotab': state.tab = d.v; draw(); window.scrollTo(0, 0); return;
-    case 'play': state.playing = !state.playing; drawTop(); runHead(); return;
-    case 'midi': toast('Drag MIDI: in the plugin this drags the loop into a clip and turns Playing off.'); return;
-    case 'zone': state.zone = d.v; draw(); return;
-    case 'aud': state.audition = d.v; state.auditionOn = true; draw(); return;
-    case 'audon': state.auditionOn = !state.auditionOn; draw(); return;
+    case 'play': if (state.playing) { stopAudio(); drawTop(); drawStatus(); } else play(state.mode === 'audition' || state.mode === 'inbreak' ? 'break' : state.mode); return;
+    case 'bpm': state.bpm = clamp(state.bpm + +d.v, 60, 160); changed(); return;
+    case 'export': exportSheet(); return;
+    case 'exmix': document.getElementById('sheet-root').innerHTML = ''; exportMix(); return;
+    case 'exstems': document.getElementById('sheet-root').innerHTML = ''; exportStems(); return;
+    case 'zone': state.zone = d.v; draw(); toast('Zone steers the next New or Breed.'); return;
+    case 'aud': state.audition = d.v; state.auditionOn = true; draw(); if (state.playing && (state.mode === 'audition' || state.mode === 'inbreak')) play(d.v === 'In break' ? 'inbreak' : 'audition'); return;
+    case 'audon': state.auditionOn = !state.auditionOn; if (!state.auditionOn && (state.mode === 'audition' || state.mode === 'inbreak')) { state.mode = 'break'; refreshAudio(); } draw(); return;
     case 'style': state.style = d.v; draw(); toast('Style steers the next New or Breed.'); return;
-    case 'hear': { const L_ = litOf(d.k); L_.hear = +d.i; if (d.k === 'groove') state.seedFrom = state.seedFrom; draw(); return; }
-    case 'breed': case 'cross': { const k = d.k, L_ = litOf(k), i = +d.i; history[k].push(JSON.stringify(L_)); const again = i === L_.parent; bump(L_, i, again); const base = act === 'cross' ? L_.items[i] : L_.items[i]; L_.items = L_.items.map((x, j) => j === i || (act === 'cross' && j === L_.hear) ? x : freshItem(k, base)); L_.parent = i; if (act === 'breed') L_.hear = i; draw(); toast((act === 'breed' ? 'Bred from ' : 'Crossed ') + L[i] + (act === 'cross' ? ' with ' + L[L_.hear] : '') + '. Example data only.'); return; }
-    case 'back': { const h = history[d.k]; if (!h.length) { toast('Nothing to go back to.'); return; } Object.assign(litOf(d.k), JSON.parse(h.pop())); draw(); return; }
-    case 'new': { const k = d.k, L_ = litOf(k); history[k].push(JSON.stringify(L_)); L_.items = L_.items.map(() => freshItem(k)); L_.parent = -1; L_.hear = 0; L_.spread = 0.25; draw(); toast(k === 'loop' ? 'Four new loops from groove ' + state.seedFrom + '.' : 'Four new ' + (k === 'drum' ? 'drums' : 'grooves') + '.'); return; }
+    case 'hear': {
+      const k = d.k, o = litOf(k), i = +d.i; o.hear = i;
+      if (k === 'drum') { if (state.auditionOn) play(state.audition === 'In break' ? 'inbreak' : 'audition'); else oneShot(o.items[i]); }
+      if (k === 'groove' && state.playing) state.mode = 'groove';
+      if (k === 'loop') { state.playingSlot = -1; if (state.mode !== 'break') state.mode = 'break'; if (!state.playing) { draw(); play('break'); return; } }
+      changed(); return;
+    }
+    case 'breed': case 'cross': { const k = d.k, o = litOf(k), i = +d.i, ops = OPS[k]; if (act === 'breed') litBreed(o, i, ops.mutate); else litCross(o, i, ops.cross, ops.mutate); if (k === 'loop') state.playingSlot = -1; if (k === 'drum' && state.auditionOn && state.playing) state.mode = state.audition === 'In break' ? 'inbreak' : 'audition'; changed(); return; }
+    case 'back': { if (!litBack(litOf(d.k))) { toast('Nothing to go back to.'); return; } changed(); return; }
+    case 'new': { const k = d.k; litNew(litOf(k), OPS[k].fresh); if (k === 'loop') state.playingSlot = -1; changed(); toast(k === 'loop' ? 'Four new loops from ' + seedLabel() + '.' : 'Four new ' + (k === 'drum' ? 'drums' : 'grooves') + '.'); return; }
     case 'lock': { const i = +d.i; state.drums.locks[i] = !state.drums.locks[i]; draw(); return; }
     case 'glock': state.groove.locks[d.v] = !state.groove.locks[d.v]; draw(); return;
-    case 'keep': { const D = state.drums, z = state.zone, n = state.pads.filter(p => p && p.zone === z).length + 1; state.pads[+d.i] = { name: (z === 'None' ? 'Drum' : z) + ' ' + n, zone: z, vals: D.items[D.hear].slice() }; draw(); toast('Kept ' + L[D.hear] + ' on pad ' + (36 + +d.i) + '.'); return; }
-    case 'clearpad': { const i = +d.i; state.pads[i] = null; state.chosen = state.chosen.map(c => c === i ? -1 : c); draw(); return; }
-    case 'playpad': toast('Plays pad ' + (36 + +d.i) + ' (no sound in this mock).'); return;
-    case 'feel': { const g = state.groove.items[state.groove.hear]; g.feel[+d.r] = d.v; draw(); return; }
+    case 'keep': { const D = state.drums, z = state.zone, base = z === 'None' ? 'Drum' : z, n = state.pads.filter(p => p && p.name.startsWith(base + ' ')).length + 1; state.pads[+d.i] = { name: base + ' ' + n, zone: z, v: D.items[D.hear].slice() }; changed(); toast('Kept ' + L[D.hear] + ' on pad ' + (36 + +d.i) + '.'); return; }
+    case 'clearpad': { const i = +d.i; state.pads[i] = null; changed(); return; }
+    case 'playpad': oneShot(state.pads[+d.i].v); return;
+    case 'feel': state.groove.items[state.groove.hear].feel[+d.r] = d.v; if (state.playing) state.mode = 'groove'; changed(); return;
     case 'seed': state.seedFrom = L[state.groove.hear]; draw(); toast('Groove ' + state.seedFrom + ' seeds the break. New or Breed on the Break tab follows it.'); return;
-    case 'keepgroove': { const n = state.keptGrooves.filter(Boolean).length + 1; state.keptGrooves[+d.i] = { name: 'Groove ' + n, g: JSON.parse(JSON.stringify(state.groove.items[state.groove.hear])) }; draw(); return; }
-    case 'cleargroove': state.keptGrooves[+d.i] = null; draw(); return;
+    case 'keepgroove': { const n = state.keptGrooves.filter(Boolean).length + 1; state.keptGrooves[+d.i] = { name: 'Groove ' + n, g: clone(state.groove.items[state.groove.hear]) }; draw(); return; }
+    case 'cleargroove': { const k = state.keptGrooves[+d.i]; if (k && state.seedFrom === k.name) state.seedFrom = L[state.groove.hear]; state.keptGrooves[+d.i] = null; draw(); return; }
     case 'seedkept': state.seedFrom = state.keptGrooves[+d.i].name; draw(); toast(state.seedFrom + ' seeds the break.'); return;
-    case 'choose': openSheet(+d.i); return;
-    case 'pick': state.chosen[+d.slot] = +d.i; document.getElementById('sheet-root').innerHTML = ''; draw(); return;
+    case 'choose': choosePadSheet(+d.i); return;
+    case 'pick': state.chosen[+d.slot] = +d.i; document.getElementById('sheet-root').innerHTML = ''; changed(); return;
     case 'rowlock': state.rowLocks[+d.r] = !state.rowLocks[+d.r]; draw(); return;
-    case 'cell': { const lp = state.loops.items[state.loops.hear], r = +d.r, s = +d.s, v = lp.rows[r][s]; lp.rows[r][s] = !v ? 0.9 : v >= 0.45 ? 0.3 : 0; draw(); return; }
-    case 'keeploop': state.keptLoops[+d.i] = JSON.parse(JSON.stringify(state.loops.items[state.loops.hear])); draw(); return;
-    case 'clearloop': state.keptLoops[+d.i] = null; draw(); return;
-    case 'playloop': toast('Switches to kept loop ' + (+d.i + 1) + ' (no sound in this mock).'); return;
+    case 'bars': { const n = +d.v; if (n === state.bars) return; state.bars = n; snap(state.loops); state.loops.items = state.loops.items.map(lp => resize(lp, n)); state.viewBar = 0; state.playingSlot = -1; changed(); toast(n === 4 ? 'Four bars: each loop repeats; the next Breed varies the new bars.' : 'Two bars: each loop keeps its first two.'); return; }
+    case 'viewbar': state.viewBar = +d.v; draw(); return;
+    case 'cell': { const lp = sourceLoop(), r = +d.r, s = +d.s, v = lp.rows[r][s]; lp.rows[r][s] = !v ? 0.9 : v >= 0.45 ? 0.3 : 0; if (!lp.roles[r]) lp.roles[r] = roleOfRow(r); changed(); return; }
+    case 'keeploop': state.keptLoops[+d.i] = clone(state.loops.items[state.loops.hear]); draw(); return;
+    case 'clearloop': { const i = +d.i; state.keptLoops[i] = null; if (state.playingSlot === i) state.playingSlot = -1; changed(); return; }
+    case 'playloop': state.playingSlot = +d.i; state.viewBar = 0; state.mode = 'break'; changed(); if (!state.playing) play('break'); return;
   }
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('sheet-root').innerHTML = ''; });
-document.addEventListener('change', e => { if (e.target.dataset.act === 'ease') { state.groove.items[state.groove.hear].ease = e.target.checked; draw(); } });
 document.addEventListener('toggle', e => { const t = e.target; if (t.classList && t.classList.contains('grp')) state.open[t.dataset.g] = t.open; }, true);
 document.addEventListener('input', e => {
-  const t = e.target, d = t.dataset, n = +t.value / 1000, out = t.parentElement.querySelector('output');
+  const t = e.target, d = t.dataset, n = +t.value / 1000, out = t.parentElement.querySelector('output'); if (!out) return;
   t.style.setProperty('--p', (n * 100).toFixed(1) + '%');
-  if (d.set !== undefined) { const i = +d.set; state.drums.items[state.drums.hear][i] = n; out.textContent = fmt(i, n); }
-  if (d.spread) { const L_ = litOf(d.spread); L_.spread = 0.02 + n * 0.48; out.textContent = L_.spread.toFixed(2); }
-  if (d.gset) { const g = state.groove.items[state.groove.hear]; g[d.gset] = n * 100; out.textContent = Math.round(n * 100); const p = t.closest('.sl').nextElementSibling; if (p) p.textContent = grooveDesc(g)[d.gset]; }
-  if (d.lswing) { const lp = state.loops.items[state.loops.hear]; lp.swing = 50 + n * 25; out.textContent = lp.swing.toFixed(0) + '%'; }
+  if (d.set !== undefined) { const i = +d.set; state.drums.items[state.drums.hear][i] = n; out.textContent = fmt(i, n); if (state.playing && (state.mode === 'audition' || state.mode === 'inbreak')) refreshAudio(); }
+  if (d.spread) { const o = litOf(d.spread); o.spread = 0.02 + n * 0.48; out.textContent = o.spread.toFixed(2); }
+  if (d.gset) { const g = state.groove.items[state.groove.hear]; g[d.gset] = n * 100; out.textContent = Math.round(n * 100); const p = document.getElementById('gd-' + d.gset); if (p) p.textContent = grooveDesc(g)[d.gset]; if (state.playing) { state.mode = 'groove'; refreshAudio(); } }
+  if (d.lswing) { const lp = sourceLoop(); lp.swing = 50 + n * 25; out.textContent = lp.swing.toFixed(0) + '%'; refreshAudio(); }
 });
-document.addEventListener('change', e => { const d = e.target.dataset; if (d.gset || d.set !== undefined || d.lswing) draw(); });
+document.addEventListener('change', e => {
+  const t = e.target, d = t.dataset;
+  if (d.act === 'ease') { state.groove.items[state.groove.hear].ease = t.checked; if (state.playing) state.mode = 'groove'; changed(); return; }
+  if (d.gset || d.set !== undefined || d.lswing) draw();
+});
 
-// a moving playhead while Playing is on, so the screen can be judged in motion
-let raf = 0, t0 = 0;
-function runHead() {
-  cancelAnimationFrame(raf);
-  const step = () => { const ph = document.getElementById('ph'); if (ph) { ph.hidden = !state.playing; if (state.playing) { const bar = 4 * 60 / state.bpm * 1000, f = ((performance.now() - t0) % bar) / bar; ph.style.left = (f * 100) + '%'; } } if (state.playing) raf = requestAnimationFrame(step); };
-  t0 = performance.now(); step();
+// a moving playhead, following the bar on show
+function tick() {
+  const ph = document.getElementById('ph');
+  if (ph) {
+    const lp = sourceLoop(), on = state.playing && cur && (state.mode === 'break' || state.mode === 'groove' || state.mode === 'inbreak');
+    if (on) { const p = position() * lp.bars, bar = Math.floor(p); ph.hidden = bar !== Math.min(state.viewBar, lp.bars - 1); ph.style.left = ((p - bar) * 100) + '%';
+      for (let b = 0; b < lp.bars; b++) { const el = document.getElementById('vb-' + b); if (el) el.classList.toggle('now', b === bar); } }
+    else ph.hidden = true;
+  }
+  requestAnimationFrame(tick);
 }
-draw();
+draw(); requestAnimationFrame(tick);
 })();
 </script>

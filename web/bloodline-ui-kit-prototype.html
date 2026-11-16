@@ -1,13 +1,15 @@
 <title>Bloodline UI Kit</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
 <style>
-/* PROTOTYPE, throwaway. Layout: a palette of every Bloodline UI piece on the left, a 12-column board on the right to drag them into; stacked under 1000px. One deliberate dark look, matching the plugins. UI only: nothing makes sound. */
+/* PROTOTYPE, throwaway. Layout: a palette of UI pieces on the left (newest builds first, older builds folded away), a 12-column board on the right to drag them into; stacked under 1000px. One dark look, taken from the plugins' own editor colours. UI only: nothing makes sound. */
 :root {
   color-scheme: dark;
-  --bg: #15171c; --panel: #1e2128; --panel-2: #262a33; --line: #343945; --fg: #ece8e1; --muted: #8d929d; --faint: #5d626d;
-  --kick: #ff6f61; --snare: #6cb6ff; --hat: #f2c94c; --keep: #f2c14e; --lock: #c9b8ff; --warn: #ff8a65;
-  --p-bd: #ff8a65; --p-bd2: #ffb38a; --p-bb: #f2c94c; --p-bb2: #e6d77a; --p-be: #b48cff; --p-bs: #6cb6ff; --p-bs2: #8fd0ff; --p-gr: #5fd3c4; --p-sh: #a9b0bc;
+  --bg: #15171c; --panel: #1f2229; --tile: #292d36; --edge: #3a3f4b; --fg: #e8e6e1; --muted: #8d8f96; --faint: #5d626d;
+  --parent: #ffc857; --keep: #9be564; --warn: #ff5d5d;
+  --l-kick: #ff6b6b; --l-snare: #7cc6fe; --l-hat: #f4d35e; --l-perc: #9be564;
+  --g1: #7cc6fe; --g2: #ff8c69; --g3: #9be564; --g4: #d59bf6; --g5: #f4d35e;
+  --p-bb2: #ff8c69; --p-bs2: #b48cff; --p-be: #5ee3c1; --p-gr: #f2c14e; --p-sh: #a9b0bc; --p-old: #6f7480;
   --display: 'Space Grotesk', 'Avenir Next', system-ui, sans-serif;
   --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -21,103 +23,141 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 button, input, textarea { font: inherit; color: inherit; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 .pad-x { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); border-bottom: 1px solid var(--edge); }
 .top-in { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding-block: 10px; max-width: 1600px; margin: 0 auto; }
 .brand { display: flex; align-items: baseline; gap: 8px; margin-right: auto; }
 .brand b { font: 700 18px/1 var(--display); }
 .brand small { color: var(--muted); font: 11px var(--mono); }
-.btn { border: 1px solid var(--line); background: var(--panel-2); height: 32px; padding: 0 11px; border-radius: 7px; cursor: pointer; font-weight: 500; white-space: nowrap; }
+.btn { border: 1px solid var(--edge); background: var(--tile); height: 32px; padding: 0 11px; border-radius: 7px; cursor: pointer; font-weight: 500; white-space: nowrap; }
 .btn:hover { border-color: var(--faint); }
 .btn.small { height: 24px; padding: 0 7px; font-size: 11px; }
-.btn.primary { background: var(--fg); color: var(--bg); border-color: transparent; }
 .hint { color: var(--muted); font-size: 12px; }
 
 .wrap { max-width: 1600px; margin: 0 auto; padding-block: 14px 48px; display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
-@media (min-width: 1000px) { .wrap { grid-template-columns: 360px minmax(0, 1fr); } .palette { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 64px); max-height: calc(100vh - 80px); overflow: auto; } }
+@media (min-width: 1000px) { .wrap { grid-template-columns: 380px minmax(0, 1fr); } .palette { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 64px); max-height: calc(100vh - 80px); overflow: auto; } }
 
 /* palette */
 .palette { display: grid; gap: 10px; min-width: 0; padding-right: 4px; }
 .filters { display: flex; flex-wrap: wrap; gap: 4px; }
-.chip { border: 1px solid var(--line); background: none; border-radius: 999px; height: 26px; padding: 0 10px; font-size: 12px; cursor: pointer; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.chip { border: 1px solid var(--edge); background: none; border-radius: 999px; height: 26px; padding: 0 10px; font-size: 12px; cursor: pointer; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
 .chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
 .chip[aria-pressed="true"] { color: var(--fg); border-color: var(--c); background: var(--panel); }
-.search { height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); padding: 0 10px; width: 100%; }
+.search { height: 34px; border-radius: 8px; border: 1px solid var(--edge); background: var(--panel); padding: 0 10px; width: 100%; }
 .group { display: grid; gap: 8px; }
-.group h3 { margin: 6px 0 0; font: 700 14px var(--display); display: flex; align-items: center; gap: 8px; }
-.group h3 i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
-.group h3 small { font: 11px var(--mono); color: var(--faint); font-weight: 400; }
+.group-head { display: grid; gap: 2px; margin-top: 6px; }
+.group-head h3 { margin: 0; font: 700 15px var(--display); display: flex; align-items: center; gap: 8px; }
+.group-head h3 i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.group-head small { font: 11px var(--mono); color: var(--muted); }
+.sub { font: 600 10px var(--body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); margin-top: 4px; }
+details.older { border-top: 1px solid var(--edge); padding-top: 8px; }
+details.older > summary { cursor: pointer; font: 600 13px var(--body); color: var(--muted); }
+details.older[open] > summary { margin-bottom: 8px; }
 .piece { background: var(--panel); border-radius: 10px; padding: 8px; display: grid; gap: 6px; border-left: 3px solid var(--c); cursor: grab; touch-action: none; user-select: none; }
-.piece:hover { background: var(--panel-2); }
+.piece:hover { background: var(--tile); }
 .piece .head { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .piece .name { font: 600 13px var(--body); flex: 1; min-width: 0; }
 .piece .desc { font-size: 11px; color: var(--muted); }
 .ident { font: 11px var(--mono); color: var(--c); background: var(--bg); border-radius: 5px; padding: 3px 6px; user-select: all; cursor: text; overflow-wrap: anywhere; }
-.preview { height: 64px; background: var(--bg); border-radius: 6px; padding: 5px; overflow: hidden; pointer-events: none; }
-.new { font: 600 9px var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--bg); background: var(--p-gr); border-radius: 3px; padding: 1px 4px; }
+.preview { height: 76px; background: var(--bg); border-radius: 6px; padding: 5px; overflow: hidden; pointer-events: none; }
+.preview.tall { height: 170px; }
+.zoom { width: 200%; height: 200%; transform: scale(0.5); transform-origin: 0 0; }
+.tagnew { font: 700 9px var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--bg); background: var(--p-gr); border-radius: 3px; padding: 1px 4px; }
 
 /* board */
 .boardcol { display: grid; gap: 10px; min-width: 0; }
 .bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .bar h2 { margin: 0; font: 700 20px/1 var(--display); margin-right: auto; }
 .scroller { overflow-x: auto; border-radius: 10px; }
-.board { position: relative; min-width: 720px; background-color: var(--panel); border-radius: 10px;
-  background-image: linear-gradient(to right, rgba(236,232,225,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(236,232,225,0.06) 1px, transparent 1px);
+.board { position: relative; min-width: 760px; background-color: var(--panel); border-radius: 10px;
+  background-image: linear-gradient(to right, rgba(232,230,225,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(232,230,225,0.06) 1px, transparent 1px);
   background-size: var(--cw) var(--rh); }
-.board.over { box-shadow: inset 0 0 0 2px var(--p-gr); }
-.drop { position: absolute; border: 2px dashed var(--p-gr); border-radius: 8px; background: rgba(95,211,196,0.08); pointer-events: none; }
+.board.over { box-shadow: inset 0 0 0 2px var(--keep); }
+.drop { position: absolute; border: 2px dashed var(--keep); border-radius: 8px; background: rgba(155,229,100,0.08); pointer-events: none; }
 .placed { position: absolute; padding: 3px; touch-action: none; }
-.placed .inner { height: 100%; background: var(--panel-2); border-radius: 8px; border-top: 3px solid var(--c); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.25); }
+.placed .inner { height: 100%; background: var(--bg); border-radius: 8px; border-top: 3px solid var(--c); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
 .placed.clash .inner { box-shadow: 0 0 0 2px var(--warn); }
 .placed.dragging { opacity: 0.85; z-index: 10; }
-.placed .ph { display: flex; align-items: center; gap: 6px; padding: 3px 5px; cursor: grab; flex: none; min-width: 0; }
+.placed .ph { display: flex; align-items: center; gap: 6px; padding: 3px 5px; cursor: grab; flex: none; min-width: 0; background: var(--panel); }
 .placed .ph .ident { user-select: none; cursor: grab; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 2px 5px; }
 .placed .ph button { flex: none; }
-.placed .body { flex: 1; min-height: 0; padding: 0 6px 6px; overflow: hidden; pointer-events: none; }
+.placed .body { flex: 1; min-height: 0; padding: 5px 6px 6px; overflow: hidden; pointer-events: none; }
 .placed .rs { position: absolute; right: 3px; bottom: 3px; width: 16px; height: 16px; cursor: nwse-resize; border-right: 3px solid var(--muted); border-bottom: 3px solid var(--muted); border-bottom-right-radius: 6px; touch-action: none; }
-.ghost { position: fixed; z-index: 50; pointer-events: none; background: var(--panel-2); border-left: 3px solid var(--c); border-radius: 8px; padding: 6px 10px; font: 600 12px var(--body); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+.ghost { position: fixed; z-index: 50; pointer-events: none; background: var(--tile); border-left: 3px solid var(--c); border-radius: 8px; padding: 6px 10px; font: 600 12px var(--body); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
 details.io { background: var(--panel); border-radius: 10px; padding: 8px 12px; }
 details.io summary { cursor: pointer; font-weight: 600; font-size: 13px; }
-details.io textarea { width: 100%; min-height: 140px; margin-top: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: 11px/1.45 var(--mono); color: var(--fg); }
-.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; font-size: 13px; z-index: 60; max-width: calc(100% - 32px); }
+details.io textarea { width: 100%; min-height: 140px; margin-top: 8px; background: var(--bg); border: 1px solid var(--edge); border-radius: 8px; padding: 8px; font: 11px/1.45 var(--mono); color: var(--fg); }
+.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--tile); border: 1px solid var(--edge); border-radius: 8px; padding: 8px 14px; font-size: 13px; z-index: 60; max-width: calc(100% - 32px); }
 
-/* mock controls: static look-alikes, scaled by their container */
-.m { display: flex; flex-direction: column; gap: 4px; height: 100%; min-height: 0; font-size: 10px; color: var(--muted); }
-.m-row { display: flex; gap: 3px; flex: 1; min-height: 14px; }
-.m-row.fixed { flex: none; }
-.m-pad { flex: 1; border: 1px solid var(--line); background: var(--bg); border-radius: 4px; display: flex; align-items: center; justify-content: center; font: 600 10px var(--display); color: var(--fg); min-width: 0; overflow: hidden; white-space: nowrap; }
-.m-pad.on { border-color: var(--keep); }
-.m-pad.act { background: var(--panel); color: var(--muted); font: 500 9px var(--body); }
-.m-pad.empty { border-style: dashed; color: var(--faint); }
-.m-seg { display: flex; gap: 2px; background: var(--bg); border-radius: 4px; padding: 2px; flex: none; flex-wrap: wrap; }
-.m-seg span { padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
-.m-seg span.on { background: var(--c, var(--fg)); color: var(--bg); }
-.m-sl { display: grid; grid-template-columns: 52px 1fr 34px; gap: 4px; align-items: center; flex: none; }
-.m-sl b { font-weight: 400; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.m-sl em { height: 3px; border-radius: 2px; background: linear-gradient(90deg, var(--c, var(--fg)) var(--v), var(--line) var(--v)); font-style: normal; }
-.m-sl u { text-decoration: none; font-family: var(--mono); text-align: right; color: var(--fg); }
-.m-sl.lk { grid-template-columns: 52px 1fr 34px 12px; }
-.m-sl s { width: 12px; height: 10px; border: 1px solid var(--line); border-radius: 2px; text-decoration: none; }
-.m-sl s.on { background: var(--lock); border-color: transparent; }
-.m-tiles { display: grid; gap: 3px; flex: 1; min-height: 0; }
-.m-tile { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; display: flex; flex-direction: column; padding: 2px; gap: 2px; min-width: 0; min-height: 0; }
-.m-tile.on { border-color: var(--c, var(--fg)); }
-.m-tile b { font: 700 9px var(--display); color: var(--fg); }
-.m-tile svg { flex: 1; width: 100%; min-height: 0; }
-.m-btns { display: flex; gap: 3px; flex: none; flex-wrap: wrap; }
-.m-btn { border: 1px solid var(--line); background: var(--panel); border-radius: 3px; padding: 1px 6px; white-space: nowrap; color: var(--fg); }
-.m-btn.on { background: var(--c, var(--fg)); color: var(--bg); border-color: transparent; }
-.m-svg { flex: 1; min-height: 0; width: 100%; background: var(--bg); border-radius: 4px; }
-.m-dial { display: flex; align-items: center; gap: 6px; flex: none; }
-.m-dial i { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--c, var(--fg)); border-right-color: var(--c, var(--fg)); flex: none; }
-.m-dial b { color: var(--fg); font-weight: 600; }
-.m-label { font: 600 8px var(--body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); flex: none; }
-.m-text { color: var(--muted); flex: none; }
-.m-keys { display: flex; flex: 1; min-height: 0; position: relative; }
-.m-keys i { flex: 1; background: #d9d4cb; border: 1px solid var(--bg); border-radius: 0 0 2px 2px; }
-.m-unit { background: var(--bg); border-radius: 4px; padding: 3px; display: flex; flex-direction: column; gap: 2px; flex: none; }
+/* mock controls, drawn after the JUCE editors: static look-alikes */
+.m { display: flex; flex-direction: column; gap: 4px; height: 100%; min-height: 0; font-size: 10px; color: var(--muted); --a: var(--c); }
+.r { display: flex; gap: 3px; align-items: center; flex: none; min-width: 0; }
+.r.fill { flex: 1; min-height: 0; align-items: stretch; }
+.gap { flex: 1; }
+.lab { font: 700 9px var(--body); color: var(--muted); letter-spacing: 0.02em; white-space: nowrap; }
+.b { border: 1px solid var(--edge); background: var(--tile); border-radius: 3px; padding: 2px 6px; color: var(--fg); white-space: nowrap; font-size: 9.5px; flex: none; }
+.b.on { background: var(--on, var(--a)); border-color: var(--on, var(--a)); color: var(--bg); font-weight: 700; }
+.b.off { opacity: 0.35; }
+.b.drag { border: 1.5px solid var(--a); font-weight: 700; }
+.sl { flex: 1; min-width: 24px; height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--sc, var(--a)) var(--v), var(--tile) var(--v)); position: relative; }
+.sl::after { content: ""; position: absolute; left: var(--v); top: 50%; width: 8px; height: 8px; border-radius: 50%; background: var(--sc, var(--a)); transform: translate(-50%, -50%); }
+.sl.nk::after { display: none; }
+.val { font: 9.5px var(--mono); color: var(--fg); white-space: nowrap; flex: none; }
+.tiles { display: grid; gap: 4px; flex: 1; min-height: 0; }
+.t { background: var(--tile); border: 1px solid var(--edge); border-radius: 6px; padding: 3px 4px; display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 0; }
+.t.hear { border: 1.5px solid var(--a); background: color-mix(in srgb, var(--tile) 80%, var(--a)); }
+.t .th { display: flex; align-items: baseline; gap: 4px; }
+.t .th b { font: 700 13px var(--body); color: var(--fg); }
+.t .th em { font: 700 8.5px var(--body); font-style: normal; margin-left: auto; color: var(--a); }
+.t .th em.par { color: var(--parent); }
+.t svg { flex: 1; width: 100%; min-height: 0; display: block; }
+.t .meta { font: 8.5px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t .acts { display: flex; gap: 3px; }
+.t .acts .b { flex: 1; text-align: center; padding: 1px 2px; }
+.panel { background: var(--panel); border-radius: 6px; padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; flex: 1; min-height: 0; overflow: hidden; }
+.ph2 { display: flex; align-items: baseline; gap: 6px; flex: none; }
+.ph2 b { font: 700 11px var(--body); color: var(--fg); white-space: nowrap; }
+.ph2 span { font-size: 8.5px; color: var(--muted); margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; flex: 1; min-height: 0; }
+.col { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gh { font: 700 8.5px var(--body); letter-spacing: 0.03em; flex: none; }
+.set { display: grid; grid-template-columns: 52px 38px 1fr 26px; gap: 3px; align-items: center; flex: none; }
+.set span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 8.5px; }
+.set u { text-decoration: none; font: 8.5px var(--mono); color: var(--fg); white-space: nowrap; }
+.set .sl { height: 4px; }
+.set .sl::after { display: none; }
+.set .lk { font-size: 7.5px; text-align: center; border: 1px solid var(--edge); border-radius: 2px; background: var(--tile); color: var(--fg); }
+.set .lk.on { background: var(--lkc, var(--a)); border-color: transparent; color: var(--bg); font-weight: 700; }
+.keep { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; flex: 1; min-height: 0; }
+.k { border: 1px solid var(--edge); background: var(--panel); border-radius: 4px; padding: 2px 3px; display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
+.k.full { background: var(--tile); border-color: var(--kc); }
+.k .n { font: 8px var(--mono); color: var(--muted); }
+.k .nm { font: 700 8.5px var(--body); color: var(--kc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.k .x { position: absolute; right: 2px; top: 0; font-size: 9px; color: var(--muted); }
+.k .dr { margin: auto; font-size: 8.5px; color: var(--muted); }
+.k svg { flex: 1; width: 100%; min-height: 0; }
+.chip2 { border: 1.5px solid var(--kc, var(--edge)); background: var(--tile); border-radius: 10px; padding: 1px 8px; color: var(--fg); font: 700 9.5px var(--body); white-space: nowrap; }
+.svgbox { flex: 1; min-height: 0; width: 100%; display: block; background: rgba(21,23,28,0.55); border-radius: 4px; }
+.lane { display: grid; grid-template-columns: 4px 1fr 0.8fr 30px 30px; gap: 3px; align-items: center; flex: none; }
+.lane i { height: 14px; border-radius: 2px; background: var(--lc); }
+.lane .s1, .lane .s2 { border: 1px solid var(--edge); background: var(--tile); border-radius: 3px; padding: 1px 4px; color: var(--fg); font: 700 8.5px var(--body); white-space: nowrap; overflow: hidden; }
+.lane .s2.empty { background: var(--panel); color: var(--muted); font-weight: 400; }
+.lane .b { text-align: center; padding: 1px 2px; }
+.unitcol { background: var(--tile); border-radius: 5px; border-top: 3px solid var(--uc); padding: 3px 5px; display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 0; }
+.unitcol .un { display: flex; gap: 4px; align-items: baseline; }
+.unitcol .un b { font: 700 10.5px var(--body); color: var(--fg); }
+.unitcol .lr { display: flex; justify-content: space-between; font-size: 8.5px; }
+.unitcol .lr u { text-decoration: none; font-family: var(--mono); color: var(--fg); }
+.unitcol .sl { --sc: var(--uc); height: 4px; flex: none; }
+.unitcol .sl::after { display: none; }
+.dial { display: flex; align-items: center; gap: 5px; flex: none; }
+.dial i { width: 20px; height: 20px; border-radius: 50%; border: 3px solid var(--tile); border-top-color: var(--a); border-right-color: var(--a); flex: none; }
+.dial b { color: var(--fg); }
+.note { font-size: 9px; color: var(--muted); flex: none; }
+.note.warm { color: var(--parent); }
+.title { font: 700 13px var(--body); color: var(--fg); letter-spacing: 0.02em; white-space: nowrap; }
 </style>
 <header class="top"><div class="top-in pad-x">
-  <div class="brand"><b>Bloodline UI Kit</b><small>prototype · UI only, no sound</small></div>
+  <div class="brand"><b>Bloodline UI Kit</b><small>prototype · UI only, no sound · newest builds from the Actions on claude/plugin-album-collection-5nvyi5</small></div>
   <button class="btn" id="copy-layout">Copy layout</button>
   <button class="btn" id="example">Example layout</button>
   <button class="btn" id="clear">Clear board</button>
@@ -131,147 +171,244 @@ details.io textarea { width: 100%; min-height: 140px; margin-top: 8px; backgroun
   </section>
 </main>
 <script>
-/* PROTOTYPE, wipe me. Bloodline UI Kit: every UI piece from the Bloodline plugins as a static look-alike,
-   labelled with the plugin it comes from, and a board to arrange them on. No audio engine: once a layout
-   is approved, the engine gets hooked up. Sources are each plugin's README (plugins/<name>/README.md),
-   plugins/bloodline-breaks-2/SPEC.md and docs/research/groove-and-drum-feel.md. */
+/* PROTOTYPE, wipe me. Bloodline UI Kit, second pass: the pieces are read from each plugin's editor
+   (plugins/<name>/plugin/editor.cpp) at the commit its newest GitHub Actions build was made from, not from
+   the READMEs. Newest builds: Bloodline Breaks 2 (0e21ed9), Bloodline Synth 2 (4458440), Bloodline Effects
+   (1fadeaa). Older builds that these replace sit in a folded group. No audio engine: once a layout is
+   approved, the engine gets hooked up. */
 (function () {
 'use strict';
 const COLS = 12, RH = 66;
 const PLUG = {
-  bd:  { name: 'Bloodline Drums', c: 'var(--p-bd)', src: 'plugins/bloodline-drums' },
-  bd2: { name: 'Bloodline Drums 2', c: 'var(--p-bd2)', src: 'plugins/bloodline-drums-2' },
-  bb:  { name: 'Bloodline Breaks', c: 'var(--p-bb)', src: 'plugins/bloodline-breaks' },
-  bb2: { name: 'Bloodline Breaks 2', c: 'var(--p-bb2)', src: 'plugins/bloodline-breaks-2' },
-  be:  { name: 'Bloodline Effects', c: 'var(--p-be)', src: 'plugins/bloodline-effects' },
-  bs:  { name: 'Bloodline Synth', c: 'var(--p-bs)', src: 'plugins/bloodline-synth' },
-  bs2: { name: 'Bloodline Synth 2', c: 'var(--p-bs2)', src: 'plugins/bloodline-synth-2' },
-  gr:  { name: 'Groove research', c: 'var(--p-gr)', src: 'docs/research/groove-and-drum-feel.md' },
-  sh:  { name: 'Shared', c: 'var(--p-sh)', src: 'every plugin and web sketch' },
+  bb2: { name: 'Bloodline Breaks 2', c: 'var(--p-bb2)', build: '0e21ed9', run: 'Bloodline Breaks 2: second pass from the user\'s notes', src: 'plugins/bloodline-breaks-2/plugin/editor.cpp', note: 'Drums on the left, loops that play them on the right. Replaces Bloodline Drums 2 and Bloodline Breaks.' },
+  bs2: { name: 'Bloodline Synth 2', c: 'var(--p-bs2)', build: '4458440', run: 'Bloodline Synth 2: bred sounds and the loops that play them', src: 'plugins/bloodline-synth-2/plugin/editor.cpp', note: 'Sounds on the left, note loops on the right. Replaces Bloodline Synth.' },
+  be: { name: 'Bloodline Effects', c: 'var(--p-be)', build: '1fadeaa', run: 'Rename the spikes Bloodline Drums, Synth and Effects', src: 'plugins/bloodline-effects/plugin/editor.cpp', note: 'A bred chain of up to six effects. Replaces FX Breeder.' },
+  gr: { name: 'Groove research', c: 'var(--p-gr)', build: '', run: '', src: 'docs/research/groove-and-drum-feel.md', note: 'New controls, not in any build yet.' },
+  sh: { name: 'Shared', c: 'var(--p-sh)', build: '', run: '', src: 'web sketches', note: 'Page-level pieces for a web version.' },
+  bd: { name: 'Bloodline Drums', c: 'var(--p-old)', build: 'abfb5cc', old: true, src: 'plugins/bloodline-drums', note: 'First spike: workbench and three kit slots.' },
+  bd2: { name: 'Bloodline Drums 2', c: 'var(--p-old)', build: 'f990733', old: true, src: 'plugins/bloodline-drums-2', note: 'Litter of eight and keep pads. Now inside Breaks 2.' },
+  bb: { name: 'Bloodline Breaks', c: 'var(--p-old)', build: 'f990733', old: true, src: 'plugins/bloodline-breaks', note: 'Litter of eight one-bar loops. Now inside Breaks 2.' },
+  bs: { name: 'Bloodline Synth', c: 'var(--p-old)', build: '1fadeaa', old: true, src: 'plugins/bloodline-synth', note: 'Litter of eight sounds and keys. Replaced by Synth 2.' },
 };
+const ACCENT = { bb2: '#ff8c69', bs2: '#b48cff', be: '#5ee3c1', gr: '#f2c14e', sh: '#a9b0bc', bd: '#ff8c69', bd2: '#ff8c69', bb: '#ff8c69', bs: '#b48cff' };
 
-// ---------- mock helpers (static HTML)
+// ---------- drawing helpers for the look-alikes
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const m = (...xs) => '<div class="m">' + xs.join('') + '</div>';
-const row = (xs, fixed) => '<div class="m-row' + (fixed ? ' fixed' : '') + '">' + xs.join('') + '</div>';
-const pad = (t, cls) => '<span class="m-pad ' + (cls || '') + '">' + esc(t) + '</span>';
-const pads = (labels, opts = {}) => row(labels.map((t, i) => pad(t, (opts.on === i ? 'on ' : '') + (opts.act && opts.act.includes(i) ? 'act ' : '') + (opts.empty ? 'empty' : ''))), opts.fixed);
-const seg = (labels, on = 0) => '<div class="m-seg">' + labels.map((t, i) => '<span class="' + (i === on ? 'on' : '') + '">' + esc(t) + '</span>').join('') + '</div>';
-const sl = (label, v, out, lock) => '<div class="m-sl' + (lock !== undefined ? ' lk' : '') + '"><b>' + esc(label) + '</b><em style="--v:' + v + '%"></em><u>' + esc(out) + '</u>' + (lock !== undefined ? '<s class="' + (lock ? 'on' : '') + '"></s>' : '') + '</div>';
-const btns = (labels, on = -1) => '<div class="m-btns">' + labels.map((t, i) => '<span class="m-btn' + (i === on ? ' on' : '') + '">' + esc(t) + '</span>').join('') + '</div>';
-const label = t => '<div class="m-label">' + esc(t) + '</div>';
-const text = t => '<div class="m-text">' + esc(t) + '</div>';
-const dial = (t, v) => '<div class="m-dial"><i></i><span>' + esc(t) + ' <b>' + esc(v) + '</b></span></div>';
 let seedN = 7; const rnd = () => { seedN = (seedN * 16807) % 2147483647; return seedN / 2147483647; };
-function loopSvg(lanes = 3, steps = 16, dense = 0.4, free) {
-  const cols = ['var(--kick)', 'var(--snare)', 'var(--hat)', '#7ddc8a'];
-  let s = '<svg viewBox="0 0 160 ' + lanes * 10 + '" preserveAspectRatio="none" aria-hidden="true">';
-  for (let b = 0; b <= steps; b += 4) s += '<rect x="' + (b / steps * 160) + '" y="0" width="0.6" height="' + lanes * 10 + '" fill="rgba(236,232,225,0.15)"/>';
-  for (let l = 0; l < lanes; l++) for (let k = 0; k < steps; k++) {
-    const on = (l === 0 && k % 8 === 0) || (l === 1 && k % 8 === 4) || (l === 2 && k % 2 === 0 && rnd() < 0.9) || rnd() < dense * (l === 2 ? 0.6 : 0.25);
-    if (!on) continue; const hgt = 3 + rnd() * 6, x = (k + (free ? (rnd() - 0.5) * 0.6 : 0)) / steps * 160 + 1;
-    s += '<rect x="' + x.toFixed(1) + '" y="' + ((lanes - l) * 10 - hgt - 0.5).toFixed(1) + '" width="3" height="' + hgt.toFixed(1) + '" fill="' + cols[l % 4] + '"/>';
+const M = (...xs) => '<div class="m">' + xs.join('') + '</div>';
+const R = (...xs) => '<div class="r">' + xs.join('') + '</div>';
+const RF = (...xs) => '<div class="r fill">' + xs.join('') + '</div>';
+const gap = '<span class="gap"></span>';
+const lab = t => '<span class="lab">' + esc(t) + '</span>';
+const b = (t, on, extra) => '<span class="b' + (on ? ' on' : '') + (extra ? ' ' + extra : '') + '">' + esc(t) + '</span>';
+const bs = (labels, on) => labels.map((t, i) => b(t, i === on)).join('');
+const sl = (v, col) => '<span class="sl" style="--v:' + v + '%' + (col ? ';--sc:' + col : '') + '"></span>';
+const val = t => '<span class="val">' + esc(t) + '</span>';
+const note = (t, warm) => '<div class="note' + (warm ? ' warm' : '') + '">' + esc(t) + '</div>';
+const LANE_C = ['var(--l-kick)', 'var(--l-snare)', 'var(--l-hat)', 'var(--l-perc)'];
+const GC = ['var(--g1)', 'var(--g2)', 'var(--g3)', 'var(--g4)', 'var(--g5)'];
+
+function envSvg(groupsCounts) { // drum tile: body and noise envelopes, then a bar per setting
+  const pts = (k, a) => { let d = ''; for (let x = 0; x <= 100; x += 4) d += (x ? 'L' : 'M') + x + ' ' + (22 - a * 20 * Math.exp(-x / k)).toFixed(1); return d; };
+  let s = '<svg viewBox="0 0 100 46" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="23" rx="2" fill="rgba(21,23,28,0.5)"/>' +
+    '<path d="' + pts(18 + rnd() * 30, 0.6 + rnd() * 0.3) + '" stroke="var(--g1)" fill="none" stroke-width="1"/><path d="' + pts(6 + rnd() * 20, 0.2 + rnd() * 0.5) + '" stroke="var(--g2)" fill="none" stroke-width="1"/>';
+  let i = 0; const n = groupsCounts.reduce((a, c) => a + c, 0), bw = 100 / n;
+  groupsCounts.forEach((c, g) => { for (let k = 0; k < c; k++, i++) { const h = 2 + rnd() * 19; s += '<rect x="' + (i * bw).toFixed(2) + '" y="' + (46 - h).toFixed(1) + '" width="' + (bw - 0.6).toFixed(2) + '" height="' + h.toFixed(1) + '" fill="' + GC[g] + '" opacity="0.85"/>'; } });
+  return s + '</svg>';
+}
+function waveSvg(groupsCounts) { // synth tile: two cycles of the oscillators, then a bar per setting
+  let d = ''; const mix = rnd(); for (let x = 0; x <= 100; x += 2) { const ph = (x / 50) % 1, y = (1 - mix) * Math.sin(2 * Math.PI * ph) + mix * (2 * ph - 1); d += (x ? 'L' : 'M') + x + ' ' + (13 - y * 9).toFixed(1); }
+  let s = '<svg viewBox="0 0 100 46" preserveAspectRatio="none" aria-hidden="true"><rect width="100" height="27" rx="2" fill="rgba(21,23,28,0.5)"/><rect y="' + (12 + rnd() * 10).toFixed(1) + '" width="100" height="15" fill="var(--g2)" opacity="0.15"/><path d="' + d + '" stroke="var(--a)" fill="none" stroke-width="1"/>';
+  let i = 0; const n = groupsCounts.reduce((a, c) => a + c, 0), bw = 100 / n;
+  groupsCounts.forEach((c, g) => { for (let k = 0; k < c; k++, i++) { const h = 1 + rnd() * 16; s += '<rect x="' + (i * bw).toFixed(2) + '" y="' + (46 - h).toFixed(1) + '" width="' + (bw - 0.5).toFixed(2) + '" height="' + h.toFixed(1) + '" fill="' + GC[g] + '" opacity="0.85"/>'; } });
+  return s + '</svg>';
+}
+function gridSvg(big, locked) { // drum loop: kick at the bottom, then snare, hat, perc; swung
+  const W = 160, H = big ? 72 : 40, rh = H / 4; let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true" class="' + (big ? 'svgbox' : '') + '"><rect width="' + W + '" height="' + H + '" rx="2" fill="rgba(21,23,28,0.55)"/>';
+  for (let k = 0; k < 16; k += 4) s += '<rect x="' + k * 10 + '" y="0" width="10" height="' + H + '" fill="rgba(58,63,75,0.35)"/>';
+  if (big) for (let k = 1; k < 16; k++) s += '<rect x="' + k * 10 + '" y="0" width="0.4" height="' + H + '" fill="rgba(58,63,75,' + (k % 4 ? 0.3 : 0.6) + ')"/>';
+  if (locked) s += '<rect x="0" y="0" width="' + W + '" height="' + rh + '" fill="#b39ddb" opacity="0.16"/>';
+  const pat = ['9002003020810130', '0000900100009102', '8383838383838383', '0000000100000030'];
+  for (let l = 0; l < 4; l++) for (let k = 0; k < 16; k++) {
+    let v = +pat[l][k] / 9; if (rnd() < 0.15) v = v ? 0 : 0.5 * rnd(); if (!v) continue;
+    const x = (k + (k % 2 ? 0.16 : 0)) * 10 + 1, y0 = (3 - l) * rh, hh = (rh - 2) * (big ? v : 0.3 + 0.7 * v), y = big ? y0 + rh - 1 - hh : y0 + (rh - hh) / 2;
+    s += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + (big ? 5 : 8) + '" height="' + hh.toFixed(1) + '" rx="1" fill="' + LANE_C[l] + '" opacity="' + (0.6 + 0.4 * v).toFixed(2) + '"/>';
   }
   return s + '</svg>';
 }
-function waveSvg() { let d = 'M0 10'; for (let x = 0; x <= 160; x += 2) d += ' L' + x + ' ' + (10 + Math.sin(x / 6) * 7 * Math.exp(-x / 70)).toFixed(1); return '<svg viewBox="0 0 160 20" preserveAspectRatio="none" aria-hidden="true"><path d="' + d + '" stroke="var(--c, #ece8e1)" fill="none" stroke-width="1.2"/></svg>'; }
-function chainSvg(n) { let s = '<svg viewBox="0 0 160 20" preserveAspectRatio="none" aria-hidden="true">'; const cs = ['#e4572e', '#f2c14e', '#6cc3d5', '#b48cff', '#9be564', '#ff5d8f']; for (let i = 0; i < n; i++) s += '<rect x="' + (i * 160 / n + 2) + '" y="4" width="' + (160 / n - 6) + '" height="12" rx="2" fill="' + cs[(i * 3 + n) % 6] + '"/>'; return s + '</svg>'; }
-function rollSvg() { let s = '<svg class="m-svg" viewBox="0 0 160 60" preserveAspectRatio="none" aria-hidden="true">'; for (let b = 0; b <= 16; b += 4) s += '<rect x="' + b * 10 + '" y="0" width="0.6" height="60" fill="rgba(236,232,225,0.15)"/>'; for (let k = 0; k < 14; k++) s += '<rect x="' + (rnd() * 150).toFixed(1) + '" y="' + (5 + rnd() * 50).toFixed(1) + '" width="' + (4 + rnd() * 18).toFixed(1) + '" height="3" rx="1" fill="var(--p-bs2)"/>'; return s + '</svg>'; }
-function bigLoopSvg(free) { return '<svg class="m-svg" viewBox="0 0 320 60" preserveAspectRatio="none" aria-hidden="true">' + loopSvg(3, 32, 0.45, free).replace(/^<svg[^>]*>|<\/svg>$/g, '').replace(/160/g, '320') + '</svg>'; }
-const tiles = (n, cols, kind, on = 0, extra = '') => '<div class="m-tiles" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))">' + Array.from({ length: n }, (_, i) => '<div class="m-tile' + (i === on ? ' on' : '') + '"><b>' + 'ABCDEFGH'[i] + (i === 1 ? ' ★' : '') + '</b>' + (kind === 'loop' ? loopSvg(kind === 'loop' ? 3 : 4, 16, 0.4) : kind === 'chain' ? chainSvg(2 + (i * 5) % 4) : waveSvg()) + extra + '</div>').join('') + '</div>';
-const keys = () => '<div class="m-keys">' + '<i></i>'.repeat(14) + '</div>';
-
-// ---------- the pieces
-// w, h in board cells (12 columns, 52px rows)
-const PIECES = [
-  // Bloodline Drums
-  { id: 'bd-workbench', p: 'bd', name: 'Workbench row', desc: '[A][B][C][Choose] on pads 36 to 39. Hear a pad, Choose breeds the other two from it.', w: 5, h: 2, mock: () => m(pads(['A', 'B ★', 'C', 'Choose'], { on: 1, act: [3] }), text('Kick · spread 0.25')) },
-  { id: 'bd-slot', p: 'bd', name: 'Kit slot, placed', desc: '[A][B][C][Random], with Open, move up and down, Clear. Pads 40 to 51.', w: 5, h: 2, mock: () => m(row([text('Slot 1 · made as Kick'), btns(['Open', '↑', '↓', 'Clear'])], true), pads(['A', 'B', 'C', 'Random'], { act: [3] })) },
-  { id: 'bd-slot-open', p: 'bd', name: 'Kit slot, opened to breed', desc: 'An open row: the fourth pad becomes Choose again, with Reset.', w: 5, h: 2, mock: () => m(row([text('Slot 2 · open'), btns(['Close', 'Reset'])], true), pads(['A', 'B', 'C ★', 'Choose'], { on: 2, act: [3] })) },
-  { id: 'bd-slot-blank', p: 'bd', name: 'Blank slot', desc: '[ ][ ][ ][Place]: puts the workbench row here and refreshes the workbench.', w: 5, h: 1, mock: () => m(pads(['', '', '', 'Place'], { empty: true })) },
-  { id: 'bd-zone', p: 'bd', name: 'Zone switch', desc: 'None, Kick, Snare, Hats: centres Body, Noise and Click while breeding.', w: 3, h: 1, mock: () => m(seg(['None', 'Kick', 'Snare', 'Hats'], 1)) },
-  { id: 'bd-inspector', p: 'bd', name: 'Inspector, 19 settings', desc: 'The last played pad: Body, Noise, Click, Grit and Out groups, each setting with Lock.', w: 4, h: 6, mock: () => m(label('Body'), sl('Pitch', 30, '52 Hz', false), sl('Sweep', 40, '8 st', true), sl('Sweep time', 35, '25 ms', false), sl('Attack', 5, '1 ms', false), sl('Decay', 55, '320 ms', false), label('Noise'), sl('Body / Noise', 20, '20%', false), sl('Noise tone', 60, '2 kHz', false), label('Click ▸ Grit ▸ Out')) },
-  { id: 'bd-rowmix', p: 'bd', name: 'Row Pan, Level and Mono', desc: 'Mixer controls for a row: pan and level offsets and Mono.', w: 4, h: 1, mock: () => m(sl('Level', 60, '0.0 dB'), sl('Pan', 50, 'C'), text('☑ Mono')) },
-  { id: 'bd-start-again', p: 'bd', name: 'Start again', desc: 'Empties the kit and refreshes the workbench. Click twice.', w: 2, h: 1, mock: () => m(btns(['Start again'])) },
-  // Bloodline Drums 2
-  { id: 'bd2-litter', p: 'bd2', name: 'Sound litter, eight tiles', desc: 'A to H, each with Breed and Cross. Click a tile to hear it.', w: 6, h: 3, mock: () => m(tiles(8, 4, 'wave', 2)) },
-  { id: 'bd2-keep', p: 'bd2', name: 'Keep pads, eight', desc: 'Pads 36 to 43. Drag a tile on to keep it, named after its zone ("Kick 3").', w: 6, h: 1, mock: () => m(pads(['Kick 1', 'Snare 1', 'Hats 1', 'Kick 2', '', '', '', ''], {})) },
-  { id: 'bd2-loop', p: 'bd2', name: 'Loop audition', desc: 'Plays the heard sound in a rhythm: Quarters, Boom bap or 16ths.', w: 3, h: 1, mock: () => m(seg(['Off', 'Quarters', 'Boom bap', '16ths'], 2)) },
-  { id: 'bd2-breedbar', p: 'bd2', name: 'Breed bar', desc: 'Back, Fresh litter and the zone above the litter.', w: 4, h: 1, mock: () => m(row([seg(['None', 'Kick', 'Snare', 'Hats']), btns(['Back', 'Fresh litter'])], true)) },
-  // Bloodline Breaks
-  { id: 'bb-litter', p: 'bb', name: 'Loop litter, eight one-bar tiles', desc: 'A to H, each with Breed and Cross. The heard bar loops.', w: 8, h: 3, mock: () => m(tiles(8, 4, 'loop', 0)) },
-  { id: 'bb-swing', p: 'bb', name: 'Swing dial', desc: '50% to 75%, MPC style. Pulls each bar\'s swing towards it.', w: 2, h: 1, mock: () => m(dial('Swing', '58%')) },
-  { id: 'bb-style', p: 'bb', name: 'Style', desc: 'Boom bap, Lo-fi, Dilla, Trap, Drill, West coast or Free: a soft pull on hits, level, lateness, rolls.', w: 5, h: 1, mock: () => m(seg(['Boom bap', 'Lo-fi', 'Dilla', 'Trap', 'Drill', 'West coast', 'Free'])) },
-  { id: 'bb-pull', p: 'bb', name: 'Pull', desc: 'Loose, soft, firm or tight: how hard style and swing pull.', w: 3, h: 1, mock: () => m(seg(['Loose', 'Soft', 'Firm', 'Tight'], 2)) },
-  { id: 'bb-taste', p: 'bb', name: 'Taste and Forget taste', desc: 'What it has learned from your Breeds; Forget wipes it.', w: 3, h: 1, mock: () => m(row([text('Taste: 14 choices'), btns(['Forget taste'])], true)) },
-  { id: 'bb-inspector', p: 'bb', name: 'Step inspector', desc: 'The heard bar, big: click a step for hit, ghost or rest. Lane roles and Lock on the left.', w: 8, h: 3, mock: () => m(row([text('Kick · Snare · Hat · Perc'), btns(['Lock'])], true), bigLoopSvg(false)) },
-  { id: 'bb-roles', p: 'bb', name: 'Lane role', desc: 'Kick, Snare, Hat, Perc or Off per lane. Steers breeding and the built-in sound.', w: 4, h: 1, mock: () => m(seg(['Kick', 'Snare', 'Hat', 'Perc', 'Off'])) },
-  { id: 'bb-barswing', p: 'bb', name: 'This bar\'s swing', desc: 'Changes just the heard bar.', w: 3, h: 1, mock: () => m(sl('This bar', 40, '57%')) },
-  { id: 'bb-dragmidi', p: 'bb', name: 'Drag MIDI', desc: 'Drag the heard bar into a clip slot in Live.', w: 2, h: 1, mock: () => m(btns(['⇲ Drag MIDI'])) },
-  { id: 'bb-play', p: 'bb', name: 'Play and Kit', desc: 'Play with Live stopped; Kit on plays the built-in voice, off is MIDI only.', w: 2, h: 1, mock: () => m(btns(['Play', 'Kit'], 1)) },
-  // Bloodline Breaks 2
-  { id: 'bb2-drumlitter', p: 'bb2', name: 'Drum litter, four tiles', desc: 'A to D with Breed and Cross, zone None, Kick, Snare, Hats or Perc.', w: 5, h: 2, mock: () => m(seg(['None', 'Kick', 'Snare', 'Hats', 'Perc'], 4), tiles(4, 4, 'wave', 1)) },
-  { id: 'bb2-spread', p: 'bb2', name: 'Spread slider', desc: 'Drag to breed wider or closer. New resets it.', w: 3, h: 1, mock: () => m(sl('Spread', 25, '0.25')) },
-  { id: 'bb2-inbreak', p: 'bb2', name: 'Loop and In break', desc: 'Off, Quarters, Boom bap, 16ths, or In break: the candidate plays inside the loop on its own lane.', w: 4, h: 1, mock: () => m(seg(['Off', 'Quarters', 'Boom bap', '16ths', 'In break'], 4)) },
-  { id: 'bb2-keepdrums', p: 'bb2', name: 'Keep pads, drums', desc: 'Eight pads, 36 to 43. The litter stays when you keep.', w: 6, h: 1, mock: () => m(pads(['Kick 1', 'Snare 1', 'Hats 1', 'Drum 1', 'Perc 1', '', '', ''])) },
-  { id: 'bb2-looplitter', p: 'bb2', name: 'Loop litter, four tiles', desc: 'A to D loops that play the kept pads. Breed, Cross, Back, New.', w: 6, h: 2, mock: () => m(tiles(4, 4, 'loop', 0)) },
-  { id: 'bb2-playing', p: 'bb2', name: 'Playing switch', desc: 'Off by default and silent; on follows Live\'s bar.', w: 2, h: 1, mock: () => m(btns(['Playing'], 0)) },
-  { id: 'bb2-dials', p: 'bb2', name: 'Swing, Pull and Spread', desc: 'Steer the next breed or New.', w: 4, h: 1, mock: () => m(row([dial('Swing', '58%'), dial('Pull', 'firm'), dial('Spread', '0.25')], true)) },
-  { id: 'bb2-style', p: 'bb2', name: 'Style', desc: 'None, Boom bap, Lo-fi, Strung, Neo soul.', w: 4, h: 1, mock: () => m(seg(['None', 'Boom bap', 'Lo-fi', 'Strung', 'Neo soul'], 1)) },
-  { id: 'bb2-freegrid', p: 'bb2', name: 'Free grid', desc: 'Hits anywhere: drag sideways freely, up and down for velocity; Shift snaps.', w: 8, h: 3, mock: () => m(bigLoopSvg(true)) },
-  { id: 'bb2-lanehead', p: 'bb2', name: 'Lane head', desc: '[first sound | second sound][One/Stack/Flam][Lock] for each lane.', w: 4, h: 1, mock: () => m(row([pad('Kick 1'), pad('+'), seg(['One', 'Stack', 'Flam 18 ms'], 2), btns(['Lock'])], true)) },
-  { id: 'bb2-keeploops', p: 'bb2', name: 'Keep slots, loops', desc: 'Eight loops on 48 to 55. Click to switch; drag back to breed.', w: 6, h: 1, mock: () => m(pads(['Loop 1', 'Loop 2', 'Loop 3', '', '', '', '', ''])) },
-  // Bloodline Effects
-  { id: 'be-litter', p: 'be', name: 'Chain litter, six cards', desc: 'A to F, each a chain of up to six effects, with Breed and Cross.', w: 6, h: 2, mock: () => m(tiles(6, 6, 'chain', 0)) },
-  { id: 'be-character', p: 'be', name: 'Character', desc: 'None, Space, Dirt, Motion, Glitch: centres which effects appear.', w: 4, h: 1, mock: () => m(seg(['None', 'Space', 'Dirt', 'Motion', 'Glitch'], 2)) },
-  { id: 'be-wild', p: 'be', name: 'Wild', desc: 'Makes structural jumps three times as likely.', w: 1, h: 1, mock: () => m(btns(['Wild'], 0)) },
-  { id: 'be-unit', p: 'be', name: 'Effect in the heard chain', desc: 'One effect with its four settings, Lock and ×.', w: 4, h: 2, mock: () => m('<div class="m-unit">' + row([text('■ Reverb'), btns(['Lock', '×'])], true) + sl('Size', 50, 'x1.2') + sl('Decay', 70, '72%') + sl('Damping', 30, '30%') + sl('Mix', 40, '40%') + '</div>') },
-  { id: 'be-out', p: 'be', name: 'Mix, Bypass, Out and limiter', desc: 'Chain dry/wet, a fading bypass, output level, and the limiter light.', w: 4, h: 1, mock: () => m(row([sl('Mix', 60, '60%'), btns(['Bypass', 'Limiting'])], true)) },
-  { id: 'be-input', p: 'be', name: 'Loop is input', desc: 'Feeds a built-in boom bap loop to audition without a clip.', w: 2, h: 1, mock: () => m(btns(['Loop is input'], 0)) },
-  { id: 'be-stack', p: 'be', name: 'Instance chain with +', desc: 'A drum or bus holds a chain of Bloodline Effects instances, none at first; + adds another. (Your note on the last pass.)', w: 4, h: 2, isNew: true, mock: () => m(row([label('Bloodline Effects'), btns(['+'])], true), '<div class="m-unit">' + text('▾ 1 · Dirt · Drive → Crush · mix 64%') + '</div>', '<div class="m-unit">' + text('▸ 2 · Space · Reverb → Width · mix 40%') + '</div>') },
-  // Bloodline Synth
-  { id: 'bs-litter', p: 'bs', name: 'Sound litter, eight tiles', desc: 'A to H with Breed and Cross. The heard tile plays at once.', w: 6, h: 3, mock: () => m(tiles(8, 4, 'wave', 3)) },
-  { id: 'bs-keys', p: 'bs', name: 'On-screen keys', desc: 'Play the heard sound by mouse.', w: 6, h: 2, mock: () => m(keys()) },
-  { id: 'bs-riff', p: 'bs', name: 'Riff', desc: 'Bass, Chords or Arp at Live\'s tempo, to keep something playing.', w: 3, h: 1, mock: () => m(seg(['Off', 'Bass', 'Chords', 'Arp'], 1)) },
-  { id: 'bs-zone', p: 'bs', name: 'Zone', desc: 'None, Bass, Keys, Lead, Pad, Pluck.', w: 4, h: 1, mock: () => m(seg(['None', 'Bass', 'Keys', 'Lead', 'Pad', 'Pluck'], 1)) },
-  { id: 'bs-inspector', p: 'bs', name: 'Inspector', desc: 'Every setting of the heard tile; drag to change, Lock for breeding.', w: 4, h: 5, mock: () => m(label('Osc'), sl('Shape A', 70, 'saw', false), sl('Detune', 30, '12 ct', true), label('Filter'), sl('Cutoff', 45, '1.2 kHz', false), sl('Resonance', 30, '3.1', false), label('Amp'), sl('Attack', 10, '4 ms', false), sl('Release', 40, '220 ms', false)) },
-  // Bloodline Synth 2
-  { id: 'bs2-loopbar', p: 'bs2', name: 'Bars, Key and Scale', desc: '2, 4 or 8 bars; key and scale cycle on click.', w: 4, h: 1, mock: () => m(row([seg(['2', '4', '8'], 1), btns(['Key: A', 'Scale: Dorian'])], true)) },
-  { id: 'bs2-octaves', p: 'bs2', name: 'Octave range', desc: 'Two handles, C0 to C8, at least an octave apart.', w: 4, h: 1, mock: () => m(sl('Octaves', 45, 'C2 to C4')) },
-  { id: 'bs2-roll', p: 'bs2', name: 'Piano roll', desc: 'Add, move, lengthen and remove notes; Shift snaps.', w: 8, h: 3, mock: () => m(rollSvg()) },
-  { id: 'bs2-lockstrip', p: 'bs2', name: 'Lock strip', desc: 'Drag along it to lock a stretch of time through breeding.', w: 8, h: 1, mock: () => m('<svg class="m-svg" viewBox="0 0 160 8" preserveAspectRatio="none" aria-hidden="true"><rect x="40" y="0" width="30" height="8" fill="var(--lock)" opacity="0.6"/></svg>') },
-  { id: 'bs2-traits', p: 'bs2', name: 'Eight traits', desc: 'Tonal/Atonal, Mono/Poly, Melodic/Rhythmic, On/Off beat, Even/Dynamic, Clustered/Open, Sparse/Dense, Short/Long, each with Lock.', w: 4, h: 4, mock: () => m(sl('Tonal', 20, 'Atonal', false), sl('Mono', 30, 'Poly', false), sl('Melodic', 60, 'Rhythmic', true), sl('On beat', 40, 'Off beat', false), sl('Even', 50, 'Dynamic', false), sl('Clustered', 35, 'Open', false), sl('Sparse', 45, 'Dense', false), sl('Short', 25, 'Long', false)) },
-  { id: 'bs2-soundchip', p: 'bs2', name: 'Sound chip', desc: 'Which kept sound plays the loop; click to cycle or drop a pad on it.', w: 2, h: 1, mock: () => m(btns(['♪ Bass 2'], 0)) },
-  { id: 'bs2-keep', p: 'bs2', name: 'Keep pads and loops', desc: 'Eight kept sounds and eight kept loops.', w: 6, h: 2, mock: () => m(pads(['Bass 1', 'Keys 1', 'Lead 1', '', '', '', '', '']), pads(['Loop 1', 'Loop 2', '', '', '', '', '', ''])) },
-  { id: 'bs2-riff', p: 'bs2', name: 'Riff with In loop', desc: 'Off, Bass, Chords, Arp, or In loop: the candidate plays the right panel\'s loop.', w: 4, h: 1, mock: () => m(seg(['Off', 'Bass', 'Chords', 'Arp', 'In loop'], 4)) },
-  // Groove research
-  { id: 'gr-dials', p: 'gr', name: 'Groove, Complexity, Forward, Behind', desc: 'The four pattern settings. Groove: swing that eases with tempo, accents, drift. Complexity: a syncopation target. Forward and Behind: early or late lanes, up to 30 ms.', w: 8, h: 2, isNew: true, mock: () => m(row([dial('Groove', '45'), dial('Complexity', '40'), dial('Forward', '10'), dial('Behind', '35')], true), text('Swing near 57% at 90 BPM · off-beats 3 dB under the beat')) },
-  { id: 'gr-dial', p: 'gr', name: 'One pattern dial', desc: 'A single Groove, Complexity, Forward or Behind dial with its readout.', w: 3, h: 2, isNew: true, mock: () => m(dial('Complexity', '40'), sl('', 40, '40'), text('Medium: some off-beat kicks and ghosts')) },
-  { id: 'gr-feel', p: 'gr', name: 'Lane feel', desc: 'Forward, On or Behind for one lane. Behind is later, louder and longer together.', w: 3, h: 1, isNew: true, mock: () => m(seg(['Forward', 'On', 'Behind'], 2)) },
-  { id: 'gr-sync', p: 'gr', name: 'Syncopation meter', desc: 'Weighted kick over snare over hat, against a medium band.', w: 5, h: 1, isNew: true, mock: () => m('<svg class="m-svg" viewBox="0 0 160 10" preserveAspectRatio="none" aria-hidden="true"><rect x="35" y="0" width="58" height="10" fill="rgba(95,211,196,0.2)"/><rect x="62" y="1" width="3" height="8" fill="var(--p-gr)"/></svg>', text('square · medium · busy')) },
-  { id: 'gr-tempo', p: 'gr', name: 'Swing eases with tempo', desc: 'A switch: less swing at faster tempos, or MPC-style fixed.', w: 3, h: 1, isNew: true, mock: () => m(text('☑ Less swing at faster tempos')) },
-  { id: 'gr-writing', p: 'gr', name: 'What the pattern is writing', desc: 'A line saying which parts it writes for which slots, and why (no snare, so the kick takes 2 and 4).', w: 8, h: 1, isNew: true, mock: () => m(text('Writing a kick part for slot 1 and a hat part for slot 3. No snare, so the kick may land on 2 and 4.')) },
-  // Shared
-  { id: 'sh-transport', p: 'sh', name: 'Transport', desc: 'Play or Stop, BPM, position.', w: 4, h: 1, mock: () => m(row([btns(['Play'], 0), btns(['− 90 BPM +']), text('1.3.2')], true)) },
-  { id: 'sh-breedbar', p: 'sh', name: 'Breed, Cross, Back, Fresh', desc: 'The litter controls every Bloodline plugin shares.', w: 4, h: 1, mock: () => m(btns(['Breed', 'Cross', 'Back', 'Fresh litter'])) },
-  { id: 'sh-downloads', p: 'sh', name: 'Downloads', desc: 'Loop and stems as a zip, and this page as HTML.', w: 4, h: 1, mock: () => m(btns(['Loop and stems .zip', 'This page .html'])) },
-  { id: 'sh-heading', p: 'sh', name: 'Section heading', desc: 'A numbered heading to mark a stage, such as "1 Bloodline Drums".', w: 12, h: 1, mock: () => m(text('1   Bloodline Drums  ·  2   Bloodline Breaks')) },
+function rollSvg(big, locks) { // note loop: pitch up, time across, scale rows, bar lines, time locks
+  const W = 160, H = big ? 80 : 40; let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true" class="' + (big ? 'svgbox' : '') + '"><rect width="' + W + '" height="' + H + '" rx="2" fill="rgba(21,23,28,0.55)"/>';
+  if (big) for (let p = 0; p < 24; p++) if ([0, 2, 3, 5, 7, 9, 10].includes(p % 12)) s += '<rect x="0" y="' + (H - (p + 1) * H / 24).toFixed(1) + '" width="' + W + '" height="' + (H / 24).toFixed(1) + '" fill="rgba(58,63,75,' + (p % 12 ? 0.22 : 0.45) + ')"/>';
+  for (let k = 0; k <= 16; k += big ? 1 : 4) s += '<rect x="' + k * 10 + '" y="0" width="0.6" height="' + H + '" fill="rgba(58,63,75,' + (k % 4 ? 0.35 : 0.9) + ')"/>';
+  if (locks) s += '<rect x="40" y="0" width="30" height="' + H + '" fill="#7cc6fe" opacity="0.14"/>';
+  for (let n = 0; n < 12; n++) { const x = Math.floor(rnd() * 16) * 10, w = 6 + rnd() * 22, y = 4 + rnd() * (H - 10); s += '<rect x="' + x + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (big ? 3 : 2) + '" rx="1" fill="var(--a)" opacity="' + (0.6 + rnd() * 0.4).toFixed(2) + '"/>'; }
+  return s + '</svg>';
+}
+function chainSvg(n) { // effects card: a block per effect, with a mini bar per setting
+  const cols = ['#e4572e', '#f2c14e', '#6cc3d5', '#7bdcb5', '#8e9aff', '#b48cff', '#ff8fab', '#9be564'];
+  let s = '<svg viewBox="0 0 160 34" preserveAspectRatio="none" aria-hidden="true">'; const w = (160 - 5 * 3) / 6;
+  for (let k = 0; k < n; k++) { const c = cols[Math.floor(rnd() * cols.length)], x = k * (w + 3); s += '<rect x="' + x.toFixed(1) + '" y="0" width="' + w.toFixed(1) + '" height="34" rx="3" fill="' + c + '" opacity="0.25"/>'; for (let p = 0; p < 4; p++) { const h = 2 + rnd() * 14; s += '<rect x="' + (x + 3 + p * (w - 6) / 4).toFixed(1) + '" y="' + (31 - h).toFixed(1) + '" width="' + ((w - 6) / 4 - 1).toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + c + '"/>'; } if (k < n - 1) s += '<rect x="' + (x + w).toFixed(1) + '" y="17" width="3" height="0.8" fill="#8d8f96"/>'; }
+  return s + '</svg>';
+}
+const tile = (i, inner, meta, state) => '<div class="t' + (state === 'hear' ? ' hear' : '') + '"><div class="th"><b>' + 'ABCDEF'[i] + '</b>' + (state === 'par' ? '<em class="par">★ parent</em>' : state === 'hear' ? '<em>' + (inner.includes('svgbox') ? 'playing' : 'hearing') + '</em>' : '') + '</div>' + inner + '<div class="meta">' + esc(meta) + '</div><div class="acts">' + b(state === 'par' ? 'Again' : 'Breed') + b('Cross', false, state === 'hear' ? 'off' : '') + '</div></div>';
+const tiles = (n, cols, make) => '<div class="tiles" style="grid-template-columns:repeat(' + cols + ',minmax(0,1fr))">' + Array.from({ length: n }, (_, i) => make(i, i === 0 ? 'hear' : i === 1 ? 'par' : '')).join('') + '</div>';
+const setRow = (name, v, out, g, lock, lkOn) => '<div class="set"><span>' + esc(name) + '</span><u>' + esc(out) + '</u>' + sl(v, GC[g]) + (lock ? '<span class="lk' + (lkOn ? ' on' : '') + '">' + (lkOn ? 'Locked' : 'Lock') + '</span>' : '<span></span>') + '</div>';
+function settingsPanel(title, hint, colsSpec) {
+  return '<div class="panel"><div class="ph2"><b>' + esc(title) + '</b><span>' + esc(hint) + '</span></div><div class="cols">' + colsSpec.map(col => '<div class="col">' + col.map(([gname, g, rows]) => '<div class="gh" style="color:' + GC[g] + '">' + gname + '</div>' + rows.map(rw => setRow(rw[0], rw[1], rw[2], g, rw[3] !== false, rw[4])).join('')).join('') + '</div>').join('') + '</div></div>';
+}
+const DRUM_SETTINGS = [
+  [['BODY', 0, [['Pitch', 30, '52 Hz'], ['Sweep', 25, '8.0 st', true, true], ['Sweep time', 40, '28 ms'], ['Attack', 5, '1 ms'], ['Decay', 55, '320 ms']]], ['NOISE', 1, [['Body / Noise', 15, '15%'], ['Noise tone', 40, '1.2 kHz'], ['Noise decay', 30, '40 ms'], ['Metal', 4, '4%']]]],
+  [['CLICK', 2, [['Click', 40, '40%'], ['Click tone', 55, '3.1 kHz']]], ['GRIT', 3, [['Drive', 20, '20%'], ['Bits', 5, '15.3 bits'], ['Rate', 10, '32 kHz']]], ['OUT', 4, [['High-pass', 8, '31 Hz'], ['Low-pass', 90, '15 kHz'], ['Resonance', 10, '10%'], ['Pan', 50, 'C'], ['Level', 100, '0.0 dB', false]]]],
 ];
-const BY_ID = Object.fromEntries(PIECES.map(p => [p.id, p]));
-PIECES.forEach(p => { seedN = 7 + p.id.length * 13; p.html = p.mock(); });
-const ident = p => PLUG[p.p].name + ' · ' + p.name;
+const SYNTH_SETTINGS = [
+  [['OSC', 0, [['Shape A', 66, 'saw'], ['Shape B', 100, 'square'], ['Tune B', 50, '0.0 st'], ['Detune', 20, '12 ct', true, true], ['Mix B', 30, '30%'], ['Sub', 50, '50%'], ['Noise', 5, '5%'], ['FM', 10, '10%']]], ['FILTER', 1, [['Cutoff', 45, '1.2 kHz'], ['Resonance', 30, '30%'], ['Env amount', 55, '18.0 st'], ['Filter decay', 40, '180 ms'], ['Drive', 20, '20%']]]],
+  [['AMP', 2, [['Attack', 10, '4 ms'], ['Decay', 40, '420 ms'], ['Sustain', 60, '60%'], ['Release', 35, '220 ms']]], ['MOTION', 3, [['LFO rate', 40, '2.1 Hz'], ['Vibrato', 5, '0.1 st'], ['Wobble', 0, '0.00 oct'], ['Glide', 10, '2 ms']]], ['OUT', 4, [['Bits', 0, '16.0 bits'], ['Width', 40, '40%'], ['Level', 100, '0.0 dB', false]]]],
+];
+const kpad = (n, name, col, sound) => '<div class="k' + (name ? ' full' : '') + '" style="--kc:' + (col || 'var(--edge)') + '"><span class="n">' + n + '</span>' + (name ? '<span class="x">×</span><span class="nm">' + esc(name) + '</span>' + sound : '<span class="dr">drop</span>') + '</div>';
+const keepRow = (pads) => '<div class="keep">' + pads.join('') + '</div>';
+const laneHead = (l, first, second, layer, locked) => '<div class="lane" style="--lc:' + LANE_C[l] + '"><i></i><span class="s1">' + esc(first) + '</span><span class="s2' + (second === '+' ? ' empty' : '') + '">' + esc(second) + '</span>' + b(layer, layer !== 'One', '" style="--on:var(--parent)') + b(locked ? 'Held' : 'Lock', locked, '" style="--on:#b39ddb') + '</div>';
+const unitCol = (k, name, col, params, locked) => '<div class="unitcol" style="--uc:' + col + '"><div class="un"><span class="n">' + k + '</span><b>' + esc(name) + '</b></div>' + R(b(locked ? 'Locked' : 'Lock', locked, '" style="--on:' + col), b('x', false, '" style="--on:var(--warn)')) + params.map(([p, v, out]) => '<div class="lr"><span>' + esc(p) + '</span><u>' + esc(out) + '</u></div>' + sl(v)).join('') + '</div>';
+const dial = (t, v) => '<span class="dial"><i></i><span>' + esc(t) + ' <b>' + esc(v) + '</b></span></span>';
+
+// ---------- Breaks 2 pieces
+const bb2DrumTile = (i, st) => tile(i, envSvg([5, 4, 2, 3, 5]), ['52 Hz  320 ms', '188 Hz  140 ms', '310 Hz  45 ms', '64 Hz  410 ms'][i % 4], st);
+const bb2LoopTile = (i, st) => tile(i, gridSvg(false, true), 'swing ' + [58, 61, 56, 63][i % 4] + '%  ' + [14, 17, 12, 19][i % 4] + ' hits', st);
+const bb2Keep = () => keepRow([kpad(36, 'Kick 1', 'var(--l-kick)', envSvg([5, 4, 2, 3, 5])), kpad(37, 'Snare 1', 'var(--l-snare)', envSvg([5, 4, 2, 3, 5])), kpad(38, 'Hats 1', 'var(--l-hat)', envSvg([5, 4, 2, 3, 5])), kpad(39, 'Hats 2', 'var(--l-hat)', envSvg([5, 4, 2, 3, 5])), kpad(40, 'Drum 1', '#c9c6bf', envSvg([5, 4, 2, 3, 5])), kpad(41), kpad(42), kpad(43)]);
+const bb2Slots = () => keepRow([1, 2, 3, 4, 5, 6, 7, 8].map(s => s < 4 ? '<div class="k full" style="--kc:var(--edge)"><span class="n">' + s + '  ' + (47 + s) + '</span><span class="x">×</span>' + gridSvg(false) + '</div>' : kpad(s + '  ' + (47 + s))));
+const bb2ZoneRow = () => R(lab('ZONE'), bs(['None', 'Kick', 'Snare', 'Hats', 'Perc'], 1), gap, b('Back'), b('New'));
+const bb2LoopRow = () => R(lab('LOOP'), b('On', true), bs(['Quarters', 'Boom bap', '16ths', 'In break'], 1), lab('SPREAD'), sl(48), val('0.25'));
+const bb2StyleRow = () => R(lab('STYLE'), bs(['None', 'Boom bap', 'Lo-fi', 'Strung', 'Neo soul'], 1), gap, b('Back'), b('New'));
+const bb2Transport = () => R(b('Playing', true), b('⇲ Drag MIDI', false, 'drag'), lab('SWING'), sl(32), val('58%'), lab('PULL'), sl(60, 'var(--parent)'), val('firm'), lab('SPREAD'), sl(48), val('0.25'));
+const bb2LoopPanel = () => '<div class="panel"><div class="ph2"><b>LOOP A ★</b><span>Click to add a hit, drag to move it (Shift snaps), up and down for velocity, click it to remove.</span></div>' +
+  '<div class="r" style="padding-left:40%"><span class="val" style="flex:1;display:flex;justify-content:space-between">' + '<span>1</span><span>e</span><span>&amp;</span><span>a</span><span>2</span><span>e</span><span>&amp;</span><span>a</span><span>3</span><span>e</span><span>&amp;</span><span>a</span><span>4</span><span>e</span><span>&amp;</span><span>a</span></span></div>' +
+  RF('<div style="display:flex;flex-direction:column;justify-content:space-around;width:40%;flex:none">' + laneHead(3, 'Drum 1', '+', 'One', true) + laneHead(2, 'Hats 1', 'Hats 2', 'Stack', false) + laneHead(1, 'Snare 1', 'Snare 1', '18ms', false) + laneHead(0, 'Kick 1', '+', 'One', false) + '</div>', gridSvg(true, true)) +
+  R(lab('THIS LOOP\'S SWING'), sl(32), val('58%')) + note('Boom bap sits around 90 BPM; Live is at 92. Style, swing and pull steer the next breed or New, firmly. Each lane plays kept drums with its label, then Drum pads; drag a pad onto a sound to choose it.') + '</div>';
+const bb2DrumSettings = () => settingsPanel('HEARING A', 'Drag to change it. Locks keep a setting when breeding.', DRUM_SETTINGS);
+
+// ---------- Synth 2 pieces
+const bs2SoundTile = (i, st) => tile(i, waveSvg([8, 5, 4, 4, 3]), ['1.2 kHz  4 ms', '640 Hz  2 ms', '3.4 kHz  210 ms', '880 Hz  12 ms'][i % 4], st);
+const bs2LoopTile = (i, st) => tile(i, rollSvg(false, true), ['Bass 1  12 notes', 'Bass 1  9 notes', 'Keys 1  16 notes', 'Bass 1  11 notes'][i % 4], st);
+const zc = { None: '#c9c9c9', Bass: '#ff6b6b', Keys: '#7cc6fe', Lead: '#f4d35e', Pad: '#d59bf6', Pluck: '#9be564' };
+const bs2Keep = () => keepRow([kpad(1, 'Bass 1', zc.Bass, waveSvg([8, 5, 4, 4, 3])), kpad(2, 'Keys 1', zc.Keys, waveSvg([8, 5, 4, 4, 3])), kpad(3, 'Lead 1', zc.Lead, waveSvg([8, 5, 4, 4, 3])), kpad(4, 'Synth 1', zc.None, waveSvg([8, 5, 4, 4, 3])), kpad(5), kpad(6), kpad(7), kpad(8)]);
+const bs2Slots = () => keepRow([1, 2, 3, 4, 5, 6, 7, 8].map(s => s < 4 ? '<div class="k full" style="--kc:var(--edge)"><span class="n">' + s + '  ' + [4, 2, 8][s - 1] + ' bars</span><span class="x">×</span>' + rollSvg(false) + '<span class="n">' + ['Bass 1', 'Keys 1', 'Bass 1'][s - 1] + '</span></div>' : kpad(s)));
+const bs2ZoneRow = () => R(lab('ZONE'), bs(['None', 'Bass', 'Keys', 'Lead', 'Pad', 'Pluck'], 1), gap, b('Back'), b('New'));
+const bs2RiffRow = () => R(lab('RIFF'), bs(['Off', 'Bass', 'Chords', 'Arp', 'In loop'], 1), lab('SPREAD'), sl(48), val('0.25'));
+const bs2LoopBar = () => R(lab('BARS'), bs(['2', '4', '8'], 1), lab('KEY'), b('A'), lab('SCALE'), b('Dorian'), gap, b('Back'), b('New'));
+const bs2Transport = () => R(b('Playing', true), b('⇲ Drag MIDI', false, 'drag'), lab('OCTAVES'), '<span class="sl nk" style="--v:50%;--sc:var(--parent);background:linear-gradient(90deg,var(--tile) 25%,var(--parent) 25%,var(--parent) 50%,var(--tile) 50%)"></span>', val('C2 to C4'), lab('SPREAD'), sl(48), val('0.25'));
+const TRAITS = [['Tonal', 'Atonal', '#7cc6fe', 20], ['Mono', 'Poly', '#d59bf6', 30], ['Melodic', 'Rhythmic', '#ff8c69', 60], ['On beat', 'Off beat', '#f4d35e', 40], ['Even', 'Dynamic', '#ff6b6b', 50], ['Clustered', 'Open', '#9be564', 35], ['Sparse', 'Dense', '#6ee7d8', 45], ['Short', 'Long', '#ffa94d', 25]];
+const traitRow = ([lo, hi, c, v], i) => R('<span style="width:44px;flex:none">' + lo + '</span>', sl(v, c), '<span style="width:44px;flex:none;text-align:right">' + hi + '</span>', b(i === 2 ? 'Locked' : 'Lock', i === 2, '" style="--on:#7cc6fe'));
+const bs2Traits = () => '<div class="cols" style="flex:none">' + [0, 1].map(c => '<div class="col" style="gap:3px">' + TRAITS.slice(c * 4, c * 4 + 4).map((t, k) => traitRow(t, c * 4 + k)).join('') + '</div>').join('') + '</div>';
+const bs2LockStrip = () => R(lab('LOCK'), '<svg class="svgbox" style="height:12px;flex:1" viewBox="0 0 160 8" preserveAspectRatio="none" aria-hidden="true"><rect width="160" height="8" rx="2" fill="#292d36"/>' + Array.from({ length: 17 }, (_, k) => '<rect x="' + k * 10 + '" y="' + (k % 4 ? 2 : 0) + '" width="0.6" height="' + (k % 4 ? 4 : 8) + '" fill="#3a3f4b"/>').join('') + '<rect x="40" y="0.5" width="30" height="7" rx="2" fill="#7cc6fe" opacity="0.75"/></svg>');
+const bs2PlayingHead = () => R('<span class="title">PLAYING A ★</span>', '<span class="chip2" style="--kc:' + zc.Bass + '">♪ Bass 1</span>', '<span class="note" style="margin-left:auto">Click to add, drag to move, drag the end to lengthen, click to remove. Shift snaps.</span>');
+const bs2LoopPanel = () => '<div class="panel">' + bs2PlayingHead() + RF('<div style="display:flex;flex-direction:column;justify-content:space-between;font:8px var(--mono);width:22px;flex:none"><span>C4</span><span>C3</span><span>C2</span></div>', rollSvg(true, true)) + bs2LockStrip() + bs2Traits() + note('Key A Dorian guides Tonal. Traits redraw on release. Live is at 92 BPM.') + '</div>';
+const bs2SoundSettings = () => settingsPanel('HEARING A', 'Drag to change it. Locks keep a setting when breeding.', SYNTH_SETTINGS);
+
+// ---------- Effects pieces
+const beRow1 = () => R(lab('CHARACTER'), bs(['None', 'Space', 'Dirt', 'Motion', 'Glitch'], 2), b('Wild', false, '" style="--on:var(--warn)'), b('Back'), b('Fresh litter'));
+const beIO = () => R(b('Loop is input', true, '" style="--on:var(--parent)'), b('Bypass', false, '" style="--on:var(--warn)'), '<span style="display:flex;flex-direction:column;flex:1;gap:2px"><span class="val" style="color:var(--muted)">OUT 0.0 dB</span>' + sl(67, 'var(--fg)') + '</span>');
+const beStatus = () => R('<span class="val" style="color:var(--muted)">SPREAD</span>', '<span class="sl nk" style="--v:48%;max-width:80px"></span>', '<span class="val" style="color:var(--muted)">0.250   gen 3</span>', gap, '<span class="val" style="color:var(--muted)">LIMITER idle</span>');
+const beCard = (i, st) => '<div class="t' + (st === 'hear' ? ' hear' : '') + '"><div class="th"><b>' + 'ABCDEF'[i] + '</b><span class="val" style="color:var(--muted)">mix ' + [64, 48, 80, 55, 71, 40][i] + '%</span>' + (st === 'par' ? '<em class="par">★ parent</em>' : st === 'hear' ? '<em>hearing</em>' : '') + '</div>' + chainSvg(2 + (i * 3) % 4) + '<div class="acts">' + b(st === 'par' ? 'Breed again' : 'Breed') + b('Cross with hearing', false, st === 'hear' ? 'off' : '') + '</div></div>';
+const beCards = () => '<div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">' + [0, 1, 2, 3, 4, 5].map(i => beCard(i, i === 0 ? 'hear' : i === 1 ? 'par' : '')).join('') + '</div>';
+const beUnits = () => [unitCol(1, 'Drive', '#e4572e', [['Amount', 40, 'x5.2'], ['Fold', 20, '20%'], ['Tone', 60, '2.6 kHz'], ['Bias', 50, '+0.00']], false), unitCol(2, 'Crush', '#f2c14e', [['Bits', 30, '11.7 bits'], ['Rate', 35, '7.7 kHz'], ['Jitter', 10, '10%'], ['Mix', 70, '70%']], true), unitCol(3, 'Comp', '#9be564', [['Threshold', 55, '-23 dB'], ['Ratio', 40, '3.9:1'], ['Attack', 30, '1.1 ms'], ['Release', 45, '139 ms']], false)];
+const beChain = () => '<div class="panel">' + R('<span class="title">HEARING A</span>', val('MIX 64%'), '<span class="sl" style="--v:64%;max-width:120px"></span>', '<span class="note">Drag a setting to change it. Lock keeps an effect as it is when breeding. x removes it.</span>') +
+  '<div class="r fill" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px">' + beUnits().join('') + '<div class="note" style="grid-column:span 3;margin:auto;text-align:center">Breeding can add effects here, up to six. Wild adds them more often.</div></div></div>';
+
+// ---------- the pieces: id, plugin, side, name, description, size (12 columns, 66 px rows), mock
+const P = [];
+const add = (p, side, id, name, desc, w, h, mock, opts) => P.push(Object.assign({ p, side, id, name, desc, w, h, mock }, opts || {}));
+// Breaks 2
+add('bb2', 'Window', 'bb2-title', 'Title bar', 'BLOODLINE BREAKS 2 and its one-line hint.', 12, 1, () => M(R('<span class="title">BLOODLINE BREAKS 2</span>', note('prototype  |  breed drums on the left, keep them, then breed loops that play them on the right'))));
+add('bb2', 'Left: drums', 'bb2-drums-panel', 'Whole drums panel', 'The left half as built: zone row, loop row, four drum tiles, settings, keep pads.', 6, 9, () => M(bb2ZoneRow(), bb2LoopRow(), tiles(4, 4, bb2DrumTile), bb2DrumSettings(), lab('KEEP'), bb2Keep()), { tall: true });
+add('bb2', 'Left: drums', 'bb2-zone', 'Zone row', 'ZONE: None, Kick, Snare, Hats, Perc. Back and New for the drum litter.', 6, 1, () => M(bb2ZoneRow()));
+add('bb2', 'Left: drums', 'bb2-audition', 'Loop row and spread', 'LOOP On/Off with Quarters, Boom bap, 16ths or In break (the candidate plays in the loop on its own lane). SPREAD slider, 0.02 to 0.5.', 6, 1, () => M(bb2LoopRow()));
+add('bb2', 'Left: drums', 'bb2-drum-litter', 'Drum litter, four tiles', 'A to D. Each shows body and noise envelopes over half a second and a bar per setting, Pitch and Decay, then Breed (Again on the parent) and Cross.', 6, 3, () => M(tiles(4, 4, bb2DrumTile)));
+add('bb2', 'Left: drums', 'bb2-drum-tile', 'One drum tile', 'A single candidate: letter, ★ parent or hearing, envelopes and setting bars, Breed and Cross. Drag it onto a keep pad.', 2, 3, () => M(tiles(1, 1, bb2DrumTile)));
+add('bb2', 'Left: drums', 'bb2-drum-settings', 'Hearing panel, 19 settings', 'HEARING A: Body and Noise in one column, Click, Grit and Out in the other. Each setting has a drag bar, its zone range underneath, and Lock.', 6, 5, () => M(bb2DrumSettings()), { tall: true });
+add('bb2', 'Left: drums', 'bb2-keep-pads', 'Keep pads, 36 to 43', 'KEEP: drag a drum here (again for a sibling). Named after the zone ("Kick 1", "Drum 1" from None). × clears; drag back to breed.', 6, 2, () => M(lab('KEEP  drag a drum here (again for a sibling); the loops on the right play only what you keep'), bb2Keep()));
+add('bb2', 'Right: loops', 'bb2-loops-panel', 'Whole loops panel', 'The right half as built: style row, transport row, four loop tiles, loop settings, keep slots.', 6, 9, () => M(bb2StyleRow(), bb2Transport(), tiles(4, 4, bb2LoopTile), bb2LoopPanel(), lab('KEEP'), bb2Slots()), { tall: true });
+add('bb2', 'Right: loops', 'bb2-style', 'Style row', 'STYLE: None, Boom bap, Lo-fi, Strung, Neo soul. Back and New for the loop litter.', 6, 1, () => M(bb2StyleRow()));
+add('bb2', 'Right: loops', 'bb2-transport', 'Playing, Drag MIDI, Swing, Pull, Spread', 'Playing switch (off is silent), Drag MIDI handle, SWING 50 to 75%, PULL loose to tight, SPREAD.', 6, 1, () => M(bb2Transport()));
+add('bb2', 'Right: loops', 'bb2-midi-note', 'Playing off note', 'Shown after a MIDI drag: "Playing off: the clip plays the kit".', 3, 1, () => M(note('Playing off: the clip plays the kit', true)));
+add('bb2', 'Right: loops', 'bb2-loop-litter', 'Loop litter, four tiles', 'A to D one-bar loops, lanes bottom up (kick, snare, hat, perc), drawn swung, locked lanes banded. Swing and hit count, Breed and Cross.', 6, 3, () => M(tiles(4, 4, bb2LoopTile)));
+add('bb2', 'Right: loops', 'bb2-loop-tile', 'One loop tile', 'A single loop candidate. Drag it onto a keep slot.', 2, 3, () => M(tiles(1, 1, bb2LoopTile)));
+add('bb2', 'Right: loops', 'bb2-loop-settings', 'Loop panel', 'LOOP A ★ with the counts row, four lane heads, the free grid, this loop\'s swing and the style note.', 6, 5, () => M(bb2LoopPanel()), { tall: true });
+add('bb2', 'Right: loops', 'bb2-lane-head', 'Lane head', '[first sound | second sound][One/Stack/Flam ms][Lock]. Drop a kept pad on either half to set it.', 3, 1, () => M(laneHead(2, 'Hats 1', 'Hats 2', 'Stack', false), laneHead(1, 'Snare 1', '+', 'One', true)));
+add('bb2', 'Right: loops', 'bb2-free-grid', 'Free grid', 'Hits anywhere: click to add, drag sideways freely, up and down for velocity, Shift snaps, click to remove.', 6, 2, () => M(gridSvg(true, true)));
+add('bb2', 'Right: loops', 'bb2-loop-swing', 'This loop\'s swing', 'Changes only the heard loop.', 6, 1, () => M(R(lab('THIS LOOP\'S SWING'), sl(32), val('58%'))));
+add('bb2', 'Right: loops', 'bb2-keep-slots', 'Keep slots, 48 to 55', 'KEEP: drag a loop here; click to play it, or play 48 to 55. × clears; drag back to breed.', 6, 2, () => M(lab('KEEP  drag a loop here; click to play it, or play 48 to 55'), bb2Slots()));
+// Synth 2
+add('bs2', 'Window', 'bs2-title', 'Title bar', 'BLOODLINE SYNTH 2 and its one-line hint.', 12, 1, () => M(R('<span class="title">BLOODLINE SYNTH 2</span>', note('prototype  |  breed sounds on the left, keep them, then breed loops that play them on the right'))));
+add('bs2', 'Left: sounds', 'bs2-sounds-panel', 'Whole sounds panel', 'The left half as built: zone row, riff row, four sound tiles, 24 settings, keep pads.', 6, 9, () => M(bs2ZoneRow(), bs2RiffRow(), tiles(4, 4, bs2SoundTile), bs2SoundSettings(), lab('KEEP'), bs2Keep()), { tall: true });
+add('bs2', 'Left: sounds', 'bs2-zone', 'Zone row', 'ZONE: None, Bass, Keys, Lead, Pad, Pluck. Back and New for the sound litter.', 6, 1, () => M(bs2ZoneRow()));
+add('bs2', 'Left: sounds', 'bs2-riff', 'Riff row and spread', 'RIFF: Off, Bass, Chords, Arp, or In loop (the candidate plays the right panel\'s loop). SPREAD slider.', 6, 1, () => M(bs2RiffRow()));
+add('bs2', 'Left: sounds', 'bs2-sound-litter', 'Sound litter, four tiles', 'A to D. Two cycles of the oscillator mix with the cutoff as a shaded floor, a bar per setting, Cutoff and Attack, Breed and Cross.', 6, 3, () => M(tiles(4, 4, bs2SoundTile)));
+add('bs2', 'Left: sounds', 'bs2-sound-tile', 'One sound tile', 'A single candidate. Drag it onto a keep pad.', 2, 3, () => M(tiles(1, 1, bs2SoundTile)));
+add('bs2', 'Left: sounds', 'bs2-sound-settings', 'Hearing panel, 24 settings', 'HEARING A: Osc and Filter in one column, Amp, Motion and Out in the other, each with Lock.', 6, 6, () => M(bs2SoundSettings()), { tall: true });
+add('bs2', 'Left: sounds', 'bs2-keep-pads', 'Keep pads, eight', 'KEEP: drag a sound here. Named after the zone ("Bass 1", "Synth 1" from None). The pad in the loop is outlined.', 6, 2, () => M(lab('KEEP  drag a sound here; the loops on the right play what you keep'), bs2Keep()));
+add('bs2', 'Right: loops', 'bs2-loops-panel', 'Whole loops panel', 'The right half as built: bars, key and scale, transport, four loop tiles, the loop panel, keep slots.', 6, 10, () => M(bs2LoopBar(), bs2Transport(), tiles(4, 4, bs2LoopTile), bs2LoopPanel(), lab('KEEP'), bs2Slots()), { tall: true });
+add('bs2', 'Right: loops', 'bs2-loopbar', 'Bars, key, scale', 'BARS 2, 4 or 8; KEY and SCALE cycle on click; Back and New for the loop litter.', 6, 1, () => M(bs2LoopBar()));
+add('bs2', 'Right: loops', 'bs2-transport', 'Playing, Drag MIDI, Octaves, Spread', 'Playing switch, Drag MIDI, OCTAVES dual slider C0 to C8, SPREAD.', 6, 1, () => M(bs2Transport()));
+add('bs2', 'Right: loops', 'bs2-loop-litter', 'Loop litter, four tiles', 'A to D note loops with time locks shaded, the sound and note count, Breed and Cross.', 6, 3, () => M(tiles(4, 4, bs2LoopTile)));
+add('bs2', 'Right: loops', 'bs2-loop-tile', 'One loop tile', 'A single note loop. Drag it onto a keep slot.', 2, 3, () => M(tiles(1, 1, bs2LoopTile)));
+add('bs2', 'Right: loops', 'bs2-loop-panel', 'Loop panel', 'PLAYING A ★ with the sound chip, piano roll, lock strip, eight traits and the guidance line.', 6, 6, () => M(bs2LoopPanel()), { tall: true });
+add('bs2', 'Right: loops', 'bs2-playing-head', 'Playing head and sound chip', 'PLAYING A ★ and the ♪ sound chip: click to cycle kept sounds, or drop a kept pad on it.', 6, 1, () => M(bs2PlayingHead()));
+add('bs2', 'Right: loops', 'bs2-roll', 'Piano roll', 'Pitch up, time across, scale rows shaded, bar lines. Add, move, lengthen, remove; Shift snaps.', 6, 3, () => M(RF('<div style="display:flex;flex-direction:column;justify-content:space-between;font:8px var(--mono);width:22px;flex:none"><span>C4</span><span>C3</span><span>C2</span></div>', rollSvg(true, true))));
+add('bs2', 'Right: loops', 'bs2-lock-strip', 'Lock strip', 'LOCK: drag along it to lock a stretch of time for breeding; click a locked stretch to unlock it.', 6, 1, () => M(bs2LockStrip()));
+add('bs2', 'Right: loops', 'bs2-traits', 'Eight traits', 'Two columns of four: Tonal/Atonal, Mono/Poly, Melodic/Rhythmic, On beat/Off beat, Even/Dynamic, Clustered/Open, Sparse/Dense, Short/Long. Each with Lock; redraws on release.', 6, 2, () => M(bs2Traits()));
+add('bs2', 'Right: loops', 'bs2-keep-slots', 'Keep slots, eight', 'KEEP: drag a loop here; click to play it. Each shows its bars and sound.', 6, 2, () => M(lab('KEEP  drag a loop here; click to play it'), bs2Slots()));
+// Effects
+add('be', 'Window', 'be-title', 'Title bar', 'BLOODLINE EFFECTS and its one-line hint.', 12, 1, () => M(R('<span class="title">BLOODLINE EFFECTS</span>', note('spike  |  on a drum pad\'s chain or on the drum bus. Click to hear, Breed to breed, Cross to mate'))));
+add('be', 'Window', 'be-window', 'Whole window', 'As built: character row, input and output, status, six chain cards, the heard chain.', 12, 8, () => M(R(beRow1(), gap, beIO()), beStatus(), beCards(), beChain()), { tall: true });
+add('be', 'Top rows', 'be-character', 'Character, Wild, Back, Fresh litter', 'CHARACTER: None, Space, Dirt, Motion, Glitch. Wild makes structural jumps three times as likely.', 6, 1, () => M(beRow1()));
+add('be', 'Top rows', 'be-io', 'Input, Bypass, Out', 'Loop is input / Track is input, Bypass (fades), OUT -24 to +12 dB.', 5, 1, () => M(beIO()));
+add('be', 'Top rows', 'be-status', 'Spread, generation, limiter', 'SPREAD meter and value, generation count, and the limiter: idle, or how many dB it is taking off.', 6, 1, () => M(beStatus()));
+add('be', 'Litter', 'be-cards', 'Six chain cards', 'A to F, three by two. Each shows its mix, a block per effect with a bar per setting, Breed (again) and Cross with hearing.', 12, 4, () => M(beCards()), { tall: true });
+add('be', 'Litter', 'be-card', 'One chain card', 'A single chain candidate.', 4, 2, () => M('<div class="tiles" style="grid-template-columns:1fr">' + beCard(0, 'hear') + '</div>'));
+add('be', 'Heard chain', 'be-chain', 'Heard chain panel', 'HEARING A with the MIX slider, then a column per effect: number, name, Lock, x, four settings.', 12, 4, () => M(beChain()), { tall: true });
+add('be', 'Heard chain', 'be-unit', 'One effect column', 'An effect in the heard chain: Lock, x and its four settings.', 2, 4, () => M(beUnits()[1]), { tall: true });
+add('be', 'Ideas', 'be-stack', 'Instance chain with +', 'Your note: a drum or bus holds a chain of Bloodline Effects instances, none at first; + adds another. Not in a build yet.', 6, 2, () => M(R(lab('BLOODLINE EFFECTS'), gap, b('+', false, 'drag')), '<div class="panel" style="flex:none">' + R('<span class="title">▾ 1</span>', note('Dirt · Drive → Crush → Comp · mix 64%')) + '</div>', '<div class="panel" style="flex:none">' + R('<span class="title">▸ 2</span>', note('Space · Reverb → Width · mix 40%')) + '</div>'), { isNew: true });
+// Groove research
+add('gr', 'Pattern settings', 'gr-dials', 'Groove, Complexity, Forward, Behind', 'The four pattern settings. Groove: swing that eases with tempo, accents, drift. Complexity: a syncopation target. Forward and Behind: early or late lanes, up to 30 ms.', 6, 1, () => M(R(dial('Groove', '45'), dial('Complexity', '40'), dial('Forward', '10'), dial('Behind', '35'))), { isNew: true });
+add('gr', 'Pattern settings', 'gr-sliders', 'The four as sliders', 'The same settings in the Breaks 2 slider style, to sit in the transport row in place of Swing and Pull.', 6, 1, () => M(R(lab('GROOVE'), sl(45), val('45'), lab('COMPLEX'), sl(40, 'var(--parent)'), val('40'), lab('FWD'), sl(10), val('10'), lab('BEHIND'), sl(35), val('35'))), { isNew: true });
+add('gr', 'Pattern settings', 'gr-feel', 'Lane feel', 'Forward, On or Behind for one lane, to sit in a lane head. Behind is later, louder and longer together.', 3, 1, () => M(R(bs(['Fwd', 'On', 'Behind'], 2))), { isNew: true });
+add('gr', 'Pattern settings', 'gr-sync', 'Syncopation meter', 'Weighted kick over snare over hat, against a medium band.', 6, 1, () => M('<svg class="svgbox" style="height:12px;flex:none" viewBox="0 0 160 10" preserveAspectRatio="none" aria-hidden="true"><rect x="35" y="0" width="58" height="10" fill="rgba(242,193,78,0.2)"/><rect x="62" y="1" width="3" height="8" fill="var(--p-gr)"/></svg>', R(note('square'), gap, note('medium, the research sweet spot'), gap, note('busy'))), { isNew: true });
+add('gr', 'Pattern settings', 'gr-tempo', 'Swing eases with tempo', 'A switch: less swing at faster tempos, or MPC-style fixed.', 3, 1, () => M(R(b('Ease with tempo', true))), { isNew: true });
+add('gr', 'Pattern settings', 'gr-writing', 'What the pattern is writing', 'A line saying which parts it writes for which pads, and why (no snare kept, so the kick takes 2 and 4).', 6, 1, () => M(note('Writing kick and hat parts. No snare kept, so the kick may land on 2 and 4 and the hats accent the backbeat.')), { isNew: true });
+// Shared
+add('sh', 'Page', 'sh-transport', 'Transport', 'For a web version with no host: Play or Stop, BPM, position.', 4, 1, () => M(R(b('Play', true), b('− 90 BPM +'), val('1.3.2'))));
+add('sh', 'Page', 'sh-downloads', 'Downloads', 'Loop and stems as a zip, and the page as HTML.', 4, 1, () => M(R(b('Loop and stems .zip'), b('This page .html'))));
+add('sh', 'Page', 'sh-heading', 'Section heading', 'A numbered heading to mark a stage, such as "1 Drums".', 12, 1, () => M(R('<span class="title">1   Drums</span>', gap, '<span class="title">2   Breaks</span>')));
+// Older builds
+add('bd', 'Older build', 'bd-workbench', 'Workbench row', '[A][B][C][Choose] on pads 36 to 39.', 5, 1, () => M(R(b('A'), b('B ★', true), b('C'), b('Choose'))));
+add('bd', 'Older build', 'bd-slot', 'Kit slot', '[A][B][C][Random] with Open, move, Clear.', 5, 1, () => M(R(b('A'), b('B'), b('C'), b('Random'), gap, b('Open'), b('Clear'))));
+add('bd', 'Older build', 'bd-zone', 'Zone switch', 'None, Kick, Snare, Hats.', 3, 1, () => M(R(bs(['None', 'Kick', 'Snare', 'Hats'], 1))));
+add('bd2', 'Older build', 'bd2-litter', 'Sound litter, eight tiles', 'A to H with Breed and Cross.', 6, 3, () => M(tiles(8, 4, bb2DrumTile)));
+add('bd2', 'Older build', 'bd2-loop', 'Loop audition', 'Quarters, Boom bap or 16ths.', 3, 1, () => M(R(bs(['Quarters', 'Boom bap', '16ths'], 1))));
+add('bb', 'Older build', 'bb-litter', 'Loop litter, eight tiles', 'A to H one-bar loops.', 8, 3, () => M(tiles(8, 4, bb2LoopTile)));
+add('bb', 'Older build', 'bb-style', 'Style', 'Boom bap, Lo-fi, Dilla, Trap, Drill, West coast, Free.', 6, 1, () => M(R(bs(['Boom bap', 'Lo-fi', 'Dilla', 'Trap', 'Drill', 'West coast', 'Free'], 0))));
+add('bb', 'Older build', 'bb-taste', 'Taste and Forget taste', 'What it has learned from your Breeds; Forget wipes it.', 3, 1, () => M(R(note('Taste: 14 choices'), b('Forget taste'))));
+add('bs', 'Older build', 'bs-keys', 'On-screen keys', 'Play the heard sound by mouse.', 6, 2, () => M('<div class="r fill">' + '<span style="flex:1;background:#d9d4cb;border:1px solid var(--bg);border-radius:0 0 2px 2px"></span>'.repeat(14) + '</div>'));
+add('bs', 'Older build', 'bs-litter', 'Sound litter, eight tiles', 'A to H with Breed and Cross.', 6, 3, () => M(tiles(8, 4, bs2SoundTile)));
+
+const BY_ID = Object.fromEntries(P.map(p => [p.id, p]));
+P.forEach((p, i) => { seedN = 7 + i * 131; p.html = p.mock(); });
+const ident = p => PLUG[p.p].name + (PLUG[p.p].build ? ' (' + PLUG[p.p].build + ')' : '') + ' · ' + p.name;
+const style = p => '--c:' + PLUG[p.p].c + ';--a:' + ACCENT[p.p];
 
 // ---------- state
-const KEY = 'bloodline-ui-kit-layout';
-let layout = [], uid = 1, filter = new Set(Object.keys(PLUG)), query = '';
+const KEY = 'bloodline-ui-kit-layout-2';
+const NEWEST = ['bb2', 'bs2', 'be', 'gr', 'sh'], OLDER = ['bd', 'bd2', 'bb', 'bs'];
+let layout = [], uid = 1, filter = new Set(NEWEST), query = '';
 const EXAMPLE = [
-  ['sh-transport', 0, 0, 5, 1], ['sh-downloads', 7, 0, 5, 1],
-  ['sh-heading', 0, 1, 12, 1],
-  ['bd-slot', 0, 2, 6, 2], ['bd-inspector', 6, 2, 6, 6],
-  ['be-stack', 0, 4, 6, 2], ['bd-slot-blank', 0, 6, 6, 1], ['bd-workbench', 0, 7, 6, 2], ['bd-zone', 0, 9, 4, 1],
-  ['sh-heading', 0, 10, 12, 1],
-  ['gr-dials', 0, 11, 12, 2], ['gr-writing', 0, 13, 12, 1],
-  ['bb-litter', 0, 14, 12, 3], ['bb2-freegrid', 0, 17, 8, 3], ['gr-sync', 8, 17, 4, 1], ['gr-feel', 8, 18, 4, 1], ['bb2-lanehead', 8, 19, 4, 1],
+  ['bb2-title', 0, 0, 12, 1],
+  ['bb2-zone', 0, 1, 6, 1], ['bb2-style', 6, 1, 6, 1],
+  ['bb2-audition', 0, 2, 6, 1], ['gr-sliders', 6, 2, 6, 1],
+  ['bb2-drum-litter', 0, 3, 6, 3], ['bb2-loop-litter', 6, 3, 6, 3],
+  ['bb2-drum-settings', 0, 6, 6, 5], ['bb2-loop-settings', 6, 6, 6, 5],
+  ['bb2-keep-pads', 0, 11, 6, 2], ['bb2-keep-slots', 6, 11, 6, 2],
+  ['gr-writing', 6, 13, 6, 1], ['gr-sync', 0, 13, 6, 1],
+  ['be-stack', 0, 14, 6, 2], ['be-card', 6, 14, 4, 2],
+  ['be-chain', 0, 16, 12, 4],
 ];
 function loadExample() { layout = EXAMPLE.map(([id, x, y, w, h]) => ({ uid: uid++, id, x, y, w, h })); }
 try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (Array.isArray(s) && s.length) { layout = s.filter(it => BY_ID[it.id]); uid = Math.max(0, ...layout.map(it => it.uid)) + 1; } } catch (e) { /* storage blocked */ }
@@ -280,60 +417,67 @@ function save() { try { localStorage.setItem(KEY, JSON.stringify(layout)); } cat
 
 // ---------- palette
 const pal = document.getElementById('palette');
+function pieceCard(p) {
+  return '<div class="piece" data-piece="' + p.id + '" style="' + style(p) + '"><div class="head"><span class="name">' + esc(p.name) + '</span>' + (p.isNew ? '<span class="tagnew">new</span>' : '') +
+    '<button class="btn small" data-copy="' + p.id + '">Copy</button><button class="btn small" data-add="' + p.id + '">Add</button></div>' +
+    '<div class="ident">' + esc(ident(p)) + '</div><div class="preview' + (p.tall ? ' tall' : '') + '">' + p.html + '</div><div class="desc">' + esc(p.desc) + '</div></div>';
+}
+function groupHtml(k) {
+  const v = PLUG[k], list = P.filter(p => p.p === k && (!query || (ident(p) + ' ' + p.desc + ' ' + p.side).toLowerCase().includes(query)));
+  if (!list.length) return '';
+  let html = '<div class="group" style="--c:' + v.c + '"><div class="group-head"><h3><i></i>' + esc(v.name) + '</h3><small>' + (v.build ? (v.old ? 'last build ' : 'newest build ') + v.build + (v.run ? ' · ' + esc(v.run) : '') : esc(v.src)) + '</small><small>' + esc(v.note) + '</small></div>';
+  let side = '';
+  list.forEach(p => { if (p.side !== side && !v.old) { side = p.side; html += '<div class="sub">' + esc(side) + '</div>'; } html += pieceCard(p); });
+  return html + '</div>';
+}
 function drawPalette() {
   let html = '<input class="search" id="q" type="search" placeholder="Search pieces" aria-label="Search pieces" value="' + esc(query) + '"><div class="filters">' +
-    Object.entries(PLUG).map(([k, v]) => '<button class="chip" data-f="' + k + '" style="--c:' + v.c + '" aria-pressed="' + filter.has(k) + '"><i></i>' + esc(v.name) + '</button>').join('') + '</div>';
-  Object.entries(PLUG).forEach(([k, v]) => {
-    if (!filter.has(k)) return;
-    const list = PIECES.filter(p => p.p === k && (!query || (ident(p) + ' ' + p.desc).toLowerCase().includes(query)));
-    if (!list.length) return;
-    html += '<div class="group" style="--c:' + v.c + '"><h3><i></i>' + esc(v.name) + ' <small>' + esc(v.src) + '</small></h3>' +
-      list.map(p => '<div class="piece" data-piece="' + p.id + '" style="--c:' + v.c + '"><div class="head"><span class="name">' + esc(p.name) + '</span>' + (p.isNew ? '<span class="new">new</span>' : '') +
-        '<button class="btn small" data-copy="' + p.id + '">Copy</button><button class="btn small" data-add="' + p.id + '">Add</button></div>' +
-        '<div class="ident">' + esc(ident(p)) + '</div><div class="preview" style="--c:' + v.c + '">' + p.html + '</div><div class="desc">' + esc(p.desc) + '</div></div>').join('') + '</div>';
-  });
+    NEWEST.map(k => '<button class="chip" data-f="' + k + '" style="--c:' + PLUG[k].c + '" aria-pressed="' + filter.has(k) + '"><i></i>' + esc(PLUG[k].name) + '</button>').join('') + '</div>';
+  NEWEST.forEach(k => { if (filter.has(k)) html += groupHtml(k); });
+  const older = OLDER.map(groupHtml).join('');
+  if (older) html += '<details class="older"' + (query ? ' open' : '') + '><summary>Older builds (replaced by the ones above)</summary>' + older + '</details>';
   pal.innerHTML = html;
 }
 pal.addEventListener('input', e => { if (e.target.id === 'q') { query = e.target.value.trim().toLowerCase(); const pos = e.target.selectionStart; drawPalette(); const q = document.getElementById('q'); q.focus(); q.setSelectionRange(pos, pos); } });
 pal.addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.f) { const k = b.dataset.f; if (filter.has(k) && filter.size === Object.keys(PLUG).length) { filter = new Set([k]); } else if (filter.has(k)) { filter.delete(k); if (!filter.size) filter = new Set(Object.keys(PLUG)); } else filter.add(k); drawPalette(); }
-  if (b.dataset.copy) copy(ident(BY_ID[b.dataset.copy]));
-  if (b.dataset.add) { const p = BY_ID[b.dataset.add], y = layout.reduce((a, it) => Math.max(a, it.y + it.h), 0); layout.push({ uid: uid++, id: p.id, x: 0, y, w: p.w, h: p.h }); save(); drawBoard(); toast('Added ' + ident(p)); }
+  const bt = e.target.closest('button'); if (!bt) return;
+  if (bt.dataset.f) { const k = bt.dataset.f; if (filter.has(k) && filter.size === NEWEST.length) filter = new Set([k]); else if (filter.has(k)) { filter.delete(k); if (!filter.size) filter = new Set(NEWEST); } else filter.add(k); drawPalette(); }
+  if (bt.dataset.copy) copy(ident(BY_ID[bt.dataset.copy]));
+  if (bt.dataset.add) { const p = BY_ID[bt.dataset.add], y = layout.reduce((a, it) => Math.max(a, it.y + it.h), 0); layout.push({ uid: uid++, id: p.id, x: 0, y, w: p.w, h: p.h }); save(); drawBoard(); toast('Added ' + ident(p)); }
 });
 
 // ---------- board
 const board = document.getElementById('board');
 function cellW() { return board.clientWidth / COLS; }
-function overlaps(a, b) { return a.uid !== b.uid && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h; }
+function overlaps(a, c) { return a.uid !== c.uid && a.x < c.x + c.w && c.x < a.x + a.w && a.y < c.y + c.h && c.y < a.y + a.h; }
 function drawBoard() {
   const cw = cellW(), rows = Math.max(14, layout.reduce((a, it) => Math.max(a, it.y + it.h), 0) + 3);
   board.style.setProperty('--cw', cw + 'px'); board.style.setProperty('--rh', RH + 'px'); board.style.height = rows * RH + 'px';
   board.innerHTML = layout.map(it => {
-    const p = BY_ID[it.id], c = PLUG[p.p].c, clash = layout.some(o => overlaps(it, o));
-    return '<div class="placed' + (clash ? ' clash' : '') + '" data-uid="' + it.uid + '" style="--c:' + c + ';left:' + it.x * cw + 'px;top:' + it.y * RH + 'px;width:' + it.w * cw + 'px;height:' + it.h * RH + 'px">' +
+    const p = BY_ID[it.id], clash = layout.some(o => overlaps(it, o));
+    return '<div class="placed' + (clash ? ' clash' : '') + '" data-uid="' + it.uid + '" style="' + style(p) + ';left:' + it.x * cw + 'px;top:' + it.y * RH + 'px;width:' + it.w * cw + 'px;height:' + it.h * RH + 'px">' +
       '<div class="inner"><div class="ph" data-move="' + it.uid + '"><span class="ident" title="' + esc(p.desc) + '">' + esc(ident(p)) + '</span><button class="btn small" data-copy="' + it.uid + '">Copy</button><button class="btn small" data-del="' + it.uid + '" aria-label="Remove ' + esc(ident(p)) + '">×</button></div>' +
       '<div class="body">' + p.html + '</div></div><div class="rs" data-resize="' + it.uid + '" aria-hidden="true"></div></div>';
   }).join('');
 }
 board.addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.del) { layout = layout.filter(it => it.uid !== +b.dataset.del); save(); drawBoard(); }
-  if (b.dataset.copy) { const it = layout.find(x => x.uid === +b.dataset.copy); copy(ident(BY_ID[it.id])); }
+  const bt = e.target.closest('button'); if (!bt) return;
+  if (bt.dataset.del) { layout = layout.filter(it => it.uid !== +bt.dataset.del); save(); drawBoard(); }
+  if (bt.dataset.copy) { const it = layout.find(x => x.uid === +bt.dataset.copy); copy(ident(BY_ID[it.id])); }
 });
 
 // ---------- dragging (pointer events, so it works with touch too)
 let drag = null;
-function cellAt(clientX, clientY) { const r = board.getBoundingClientRect(), cw = r.width / COLS; return { x: Math.floor((clientX - r.left) / cw), y: Math.floor((clientY - r.top) / RH), inside: clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom }; }
+function cellAt(cx, cy) { const r = board.getBoundingClientRect(), cw = r.width / COLS; return { x: Math.floor((cx - r.left) / cw), y: Math.floor((cy - r.top) / RH), inside: cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom }; }
 function showDrop(x, y, w, h) { let d = board.querySelector('.drop'); if (!d) { d = document.createElement('div'); d.className = 'drop'; board.appendChild(d); } const cw = cellW(); Object.assign(d.style, { left: x * cw + 'px', top: y * RH + 'px', width: w * cw + 'px', height: h * RH + 'px' }); }
 function hideDrop() { const d = board.querySelector('.drop'); if (d) d.remove(); board.classList.remove('over'); }
 document.addEventListener('pointerdown', e => {
-  if (e.button !== 0 || e.target.closest('button, input, textarea') || e.target.closest('.piece .ident')) return;
+  if (e.button !== 0 || e.target.closest('button, input, textarea, summary') || e.target.closest('.piece .ident')) return;
   const pc = e.target.closest('.piece'), mv = e.target.closest('[data-move]'), rs = e.target.closest('[data-resize]');
   if (pc) drag = { kind: 'new', id: pc.dataset.piece, sx: e.clientX, sy: e.clientY, started: false };
   else if (mv) { const it = layout.find(x => x.uid === +mv.dataset.move), c = cellAt(e.clientX, e.clientY); drag = { kind: 'move', it, ox: c.x - it.x, oy: c.y - it.y, sx: e.clientX, sy: e.clientY, started: false }; }
   else if (rs) { const it = layout.find(x => x.uid === +rs.dataset.resize); drag = { kind: 'resize', it, sx: e.clientX, sy: e.clientY, w: it.w, h: it.h, started: true }; }
-  if (drag) { e.preventDefault(); }
+  if (drag) e.preventDefault();
 });
 document.addEventListener('pointermove', e => {
   if (!drag) return;
@@ -363,7 +507,7 @@ window.addEventListener('resize', drawBoard);
 
 // ---------- copy, export, import
 function layoutText() {
-  const items = layout.slice().sort((a, b) => a.y - b.y || a.x - b.x);
+  const items = layout.slice().sort((a, c) => a.y - c.y || a.x - c.x);
   const lines = items.map(it => 'Row ' + (it.y + 1) + (it.h > 1 ? ' to ' + (it.y + it.h) : '') + ', columns ' + (it.x + 1) + ' to ' + (it.x + it.w) + ': ' + ident(BY_ID[it.id]));
   return 'Bloodline UI Kit layout (12 columns, ' + items.length + ' pieces)\n' + lines.join('\n') + '\n\nLayout data: ' + JSON.stringify(items.map(it => [it.id, it.x, it.y, it.w, it.h]));
 }

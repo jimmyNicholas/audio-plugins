@@ -154,6 +154,20 @@ details.grp .sets { display: grid; gap: 2px; padding-bottom: 10px; }
 .cell i { position: absolute; left: 15%; right: 15%; bottom: 2px; border-radius: 2px; background: var(--kc); opacity: var(--o, 1); }
 .playhead { position: absolute; top: 16px; bottom: 0; width: 2px; background: var(--fg); opacity: 0.75; pointer-events: none; left: 0; }
 .map { font: 10.5px var(--mono); color: var(--muted); }
+.shape4 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.step { background: var(--tile); border-radius: 10px; padding: 8px; display: grid; gap: 6px; min-width: 0; }
+.step.fixed { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.step b { font-size: 13px; }
+.step small { display: block; font: 10px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stepc { display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; gap: 4px; align-items: center; }
+.stepc button { height: 38px; border-radius: 8px; border: 1px solid var(--edge); background: var(--panel); font-size: 18px; }
+.stepc button:disabled { opacity: 0.3; cursor: default; }
+.stepc .v { border: 0; background: none; font: 600 17px var(--mono); }
+.stepc .v.any { color: var(--muted); font: 600 13px var(--body); }
+.rowchips .chip { display: inline-flex; align-items: center; gap: 6px; }
+.rowchips .chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--kc); }
+.rowchips .chip[aria-pressed="true"] i { background: var(--bg); }
+.rowchips .chip em { font-style: normal; font: 700 10px var(--mono); }
 .barpick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
 .barpick button { height: 30px; border-radius: 6px; border: 1px solid var(--edge); background: var(--tile); font: 600 11px var(--mono); color: var(--muted); position: relative; overflow: hidden; }
 .barpick button[aria-pressed="true"] { border-color: var(--accent); color: var(--fg); }
@@ -348,6 +362,56 @@ function candidate(role, c, has, bars) {
   return g;
 }
 function pickBySync(cands, role, c) { const T = syncTarget(role, c); let best = cands[0], bs = 1e9; cands.forEach(g => { const d = Math.abs(lhl(g) - T) + R() * 0.6; if (d < bs) { bs = d; best = g; } }); return best; }
+
+// ---------- shape: how many quarters, eighths and sixteenths a bar, and how many notes in all, per row
+const CLS = s => s % 4 === 0 ? 'q' : s % 4 === 2 ? 'e' : 's';
+const KS = ['q', 'e', 's'], CAP = { q: 4, e: 4, s: 8 };
+const anyFixed = sh => sh.q >= 0 || sh.e >= 0 || sh.s >= 0 || sh.t >= 0;
+function expected(role, c, has, k) { let e = 0; for (let s = 0; s < 16; s++) if (CLS(s) === k) e += odds(role, c, has, s); if (role === 'snare' && k === 's') e += c * 2.5; return e; }
+function totalRange(sh) { const fixed = KS.filter(k => sh[k] >= 0).reduce((a, k) => a + sh[k], 0), room = KS.filter(k => sh[k] < 0).reduce((a, k) => a + CAP[k], 0); return [fixed, fixed + room]; }
+function resolve(sh, role, c, has, cur) { // the counts for one bar: fixed ones as set, Any ones drawn, then fitted to Total
+  const out = {}, any = [];
+  KS.forEach(k => { if (sh[k] >= 0) out[k] = sh[k]; else { const v = cur ? cur[k] + (R() < 0.3 ? (R() < 0.5 ? -1 : 1) : 0) : Math.round(expected(role, c, has, k) + gauss() * 0.6); out[k] = clamp(v, 0, CAP[k]); any.push(k); } });
+  if (sh.t >= 0 && any.length) {
+    const [lo, hi] = totalRange(sh), rem = clamp(sh.t, lo, hi) - lo, w = any.map(k => out[k] + 0.5), tot = w.reduce((a, b) => a + b, 0);
+    any.forEach((k, i) => { out[k] = Math.min(CAP[k], Math.floor(rem * w[i] / tot)); });
+    let left = rem - any.reduce((a, k) => a + out[k], 0), guard = 0;
+    while (left > 0 && guard++ < 60) { const k = any[Math.floor(R() * any.length)]; if (out[k] < CAP[k]) { out[k]++; left--; } }
+  }
+  return out;
+}
+function velFor(role, k, s) { if (role === 'snare' && !isAnchor(role, s)) return k === 's' ? 0.2 + R() * 0.12 : 0.55; if (role === 'hat') return k === 'q' ? 0.85 : k === 'e' ? 0.6 : 0.42; return s % 16 === 0 ? 1 : k === 'q' ? 0.9 : k === 'e' ? 0.8 : 0.7; }
+function weightedPick(list, w) { let t = w.reduce((a, b) => a + b, 0) * R(), j = 0; for (; j < list.length - 1; j++) { t -= w[j]; if (t <= 0) break; } return j; }
+function barFrom(role, c, has, counts) {
+  const bar = new Array(16).fill(0);
+  KS.forEach(k => { const pos = []; for (let s = 0; s < 16; s++) if (CLS(s) === k) pos.push(s);
+    for (let i = 0; i < counts[k] && pos.length; i++) { const j = weightedPick(pos, pos.map(s => (odds(role, c, has, s) + 0.03) * (isAnchor(role, s) ? 20 : 1))); bar[pos[j]] = velFor(role, k, pos[j]); pos.splice(j, 1); } });
+  return bar;
+}
+function shapedCandidate(role, c, has, bars, sh) {
+  const counts = resolve(sh, role, c, has), b0 = barFrom(role, c, has, counts), row = [];
+  for (let b = 0; b < bars; b++) { let bar = b0.slice(); if (b > 0 && R() < 0.2 + 0.4 * c) { const k = KS[Math.floor(R() * 3)], fresh = barFrom(role, c, has, { q: 0, e: 0, s: 0, [k]: counts[k] }); bar = b0.map((v, s) => CLS(s) === k ? fresh[s] : v); } row.push(...bar); }
+  return row;
+}
+function countsOf(row, b) { const c = { q: 0, e: 0, s: 0 }; for (let s = 0; s < 16; s++) if (row[b * 16 + s]) c[CLS(s)]++; return c; }
+function shapedMutate(row, role, c, has, spread, sh) {
+  const h = row.slice(), bars = h.length / 16;
+  for (let b = 0; b < bars; b++) {
+    const tgt = resolve(sh, role, c, has, spread ? countsOf(h, b) : null);
+    if (!spread) KS.forEach(k => { if (sh[k] < 0 && sh.t < 0) tgt[k] = countsOf(h, b)[k]; }); // fitting only: leave Any alone unless Total asks
+    KS.forEach(k => {
+      const pos = []; for (let s = 0; s < 16; s++) if (CLS(s) === k) pos.push(b * 16 + s);
+      let on = pos.filter(p => h[p]), off = pos.filter(p => !h[p]);
+      on.forEach(p => { if (off.length && R() < spread * 1.2 && !isAnchor(role, p % 16)) { const q = off.splice(Math.floor(R() * off.length), 1)[0]; h[q] = h[p]; h[p] = 0; off.push(p); } }); // move within the subdivision
+      on = pos.filter(p => h[p]); off = pos.filter(p => !h[p]);
+      while (on.length > tgt[k]) { const free = on.filter(p => !isAnchor(role, p % 16)), from = free.length ? free : on, p = from[Math.floor(R() * from.length)]; h[p] = 0; on = on.filter(x => x !== p); }
+      while (on.length < tgt[k] && off.length) { const j = weightedPick(off, off.map(p => odds(role, c, has, p % 16) + 0.03)), p = off.splice(j, 1)[0]; h[p] = velFor(role, k, p % 16); on.push(p); }
+    });
+  }
+  for (let s = 0; s < h.length; s++) if (h[s] && R() < spread * 0.5) h[s] = clamp(h[s] + gauss() * spread * 0.5, 0.1, 1);
+  return h;
+}
+function freshRow(role, c, has, bars, r) { const sh = state.shape[r]; return pickBySync(Array.from({ length: 14 }, () => anyFixed(sh) ? shapedCandidate(role, c, has, bars, sh) : candidate(role, c, has, bars)), role, c); }
 function mutateRow(row, role, c, has, spread) {
   const h = row.slice(), N = h.length, n = 1 + poisson(spread * 8 * (N / 32));
   for (let k = 0; k < n; k++) {
@@ -362,10 +426,11 @@ function mutateRow(row, role, c, has, spread) {
 }
 const loopOps = {
   fresh() { const g = seedGroove(), roles = rolesNow(), has = hasOf(roles), c = g.complexity / 100, bars = state.bars;
-    return { bars, rows: roles.map(role => role ? pickBySync(Array.from({ length: 14 }, () => candidate(role, c, has, bars)), role, c) : new Array(bars * 16).fill(0)), roles: roles.slice(), g: clone(g), swing: swingPct(g), seed: newSeed() }; },
+    return { bars, rows: roles.map((role, r) => role ? freshRow(role, c, has, bars, r) : new Array(bars * 16).fill(0)), roles: roles.slice(), g: clone(g), swing: swingPct(g), seed: newSeed() }; },
   mutate(from, spread) {
     const g = seedGroove(), roles = rolesNow(), has = hasOf(roles), c = g.complexity / 100, out = clone(from);
-    out.rows = from.rows.map((row, r) => { const role = roles[r]; if (!role) return row.slice(); if (from.roles[r] !== role || !row.some(Boolean)) return pickBySync(Array.from({ length: 14 }, () => candidate(role, c, has, from.bars)), role, c); if (state.rowLocks[r]) return row.slice();
+    out.rows = from.rows.map((row, r) => { const role = roles[r]; if (!role) return row.slice(); if (from.roles[r] !== role || !row.some(Boolean)) return freshRow(role, c, has, from.bars, r); if (state.rowLocks[r]) return row.slice();
+      if (anyFixed(state.shape[r])) return pickBySync(Array.from({ length: 6 }, () => shapedMutate(row, role, c, has, spread, state.shape[r])), role, c);
       const before = row.join(','), cands = []; for (let k = 0; k < 6; k++) { const h = mutateRow(row, role, c, has, spread); if (h.join(',') !== before) cands.push(h); } return cands.length ? pickBySync(cands, role, c) : mutateRow(row, role, c, has, Math.max(spread, 0.2)); });
     out.roles = roles.slice(); out.g = clone(g); out.swing = clamp(swingPct(g) + gauss() * spread * 4, 50, 75); out.seed = R() < 0.5 ? from.seed : newSeed();
     return out;
@@ -404,6 +469,7 @@ const state = {
   chosen: [0, 1, 2, 3],
   loops: { items: [], hear: 0, parent: -1, spread: TUNE.start, streak: 0 },
   rowLocks: [false, false, false, false], keptLoops: Array(8).fill(null), playingSlot: -1, viewBar: 0,
+  shape: [0, 1, 2, 3].map(() => ({ q: -1, e: -1, s: -1, t: -1 })), shapeRow: 0,
   open: { Body: true }, mode: 'break', playing: false,
 };
 [['Kick', 'Kick 1'], ['Snare', 'Snare 1'], ['Hats', 'Hats 1'], ['Perc', 'Perc 1']].forEach(([z, n], i) => { const v = drumOps.fresh(z); v[PAN] = z === 'Kick' || z === 'Snare' ? 0.5 : z === 'Hats' ? 0.6 : 0.4; state.pads[i] = { name: n, zone: z, v }; });
@@ -627,7 +693,7 @@ function breakPane() {
     '<div class="pane-head"><span class="n">3</span><h2>Break</h2><p>Loops bred from the groove, played by four pads.</p></div>' +
     '<div class="row between"><button class="seedpill" data-act="gotab" data-v="groove" aria-label="Seeded by ' + esc(seedLabel()) + '; open Groove">' + grooveSvg(seedGroove(), 16).replace('style="height:16px"', '') + 'Seed: ' + esc(seedLabel()) + '</button><span class="row"><button class="btn small" data-act="back" data-k="loop">Back</button><button class="btn small" data-act="new" data-k="loop">New</button></span></div>' +
     '<div class="row between"><span class="lab">Bars</span><span class="seg" role="group" aria-label="Bars" style="--sg:var(--accent)">' + [2, 4].map(n => '<button data-act="bars" data-v="' + n + '" aria-pressed="' + (state.bars === n) + '">' + n + ' bars</button>').join('') + '</span></div>' +
-    slider('lspread', 'Spread', (B.spread - 0.02) / 0.48, B.spread.toFixed(2), 'data-spread="loop"') +
+    slider('lspread', 'Spread', (B.spread - 0.02) / 0.48, B.spread.toFixed(2), 'data-spread="loop"') + shapeCard(lp) +
     '<div class="litter">' + B.items.map((x, i) => tile(i, loopSvg(x), 'swing ' + x.swing.toFixed(0) + '%  ' + x.rows.flat().filter(Boolean).length + ' hits', B, 'loop', null, 'playing')).join('') + '</div>' +
     '<div class="card"><div class="row between"><b>' + name + '</b><span class="hint">Tap a step: hit, ghost, rest</span></div>' +
     '<div class="row between"><span class="lab">Plays · left to right</span><span class="map">pad 1 → bottom row, pad 4 → top</span></div><div class="plays">' + plays + '</div>' + barpick +
@@ -637,6 +703,22 @@ function breakPane() {
     '<div class="card"><div class="row between"><span class="lab">Keep loops · 48 to 55</span><span class="hint">Tap a free slot to keep ' + L[B.hear] + '; tap a kept one to play it</span></div><div class="keep">' +
     state.keptLoops.map((k, i) => k ? '<div class="pad full' + (state.playingSlot === i ? ' live' : '') + '" style="--kc:var(--accent)"><button class="hearzone" data-act="playloop" data-i="' + i + '" style="display:contents"><span class="no">' + (i + 1) + '  ' + (48 + i) + ' · ' + k.bars + ' bars</span>' + loopSvg(k, 34).replace('style="height:34px"', 'style="height:34px;margin-top:auto"') + '</button><button class="x" data-act="clearloop" data-i="' + i + '" aria-label="Clear kept loop ' + (i + 1) + '">×</button></div>'
       : '<button class="pad target" data-act="keeploop" data-i="' + i + '"><span class="no">' + (i + 1) + '  ' + (48 + i) + '</span><span class="dr">Keep ' + L[B.hear] + '</span></button>').join('') + '</div></div></section>';
+}
+function rowNow(lp, r) { const bars = lp.bars, c = { q: 0, e: 0, s: 0 }; for (let b = 0; b < bars; b++) { const x = countsOf(lp.rows[r], b); KS.forEach(k => { c[k] += x[k] / bars; }); } c.t = c.q + c.e + c.s; return c; }
+const fmtN = x => Number.isInteger(x) ? String(x) : x.toFixed(1);
+function shapeCard(lp) {
+  const r = state.shapeRow, sh = state.shape[r], pad = state.pads[state.chosen[r]], now = rowNow(lp, r), [tlo, thi] = totalRange(sh), allFixed = KS.every(k => sh[k] >= 0);
+  const chips = '<div class="chips rowchips">' + [0, 1, 2, 3].map(i => { const p = state.pads[state.chosen[i]], fixed = anyFixed(state.shape[i]); return '<button class="chip" data-act="shaperow" data-v="' + i + '" aria-pressed="' + (i === r) + '" style="--kc:' + (p ? ZCOL[p.zone] : 'var(--faint)') + ';--on:' + (p ? ZCOL[p.zone] : 'var(--faint)') + '"><i></i>' + (i + 1) + ' ' + (p ? esc(p.name) : 'empty') + (fixed ? ' <em>set</em>' : '') + '</button>'; }).join('') + '</div>';
+  const step = (k, label, where, max) => { const v = sh[k], show = k === 't' && allFixed ? KS.reduce((a, x) => a + sh[x], 0) : v, auto = k === 't' && allFixed;
+    const lo = k === 't' ? tlo : 0, hi = k === 't' ? thi : max;
+    return '<div class="step' + (v >= 0 || auto ? ' fixed' : '') + '"><div><b>' + label + '</b><small>' + where + ' · now ' + fmtN(now[k]) + '</small></div><div class="stepc">' +
+      '<button data-act="shape" data-k="' + k + '" data-d="-1" aria-label="Fewer ' + label.toLowerCase() + '"' + (auto || (v >= 0 && v <= lo) ? ' disabled' : '') + '>−</button>' +
+      '<button class="v' + (show < 0 ? ' any' : '') + '" data-act="shapeany" data-k="' + k + '" aria-label="' + label + ': ' + (show < 0 ? 'any' : show) + (show >= 0 && !auto ? ', tap for Any' : '') + '"' + (auto ? ' disabled' : '') + '>' + (show < 0 ? 'Any' : show) + '</button>' +
+      '<button data-act="shape" data-k="' + k + '" data-d="1" aria-label="More ' + label.toLowerCase() + '"' + (auto || (v >= 0 && v >= hi) ? ' disabled' : '') + '>+</button></div></div>'; };
+  const all = [0, 1, 2, 3].reduce((a, i) => a + (state.pads[state.chosen[i]] ? rowNow(lp, i).t : 0), 0);
+  return '<div class="card"><div class="row between"><span class="lab">Notes per bar</span><button class="btn small" data-act="fit"' + (anyFixed(sh) ? '' : ' disabled') + '>Fit ' + (state.playingSlot >= 0 ? 'kept ' + (state.playingSlot + 1) : 'loop ' + L[state.loops.hear]) + ' now</button></div>' + chips +
+    '<div class="shape4">' + step('q', 'Quarters', 'on 1 2 3 4', 4) + step('e', 'Eighths', 'on the &s', 4) + step('s', 'Sixteenths', 'on the e and a', 8) + step('t', 'Total', allFixed ? 'the three added' : 'all notes', 16) + '</div>' +
+    '<p class="hint">Row ' + (r + 1) + (pad ? ' (' + esc(pad.name) + ')' : '') + ' now has ' + fmtN(now.t) + ' notes a bar; all rows ' + fmtN(all) + '. These steer the next Breed or New. Any lets the breeder choose; with Total set, the Any ones share what is left. Tap a number to set it back to Any.</p></div>';
 }
 function seedLabel(lp) { const k = state.seedFrom; return k.startsWith('Groove ') ? k.toLowerCase() : 'groove ' + k; }
 function drawTop() {
@@ -713,6 +795,21 @@ document.addEventListener('click', e => {
     case 'rowlock': state.rowLocks[+d.r] = !state.rowLocks[+d.r]; draw(); return;
     case 'bars': { const n = +d.v; if (n === state.bars) return; state.bars = n; snap(state.loops); state.loops.items = state.loops.items.map(lp => resize(lp, n)); state.viewBar = 0; state.playingSlot = -1; changed(); toast(n === 4 ? 'Four bars: each loop repeats; the next Breed varies the new bars.' : 'Two bars: each loop keeps its first two.'); return; }
     case 'viewbar': state.viewBar = +d.v; draw(); return;
+    case 'shaperow': state.shapeRow = +d.v; draw(); return;
+    case 'shape': case 'shapeany': {
+      const sh = state.shape[state.shapeRow], k = d.k, now = rowNow(sourceLoop(), state.shapeRow);
+      if (act === 'shapeany') { if (sh[k] < 0) sh[k] = Math.round(now[k]); else sh[k] = -1; }
+      else if (sh[k] < 0) sh[k] = Math.round(now[k]) + (+d.d);
+      else sh[k] += +d.d;
+      if (k === 't') { const [lo, hi] = totalRange(sh); if (sh.t >= 0) sh.t = clamp(sh.t, lo, hi); }
+      else { sh[k] = sh[k] < 0 ? -1 : clamp(sh[k], 0, CAP[k]); if (sh.t >= 0) { const [lo, hi] = totalRange(sh); sh.t = clamp(sh.t, lo, hi); } }
+      draw(); return;
+    }
+    case 'fit': {
+      const lp = sourceLoop(), roles = rolesNow(), has = hasOf(roles), c = seedGroove().complexity / 100; snap(state.loops);
+      lp.rows = lp.rows.map((row, r) => { const role = roles[r]; if (!role || state.rowLocks[r] || !anyFixed(state.shape[r])) return row; return shapedMutate(row, role, c, has, 0, state.shape[r]); });
+      changed(); toast('Fitted the rows that have settings. Back undoes it.'); return;
+    }
     case 'cell': { const lp = sourceLoop(), r = +d.r, s = +d.s, v = lp.rows[r][s]; lp.rows[r][s] = !v ? 0.9 : v >= 0.45 ? 0.3 : 0; if (!lp.roles[r]) lp.roles[r] = roleOfRow(r); changed(); return; }
     case 'keeploop': state.keptLoops[+d.i] = clone(state.loops.items[state.loops.hear]); draw(); return;
     case 'clearloop': { const i = +d.i; state.keptLoops[i] = null; if (state.playingSlot === i) state.playingSlot = -1; changed(); return; }

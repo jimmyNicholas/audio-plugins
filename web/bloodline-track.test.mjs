@@ -1,16 +1,21 @@
 // Bloodline Track prototype (issue #51): behaviour through the one seam, Track actions and the offline render.
-// Effects need Web Audio, so here chains pass audio through; the page runs them offline in the browser.
+// The scripts come from the page itself. Effects need Web Audio, so here chains pass audio through;
+// the page runs them offline in the browser.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
-// The shared engine draws from Math.random, so seed that too (before the engine loads) to make every run the same.
+import { readFileSync } from 'node:fs';
+import { runInThisContext } from 'node:vm';
+// The page is one file: run its engine and core scripts here, without the DOM.
+// The engine draws from Math.random, so seed that too (before the engine runs) to make every run the same.
 let gen = null;
 const builtin = Math.random;
 Math.random = () => (gen ? gen() : builtin());
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-require('./bloodline-engine.js');
-const T = require('./bloodline-track-core.js');
+const html = readFileSync(new URL('./bloodline-track-prototype.html', import.meta.url), 'utf8');
+const script = id => { const m = html.match(new RegExp('<script id="' + id + '">([\\s\\S]*?)</script>')); if (!m) throw new Error('no script ' + id); return m[1]; };
+runInThisContext(script('bl-engine'), { filename: 'bl-engine' });
+runInThisContext(script('bl-core'), { filename: 'bl-core' });
+const T = globalThis.BTrack;
 
 const peakOf = (l, r) => { let p = 0; for (let i = 0; i < l.length; i++) p = Math.max(p, Math.abs(l[i]), Math.abs(r[i])); return p; };
 const db = x => 20 * Math.log10(x);

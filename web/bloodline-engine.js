@@ -568,7 +568,7 @@
   }
   const irCache = new Map();
   function impulse(size, decay, damp) {
-    const key = [size, decay, damp].map(x => Math.round(x * 10)).join(':') + ':' + ctx.sampleRate;
+    const key = [size, decay, damp].map(x => Math.round(x * 10)).join(':');
     if (irCache.has(key)) return irCache.get(key);
     const sr = ctx.sampleRate, len = Math.floor(sr * (0.4 + size * 3.6)), buf = ctx.createBuffer(2, len, sr);
     const pw = 1.5 + (1 - decay) * 5;
@@ -775,20 +775,6 @@
     level() { this.meter.getFloatTimeDomainData(this.buf); let p = 0; for (const x of this.buf) p = Math.max(p, Math.abs(x)); return p; }
   }
   BL.Bus = Bus;
-
-  // Run a chain over a stereo buffer offline (Bloodline Track renders its loops this way).
-  // Builds the same nodes as a live Bus, on an OfflineAudioContext, at the given tempo.
-  BL.offlineChain = function (chain, bypass, left, right, sr, bpm) {
-    const AC = global.OfflineAudioContext || global.webkitOfflineAudioContext;
-    const off = new AC(2, left.length, sr), saved = ctx, savedBpm = BL.transport.bpm;
-    let g;
-    ctx = off; BL.transport.bpm = bpm;
-    try { g = buildChain(chain, bypass); } finally { ctx = saved; BL.transport.bpm = savedBpm; }
-    const buf = off.createBuffer(2, left.length, sr);
-    buf.copyToChannel(left, 0); buf.copyToChannel(right, 1);
-    const src = off.createBufferSource(); src.buffer = buf; src.connect(g.in); g.out.connect(off.destination); src.start(0);
-    return off.startRendering().then(b => [b.getChannelData(0), b.getChannelData(1)]);
-  };
 
   // ---------- transport: a look-ahead scheduler in beats
   const T = BL.transport = {
